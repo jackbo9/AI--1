@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env.local
+data/jobs.json
+data/generated/*
+!data/generated/.gitkeep
+playwright-report/
+test-results/
