@@ -1,0 +1,116 @@
+.format-card {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding: 16px 18px;
+  border: 1px solid #b9ccff;
+  border-radius: 10px;
+  background: #f7faff;
+}
+
+.format-card b {
+  font-size: 14px;
+}
+
+.format-card span {
+  color: #7d8797;
+  font-size: 12px;
+}
+
+.format-card em {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  color: #3370ff;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.form-grid .check-row {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.form-grid .check-row input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #3370ff;
+}
+
+.check-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.check-row small {
+  color: #929baa;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.copy-review {
+  padding: 24px;
+  border: 1px solid #cddaff;
+  border-radius: 14px;
+  background: #fbfcff;
+}
+
+.stage-banner {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #eaf1ff;
+  color: #3564c8;
+  font-size: 12px;
+}
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.result-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.result-actions .download {
+  margin-top: 0;
+}
+
+.secondary-action {
+  border: 1px solid #b9ccff;
+  border-radius: 8px;
+  background: #fff;
+  color: #2f66dd;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (min-width: 720px) {
+  .scene-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .format-card,
+  .form-grid .check-row,
+  .copy-review,
+  .secondary-action {
+    background: #1d2738;
+  }
+}

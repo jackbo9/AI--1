@@ -1,14 +1,220 @@
+import { z } from "zod";
 import { configured, serverEnv } from "@/lib/env";
-import { posterDocumentSchema, type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
+import {
+  posterDocumentSchema,
+  type EmployeeActivityInput,
+  type PosterDocument
+} from "@/contracts/poster";
+import { ProviderError, requestJson } from "./provider-error";
 
-const systemPrompt = "你是企业行政活动文案助手。只输出符合 PosterDocumentV1_5 的 JSON，不能输出 Markdown。sessions、notice、contact、ctaLabel、qrPayload 必须逐字保留输入内容；不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。";
-export async function generateCopy(input: EmployeeActivityInput): Promise<{ document: PosterDocument; provider: string }> {
-  if (!configured.copy) return { document: fallbackCopy(input), provider: "demo-copy" };
-  const response = await fetch(`${serverEnv.LLM_BASE_URL}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${serverEnv.LLM_API_KEY}` }, body: JSON.stringify({ model: serverEnv.LLM_MODEL, temperature: 0.6, response_format: { type: "json_object" }, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: JSON.stringify(input) }] }), signal: AbortSignal.timeout(30000) });
-  if (!response.ok) throw new Error(`文案服务请求失败（${response.status}）`);
-  const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }; const raw = payload.choices?.[0]?.message?.content;
-  if (!raw) throw new Error("文案服务未返回内容"); const document = posterDocumentSchema.parse(JSON.parse(raw));
-  if (JSON.stringify(document.sessions) !== JSON.stringify(input.sessions) || document.notice !== input.notice || document.contact !== input.contact || document.ctaLabel !== input.ctaLabel || document.qrPayload !== input.qrPayload) throw new Error("文案服务修改了不可改写字段");
-  return { document, provider: "deepseek" };
+const copyPromptVersion = "employee-activity-copy-v1-6";
+const systemPrompt =
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、contact、immutableSource。schemaVersion 必须是 "1.6"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、notice、contact、includeQr、ctaLabel、qrPayload 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、contact、includeQr、ctaLabel、qrPayload、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
+
+const deepSeekResponseSchema = z.object({
+  choices: z
+    .array(
+      z.object({
+        message: z.object({ content: z.string().min(1) })
+      })
+    )
+    .min(1)
+});
+
+export type CopyResult = {
+  document: PosterDocument;
+  provider: string;
+  model: string;
+  promptVersion: string;
+};
+
+export async function generateCopy(
+  input: EmployeeActivityInput
+): Promise<CopyResult> {
+  if (!configured.copy) {
+    return {
+      document: fallbackCopy(input),
+      provider: "demo-copy",
+      model: "demo-copy",
+      promptVersion: copyPromptVersion
+    };
+  }
+
+  let lastError: ProviderError | undefined;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const payload = deepSeekResponseSchema.parse(
+        await requestJson(
+          `${serverEnv.LLM_BASE_URL}/chat/completions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serverEnv.LLM_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: serverEnv.LLM_MODEL,
+              temperature: 0.1,
+              response_format: { type: "json_object" },
+              messages: [
+                { role: "system", content: systemPrompt },
+                {
+                  role: "user",
+                  content: JSON.stringify({
+                    task: "优化允许编辑的标题、副标题、摘要、活动亮点和参与方式，并返回完整 PosterDocumentV1_6。",
+                    constraints: {
+                      titleMaxLength: 40,
+                      subtitleMaxLength: 56,
+                      summaryMaxLength: 150,
+                      highlights: "2 到 4 项，每项最多 22 字",
+                      participationSteps: "1 到 4 项，每项最多 52 字"
+                    },
+                    input
+                  })
+                }
+              ]
+            })
+          },
+          {
+            timeoutMs: 30_000,
+            retries: 1,
+            classify: classifyLlmStatus,
+            networkError: () =>
+              new ProviderError(
+                "LLM_REQUEST_FAILED",
+                "文案服务暂时不可用",
+                true
+              )
+          }
+        )
+      );
+
+      const document = posterDocumentSchema.parse(
+        JSON.parse(payload.choices[0].message.content) as unknown
+      );
+      assertImmutable(input, document);
+
+      return {
+        document,
+        provider: "deepseek",
+        model: serverEnv.LLM_MODEL ?? "unknown",
+        promptVersion: copyPromptVersion
+      };
+    } catch (error) {
+      if (
+        error instanceof ProviderError &&
+        error.code !== "LLM_INVALID_OUTPUT"
+      ) {
+        throw error;
+      }
+      lastError = invalidOutputError(error);
+      if (attempt === 1) throw lastError;
+    }
+  }
+
+  throw (
+    lastError ??
+    new ProviderError("LLM_INVALID_OUTPUT", "文案结果未通过内容校验")
+  );
 }
-function fallbackCopy(input: EmployeeActivityInput): PosterDocument { return { schemaVersion: "1.5", scene: "employee_activity", locale: "zh-CN", category: input.category, title: input.activityName, subtitle: "一起出发，把日常过得更有意思", summary: input.description, sessions: input.sessions, highlights: input.highlights, participationSteps: input.participationSteps, notice: input.notice, ctaLabel: input.ctaLabel, qrPayload: input.qrPayload, contact: input.contact, immutableSource: { sessions: true, contact: true, ctaLabel: true, qrPayload: true, notice: true } }; }
+
+function invalidOutputError(error: unknown) {
+  if (error instanceof ProviderError) return error;
+  if (error instanceof z.ZodError) {
+    const issue = error.issues[0];
+    const field = issue?.path.join(".") || "root";
+    return new ProviderError(
+      "LLM_INVALID_OUTPUT",
+      `文案结果字段 ${field} 未通过校验：${issue?.message ?? "格式错误"}`,
+      true
+    );
+  }
+  if (error instanceof SyntaxError) {
+    return new ProviderError(
+      "LLM_INVALID_OUTPUT",
+      "文案服务未返回有效 JSON",
+      true
+    );
+  }
+  return new ProviderError(
+    "LLM_INVALID_OUTPUT",
+    "文案结果未通过结构化内容校验",
+    true
+  );
+}
+
+function classifyLlmStatus(status: number) {
+  if (status === 401 || status === 403) {
+    return new ProviderError(
+      "LLM_AUTH_FAILED",
+      "文案服务配置或权限无效",
+      false,
+      status
+    );
+  }
+  if (status === 429) {
+    return new ProviderError(
+      "LLM_RATE_LIMITED",
+      "文案服务繁忙，请稍后重试",
+      true,
+      status
+    );
+  }
+  return new ProviderError(
+    "LLM_REQUEST_FAILED",
+    "文案服务请求失败",
+    status >= 500,
+    status
+  );
+}
+
+function assertImmutable(
+  input: EmployeeActivityInput,
+  document: PosterDocument
+) {
+  const immutableMatches =
+    document.outputFormat === input.outputFormat &&
+    JSON.stringify(document.sessions) === JSON.stringify(input.sessions) &&
+    document.notice === input.notice &&
+    document.contact === input.contact &&
+    document.includeQr === input.includeQr &&
+    document.ctaLabel === input.ctaLabel &&
+    document.qrPayload === input.qrPayload;
+
+  if (!immutableMatches) {
+    throw new ProviderError(
+      "IMMUTABLE_FIELD_CHANGED",
+      "重要活动信息被意外改写"
+    );
+  }
+}
+
+function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
+  return {
+    schemaVersion: "1.6",
+    scene: "employee_activity",
+    locale: "zh-CN",
+    outputFormat: input.outputFormat,
+    category: input.category,
+    title: input.activityName,
+    subtitle: "一起出发，把日常过得更有意思",
+    summary: input.description,
+    sessions: input.sessions,
+    highlights: input.highlights,
+    participationSteps: input.participationSteps,
+    notice: input.notice,
+    includeQr: input.includeQr,
+    ctaLabel: input.ctaLabel,
+    qrPayload: input.qrPayload,
+    contact: input.contact,
+    immutableSource: {
+      outputFormat: true,
+      sessions: true,
+      contact: true,
+      includeQr: true,
+      ctaLabel: true,
+      qrPayload: true,
+      notice: true
+    }
+  };
+}

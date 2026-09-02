@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "render:fixture": "tsx scripts/render-fixture.ts",
+    "probe:copy": "node --env-file=.env.local --import tsx scripts/probe-copy-provider.ts",
+    "probe:image": "node --env-file=.env.local --import tsx scripts/probe-image-provider.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
