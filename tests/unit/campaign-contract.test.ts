@@ -93,4 +93,54 @@ describe("Campaign and Bundle migration contract", () => {
       height: 1920
     });
   });
+
+  it("keeps Phase 1.5 and earliest single-session history readable", () => {
+    const now = "2026-09-03T00:00:00.000Z";
+    const common = {
+      id: "85397b74-dc13-4347-b9b2-0bfeac4eaa7b",
+      traceId: "9fbf918a-951d-40ff-8805-e4afb5a9086c",
+      idempotencyKey: "89802b19-9eef-4385-b4fe-775267df493b",
+      actionIdempotencyKeys: [],
+      userId: "legacy-user",
+      status: "FAILED_FINAL" as const,
+      currentStep: "历史任务",
+      retryCount: 0,
+      versions: [],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const phaseOnePointFive = normalizeStoredJob({
+      ...common,
+      input: {
+        ...normal,
+        outputFormat: undefined,
+        includeQr: undefined
+      }
+    });
+    expect(phaseOnePointFive.input.outputFormat).toBe(
+      "portrait_1080x1920"
+    );
+    expect(phaseOnePointFive.input.includeQr).toBe(false);
+
+    const earliest = normalizeStoredJob({
+      ...common,
+      id: "021c9fe2-c104-4159-a30e-497ec6e1313b",
+      input: {
+        activityName: "秋日同行日",
+        date: "2026-09-18",
+        time: "14:00–17:30",
+        location: "上海总部一层多功能厅",
+        description:
+          "一场为同事准备的轻松秋日相聚，包含趣味互动和手作体验。",
+        style: "warm"
+      }
+    });
+    expect(earliest.input.sessions[0]).toMatchObject({
+      date: "2026-09-18",
+      time: "14:00–17:30",
+      location: "上海总部一层多功能厅"
+    });
+    expect(earliest.campaignBrief.renderTargets).toHaveLength(4);
+  });
 });
