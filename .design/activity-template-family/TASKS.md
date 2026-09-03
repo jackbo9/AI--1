@@ -17,7 +17,7 @@ Date: 2026-09-03
 ## Phase A｜契约与可复现基线
 
 - [x] **A1. 固化 BrandSpec v1 为运行时契约**：建立 `BrandTokens` 与 `BrandSpec` Schema，写入 `adminYellow: #FAE24C`、`H0: 120px`、`H1: 80px`、标题最多三行及双标识左右关系；为 `brandSpecVersion` 建立版本字段和 Fixture。_Creates: brand contract/tokens; reuses Zod conventions._
-- [ ] **A2. 建立四规格 TemplateFamily Manifest**：定义四个稳定 RenderTarget ID、固定尺寸或 `heightMode: auto`、各自 `safeArea`、标题级别、模块投影、焦点区、Logo/二维码区和溢出策略；安全边距从对应 SVG 测量并写入各规格。_Creates: template-family manifest; depends on A1._
+- [x] **A2. 建立四规格 TemplateFamily Manifest**：定义四个稳定 RenderTarget ID、固定尺寸或 `heightMode: auto`、各自 `safeArea`、标题级别、模块投影、焦点区、Logo/二维码区和溢出策略；安全边距从对应 SVG 测量并写入各规格。_Creates: template-family manifest; depends on A1._
 - [ ] **A3. 将单输出模型升级为 Campaign/Bundle**：把当前写死的 `outputFormat` 升级为一次 `CampaignBrief`、一份 `ConfirmedCampaignDocument`、一个 `VisualMaster` 和四个 `Artifact`；增加旧竖版任务读取兼容。_Modifies: `src/contracts/poster.ts`, `src/contracts/job.ts`, `src/server/job-store.ts`; depends on A2._
 - [ ] **A4. 准备四规格 Fixture 套件**：覆盖正常内容、三行标题边界、标题超限、缺可选模块、二维码、长正文和图片降级；每种 Fixture 声明四项预期尺寸、高度范围和 Brand Check 结果。_Creates/modifies: `tests/fixtures`; depends on A1-A3._
 
