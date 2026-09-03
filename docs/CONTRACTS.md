@@ -73,6 +73,54 @@
 - `validationResults`
 - `outputFiles`
 
+### CampaignBrief
+
+一次活动物料包共享的业务事实，不绑定单一输出尺寸。
+
+关键字段：
+
+- `schemaVersion`、`scene`、`locale`
+- `brandSpecVersion`
+- 活动名称、场次、日期、时间、地点、规则和二维码事实
+- 默认四个 `renderTargets`
+
+### ConfirmedCampaignDocument
+
+用户完成一次文案确认后的不可变内容版本。它不包含 HTML/CSS 或
+单一 `outputFormat`，四个规格由代码按 Manifest 投影。
+
+### VisualMaster
+
+四个规格共享的视觉母题，记录：
+
+- `visualFamilyId`
+- 来源内容版本
+- 结构化插画 Brief 与 Prompt 版本
+- 各 RenderTarget 的生成、派生或降级资产
+
+### Artifact
+
+物料包中的单个不可变输出。每项独立记录：
+
+- `renderTargetId`
+- 固定尺寸或自动高度
+- `brandSpecVersion`
+- 模板、内容和视觉版本
+- 输出文件与 Brand Check
+- 独立状态和错误
+
+员工活动 BrandSpec v1 默认包含：
+
+```text
+portrait_1080x1920
+landscape_1920x1080
+banner_2227x950
+longform_1080xAuto
+```
+
+旧版单竖版任务在读取时转换为 `CampaignBrief`，已有竖版结果映射为
+一个兼容 Artifact，不原地覆盖历史 JSON。
+
 ## 2. PosterDocument 示例
 
 LLM 必须返回与场景 Schema 匹配的数据。示例：
@@ -218,4 +266,3 @@ READY_FOR_REVIEW -> QUEUED   # 局部修改或重新生成新版本
 | 文本溢出 | 按模板规则缩字/换模板；不得静默裁切重要内容 |
 | 存储上传失败 | 保留本地临时产物并重试，不通知用户已完成 |
 | 飞书通知失败 | 任务仍为完成状态，异步重试通知 |
-
