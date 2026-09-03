@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  brandSpecVersionSchema,
+  defaultRenderTargetIds,
+  renderTargetIdSchema
+} from "./brand";
 
 export const outputFormatSchema = z.literal("portrait_1080x1920");
 export const activityCategorySchema = z.enum(["team", "festival", "competition"]);
@@ -25,9 +30,7 @@ const optionalQrPayloadSchema = z
     }
   }, "二维码链接必须是有效的 HTTP 或 HTTPS 地址");
 
-export const employeeActivityInputSchema = z
-  .object({
-    outputFormat: outputFormatSchema.default("portrait_1080x1920"),
+const employeeActivityFieldsSchema = z.object({
     activityName: z
       .string()
       .trim()
@@ -55,16 +58,39 @@ export const employeeActivityInputSchema = z
       .trim()
       .min(10, "请用至少 10 个字描述主视觉")
       .max(180)
-  })
-  .superRefine((input, context) => {
-    if (input.includeQr && !input.qrPayload) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["qrPayload"],
-        message: "启用二维码后请填写二维码链接"
-      });
-    }
   });
+
+function validateQrRequirement(
+  input: { includeQr: boolean; qrPayload: string },
+  context: z.RefinementCtx
+) {
+  if (input.includeQr && !input.qrPayload) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["qrPayload"],
+      message: "启用二维码后请填写二维码链接"
+    });
+  }
+}
+
+export const employeeActivityInputSchema = employeeActivityFieldsSchema
+  .extend({
+    outputFormat: outputFormatSchema.default("portrait_1080x1920")
+  })
+  .superRefine(validateQrRequirement);
+
+export const campaignBriefSchema = employeeActivityFieldsSchema
+  .extend({
+    schemaVersion: z.literal("1.0"),
+    scene: z.literal("employee_activity"),
+    locale: z.literal("zh-CN"),
+    brandSpecVersion: brandSpecVersionSchema,
+    renderTargets: z
+      .array(renderTargetIdSchema)
+      .length(4)
+      .default([...defaultRenderTargetIds])
+  })
+  .superRefine(validateQrRequirement);
 
 export const posterDocumentSchema = z.object({
   schemaVersion: z.literal("1.6"),
@@ -94,6 +120,19 @@ export const posterDocumentSchema = z.object({
   })
 });
 
+export const confirmedCampaignDocumentSchema = posterDocumentSchema
+  .omit({
+    schemaVersion: true,
+    outputFormat: true,
+    immutableSource: true
+  })
+  .extend({
+    schemaVersion: z.literal("1.0"),
+    brandSpecVersion: brandSpecVersionSchema,
+    documentVersionId: z.string().uuid(),
+    sourceCopySchemaVersion: z.literal("1.6")
+  });
+
 export const editablePosterContentSchema = z.object({
   title: z.string().trim().min(1).max(40),
   subtitle: z.string().trim().max(56),
@@ -111,6 +150,21 @@ export const illustrationBriefSchema = z.object({
   style: z.string().min(2).max(60),
   mood: z.string().min(2).max(60),
   negative: z.literal("不要文字、字母、数字、Logo、二维码、水印、签名")
+});
+
+export const visualMasterAssetSchema = z.object({
+  renderTargetId: renderTargetIdSchema,
+  path: z.string().min(1),
+  mode: z.enum(["generated", "derived", "fallback"])
+});
+
+export const visualMasterSchema = z.object({
+  id: z.string().uuid(),
+  visualFamilyId: z.string().uuid(),
+  sourceDocumentVersionId: z.string().uuid(),
+  promptVersion: z.string().min(1),
+  brief: illustrationBriefSchema,
+  assets: z.array(visualMasterAssetSchema).default([])
 });
 
 export const generationStatusSchema = z.enum([
@@ -141,10 +195,52 @@ export const regenerateAssetSchema = z.object({
 
 export type OutputFormat = z.infer<typeof outputFormatSchema>;
 export type EmployeeActivityInput = z.infer<typeof employeeActivityInputSchema>;
+export type CampaignBrief = z.infer<typeof campaignBriefSchema>;
 export type PosterDocument = z.infer<typeof posterDocumentSchema>;
+export type ConfirmedCampaignDocument = z.infer<
+  typeof confirmedCampaignDocumentSchema
+>;
 export type EditablePosterContent = z.infer<typeof editablePosterContentSchema>;
 export type IllustrationBrief = z.infer<typeof illustrationBriefSchema>;
+export type VisualMaster = z.infer<typeof visualMasterSchema>;
 export type GenerationStatus = z.infer<typeof generationStatusSchema>;
+
+export function campaignBriefFromLegacyInput(
+  input: EmployeeActivityInput
+): CampaignBrief {
+  const facts = employeeActivityFieldsSchema.parse(input);
+  return campaignBriefSchema.parse({
+    ...facts,
+    schemaVersion: "1.0",
+    scene: "employee_activity",
+    locale: "zh-CN",
+    brandSpecVersion: 1,
+    renderTargets: [...defaultRenderTargetIds]
+  });
+}
+
+export function legacyPortraitInputFromCampaignBrief(
+  brief: CampaignBrief
+): EmployeeActivityInput {
+  const facts = employeeActivityFieldsSchema.parse(brief);
+  return employeeActivityInputSchema.parse({
+    ...facts,
+    outputFormat: "portrait_1080x1920"
+  });
+}
+
+export function confirmedCampaignDocumentFromPoster(
+  document: PosterDocument,
+  documentVersionId: string
+): ConfirmedCampaignDocument {
+  return confirmedCampaignDocumentSchema.parse({
+    ...document,
+    schemaVersion: "1.0",
+    brandSpecVersion: 1,
+    documentVersionId,
+    sourceCopySchemaVersion: "1.6"
+  });
+}
 
 export const posterDocumentJsonSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
