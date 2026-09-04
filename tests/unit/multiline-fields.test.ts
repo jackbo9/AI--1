@@ -15,5 +15,6 @@ describe("multiline list fields", () => {
       "第一点",
       "第二点"
     ]);
+    expect(normalizeLines(splitDraftLines(""))).toEqual([]);
   });
 });

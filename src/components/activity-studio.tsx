@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- generated PNGs and local brand assets are intentional. */
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { EmployeeActivityInput, PosterDocument } from "@/contracts/poster";
-import { splitDraftLines } from "@/components/multiline-fields";
+import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import { createClientUuid } from "@/lib/client-uuid";
 
 type Stage = 1 | 2 | 3 | 4;
@@ -54,7 +54,7 @@ export function ActivityStudio({ identity }: { identity: { displayName: string; 
   const working = Boolean(job && ["QUEUED", "VALIDATING_INPUT", "GENERATING_COPY", "REFINING_VISUAL", "GENERATING_ASSET", "RENDERING", "VALIDATING_OUTPUT"].includes(job.status));
   const version = job?.versions.at(-1);
   const previewCopy = job?.copyDraft?.document && copyReview
-    ? { ...job.copyDraft.document, summary: copyReview.summary, rules: copyReview.rules, prize: copyReview.prize, participationSteps: splitDraftLines(copyReview.rules) }
+    ? { ...job.copyDraft.document, summary: copyReview.summary, rules: copyReview.rules, prize: copyReview.prize, participationSteps: normalizeLines(splitDraftLines(copyReview.rules)) }
     : job?.copyDraft?.document;
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export function ActivityStudio({ identity }: { identity: { displayName: string; 
     if (!jobId || !copyReview || !job?.copyDraft) return;
     setError(undefined);
     const document = job.copyDraft.document;
-    const response = await fetch(`/api/jobs/${jobId}/confirm-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: { title: document.title, subtitle: document.subtitle, summary: copyReview.summary, highlights: document.highlights, participationSteps: splitDraftLines(copyReview.rules), rules: copyReview.rules, prize: copyReview.prize }, idempotencyKey: createClientUuid() }) });
+    const response = await fetch(`/api/jobs/${jobId}/confirm-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: { title: document.title, subtitle: document.subtitle, summary: copyReview.summary, highlights: document.highlights, participationSteps: normalizeLines(splitDraftLines(copyReview.rules)), rules: copyReview.rules, prize: copyReview.prize }, idempotencyKey: createClientUuid() }) });
     const payload = (await response.json()) as { error?: { message: string } };
     if (!response.ok) return setError(payload.error?.message ?? "确认文案失败");
     await refreshJob(jobId);
@@ -173,7 +173,7 @@ function Field({ className = "", label, value, onChange, required = false, type 
 function TextField({ className = "", label, value, onChange, placeholder = "" }: { className?: string; label: string; value: string; onChange: (value: string) => void; placeholder?: string }) { return <div className={`ead-field ${className}`}><label>{label}</label><textarea rows={3} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>; }
 function Preview({ form, copy, hasQr }: { form: FormState; copy?: PosterDocument; hasQr: boolean }) {
   const sessions = [form.session, ...(form.secondSession ? [form.secondSession] : [])];
-  const participation = copy?.participationSteps?.length ? copy.participationSteps : splitDraftLines(form.rules);
+  const participation = copy?.participationSteps?.length ? copy.participationSteps : normalizeLines(splitDraftLines(form.rules));
   return <div className="t01-preview"><img className="t01-preview-background" src="/brand/employee-activity-fallback.svg" alt="" /><div className="t01-preview-scrim t01-preview-title-scrim" /><div className="t01-preview-scrim t01-preview-info-scrim" /><header className="t01-preview-header"><img src="/brand/company-logo.svg" alt="九号公司" /><img src="/brand/administration-mark.svg" alt="行政" /></header><section className="t01-preview-title"><h3>{copy?.title || form.activityName || "活动主题"}</h3><p>{copy?.subtitle || form.supplement || "活动说明将在确认后显示"}</p></section><section className="t01-preview-info t01-preview-sessions"><h4>活动时间/地点</h4>{sessions.map((session, index) => <p key={`${index}-${session.date}`}>{session.date || "日期"} {session.time || "时间"} · {session.location || "地点"}</p>)}</section><section className="t01-preview-info t01-preview-audience"><h4>参与对象</h4><p>{form.audience || "参与对象"}</p></section><section className={`t01-preview-info t01-preview-participation ${hasQr ? "has-qr" : ""}`}><h4>参与方式</h4>{participation.slice(0, 2).map((step, index) => <p key={`${index}-${step}`}>{step}</p>)}</section>{hasQr && <aside className="t01-preview-qr"><b>QR</b><span>扫码报名</span></aside>}<footer className="t01-preview-footer"><span>九号行政</span><span>员工活动</span></footer></div>;
 }
 function validateForm(form: FormState) {
@@ -187,5 +187,5 @@ function validateForm(form: FormState) {
 }
 function normalizeForm(form: FormState): EmployeeActivityInput {
   const sessions = [form.session, ...(form.secondSession ? [form.secondSession] : [])];
-  return { outputFormat: "portrait_1080x1920", activityName: form.activityName.trim(), category: "team", themeKeywords: [], description: form.supplement.trim(), sessions: sessions.map((session, index) => ({ label: index === 0 ? "第一场" : "第二场", date: session.date, time: session.time.trim(), location: session.location.trim(), details: [] })), audience: form.audience.trim(), highlights: [], participationSteps: splitDraftLines(form.rules), notice: "", includeQr: Boolean(form.qrUrl), ctaLabel: "", qrPayload: form.qrUrl.trim(), contact: form.contact.trim(), visualIntent: "", deadline: form.deadline.trim(), rules: form.rules.trim(), prize: form.prize.trim() };
+  return { outputFormat: "portrait_1080x1920", activityName: form.activityName.trim(), category: "team", themeKeywords: [], description: form.supplement.trim(), sessions: sessions.map((session, index) => ({ label: index === 0 ? "第一场" : "第二场", date: session.date, time: session.time.trim(), location: session.location.trim(), details: [] })), audience: form.audience.trim(), highlights: [], participationSteps: normalizeLines(splitDraftLines(form.rules)), notice: "", includeQr: Boolean(form.qrUrl), ctaLabel: "", qrPayload: form.qrUrl.trim(), contact: form.contact.trim(), visualIntent: "", deadline: form.deadline.trim(), rules: form.rules.trim(), prize: form.prize.trim() };
 }
