@@ -31,6 +31,14 @@ export type CopyResult = {
 export async function generateCopy(
   input: EmployeeActivityInput
 ): Promise<CopyResult> {
+  if (!hasOptionalCopyInput(input)) {
+    return {
+      document: fallbackCopy(input),
+      provider: "demo-copy-empty-optional",
+      model: "none",
+      promptVersion: copyPromptVersion
+    };
+  }
   if (!configured.copy) {
     return {
       document: fallbackCopy(input),
@@ -66,8 +74,8 @@ export async function generateCopy(
                       titleMaxLength: 40,
                       subtitleMaxLength: 56,
                       summaryMaxLength: 150,
-                      highlights: "2 到 4 项，每项最多 22 字",
-                      participationSteps: "1 到 4 项，每项最多 52 字"
+                      highlights: "保留输入；为空时返回空数组",
+                      participationSteps: "保留输入；为空时返回空数组"
                     },
                     input
                   })
@@ -211,7 +219,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     outputFormat: input.outputFormat,
     category: input.category,
     title: input.activityName,
-    subtitle: "一起出发，把日常过得更有意思",
+    subtitle: "",
     summary: input.description,
     sessions: input.sessions,
     audience: input.audience,
@@ -236,4 +244,16 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
       notice: true
     }
   };
+}
+
+function hasOptionalCopyInput(input: EmployeeActivityInput) {
+  return [
+    input.description,
+    ...input.highlights,
+    ...input.participationSteps,
+    input.notice,
+    input.deadline,
+    input.rules,
+    input.prize
+  ].some((value) => value.trim().length > 0);
 }

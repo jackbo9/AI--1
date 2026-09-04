@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 import {
   confirmCopySchema,
   confirmedCampaignDocumentFromPoster,
-  legacyPortraitInputFromCampaignBrief,
+  employeeActivityInputSchema,
   posterDocumentSchema
 } from "@/contracts/poster";
-import { findJob, updateJob } from "@/server/job-store";
+import { preflightEmployeeActivity, PosterRenderError } from "@/templates/employee-activity";
+import { claimJobAction, findJob, JobActionError } from "@/server/job-store";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -61,7 +62,13 @@ export async function POST(
     );
   }
 
-  const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
+  const input = employeeActivityInputSchema.parse(job.input);
+  if (parsed.data.content.title !== input.activityName) {
+    return NextResponse.json(
+      { error: { code: "IMMUTABLE_FIELD_CHANGED", message: "活动主题属于锁定事实，不能在确认文案时改写" } },
+      { status: 409 }
+    );
+  }
   const document = posterDocumentSchema.parse({
     ...job.copyDraft.document,
     ...parsed.data.content,
@@ -73,27 +80,46 @@ export async function POST(
     ctaLabel: input.ctaLabel,
     qrPayload: input.qrPayload,
     contact: input.contact,
-    deadline: input.deadline,
-    rules: input.rules,
-    prize: input.prize
+    deadline: parsed.data.content.deadline,
+    rules: parsed.data.content.rules,
+    prize: parsed.data.content.prize,
+    // The editable supplement is the actual top explanation in T01. Keep
+    // summary as a compatibility alias for older preview/read paths.
+    subtitle: parsed.data.content.summary,
+    summary: parsed.data.content.summary
   });
   const confirmedDocument = confirmedCampaignDocumentFromPoster(
     document,
     crypto.randomUUID()
   );
+  try {
+    await preflightEmployeeActivity(document);
+  } catch (error) {
+    if (error instanceof PosterRenderError) {
+      return NextResponse.json({ error: { code: error.code, message: error.message } }, { status: 422 });
+    }
+    throw error;
+  }
 
-  await updateJob(jobId, (item) => ({
-    ...item,
-    actionIdempotencyKeys: [
-      ...(item.actionIdempotencyKeys ?? []),
-      parsed.data.idempotencyKey
-    ],
-    status: "READY_FOR_VISUAL_INPUT",
-    currentStep: "等待输入主视觉想法",
-    copyDraft: { ...item.copyDraft!, document },
-    confirmedDocument,
-    error: undefined
-  }));
+  try {
+    await claimJobAction(jobId, parsed.data.idempotencyKey, ["READY_FOR_COPY_REVIEW"], (item) => ({
+      ...item,
+      actionIdempotencyKeys: [
+        ...(item.actionIdempotencyKeys ?? []),
+        parsed.data.idempotencyKey
+      ],
+      status: "READY_FOR_VISUAL_INPUT",
+      currentStep: "等待输入主视觉想法",
+      copyDraft: { ...item.copyDraft!, document },
+      confirmedDocument,
+      error: undefined
+    }));
+  } catch (error) {
+    if (error instanceof JobActionError) {
+      return NextResponse.json({ error: { code: "COPY_NOT_READY", message: "当前文案已处理，请刷新任务后继续" } }, { status: 409 });
+    }
+    throw error;
+  }
   return NextResponse.json(
     { jobId, status: "READY_FOR_VISUAL_INPUT" },
     { status: 202 }

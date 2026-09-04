@@ -26,13 +26,13 @@ export async function GET(
   const belongsToArtifact = job.artifacts.some(
     (artifact) =>
       artifact.status === "READY" &&
-      artifact.validation.passed &&
+      (artifact.validation.exportAllowed ?? artifact.validation.passed) &&
       artifact.outputPath &&
       path.basename(artifact.outputPath) === filename
   );
   const belongsToLegacyVersion = job.versions.some(
     (version) =>
-      version.validation.passed &&
+      (version.validation.exportAllowed ?? version.validation.passed) &&
       path.basename(version.outputPath) === filename
   );
   if (!belongsToArtifact && !belongsToLegacyVersion) {

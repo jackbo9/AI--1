@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { configured, serverEnv } from "@/lib/env";
 import type { IllustrationBrief } from "@/contracts/poster";
+import { t01CompositionContract } from "./prompt-compiler";
 import {
   ProviderError,
   requestBytes,
@@ -29,17 +30,21 @@ const imageResponseSchema = z.object({
 });
 
 export function seedreamPrompt(brief: IllustrationBrief) {
-  return [
+  const prompt = [
     "【画面主体】" + brief.subject,
     "【行为】" + brief.action,
     "【场景】" + brief.setting,
-    "【版式构图】" + brief.composition,
+    "【用户创意构图】" + brief.composition,
     "【视觉风格】" + brief.style,
     "【色彩】" + brief.palette,
     "【氛围】" + brief.mood,
-    "【禁止】" + brief.negative
+    "【禁止】" + brief.negative,
+    "【版式构图】" + t01CompositionContract,
   ].join("\n");
+  return illustrationPromptSchema.parse(prompt);
 }
+
+export const illustrationPromptSchema = z.string().trim().min(80).max(2200);
 
 export async function generateIllustration(
   brief: IllustrationBrief,

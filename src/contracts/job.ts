@@ -18,6 +18,11 @@ export type OutputValidation = {
   exportAllowed?: boolean;
   strategy?: "strict" | "trial";
   messages: string[];
+  checks?: {
+    fontAndLogos: boolean;
+    capacity: boolean;
+    outputSize: boolean;
+  };
   readability?: T01ReadabilityReport;
 };
 

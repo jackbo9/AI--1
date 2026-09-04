@@ -10,10 +10,14 @@ import {
   briefFromConfirmedDescription,
   compileIllustrationBrief
 } from "@/providers/prompt-compiler";
-import { generateIllustration } from "@/providers/illustration-provider";
+import {
+  generateIllustration,
+  seedreamPrompt
+} from "@/providers/illustration-provider";
 import { ProviderError } from "@/providers/provider-error";
 import {
   renderEmployeeActivity,
+  preflightEmployeeActivity,
   employeeActivityTemplate,
   PosterRenderError
 } from "@/templates/employee-activity";
@@ -89,8 +93,7 @@ export async function runVisualRefinement(jobId: string, visualIntent: string) {
 
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
     const compiler = await compileIllustrationBrief({
-      category: input.category,
-      themeKeywords: input.themeKeywords,
+      ...input,
       visualIntent
     });
     const description = visualDescriptionFromBrief(compiler.brief);
@@ -138,11 +141,14 @@ export async function runVisualStage(
     }));
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
     const brief = briefFromConfirmedDescription(confirmedDescription, input);
+    // Validate the final provider payload before any paid image request.
+    seedreamPrompt(brief);
     const compiler = {
       brief,
       provider: "confirmed-visual",
       promptVersion: "visual-confirmed-v1"
     };
+    await preflightEmployeeActivity(document);
     const documentVersionId =
       job.confirmedDocument?.documentVersionId ??
       job.versions.at(-1)?.id ??
@@ -177,6 +183,11 @@ export async function runVisualStage(
         posterValidation.passed &&
         (rendered.readability.passed || serverEnv.READABILITY_MODE === "trial"),
       strategy: serverEnv.READABILITY_MODE,
+      checks: {
+        fontAndLogos: true,
+        capacity: true,
+        outputSize: true
+      },
       messages: [
         ...posterValidation.messages,
         "T01 可读性：" +
@@ -290,7 +301,7 @@ export async function runVisualStage(
 }
 
 function visualDescriptionFromBrief(brief: IllustrationBrief) {
-  return [
+  const description = [
     `主体：${brief.subject}`,
     `动作：${brief.action}`,
     `环境：${brief.setting}`,
@@ -298,6 +309,9 @@ function visualDescriptionFromBrief(brief: IllustrationBrief) {
     `风格：${brief.style}`,
     `氛围：${brief.mood}`
   ].join("\n");
+  // Preserve the editable creative description intact when labels would push
+  // it beyond the confirmation contract; never silently truncate it.
+  return description.length <= 420 ? description : brief.composition.trim();
 }
 
 async function failJob(jobId: string, error: unknown) {

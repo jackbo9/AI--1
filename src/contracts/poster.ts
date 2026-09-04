@@ -201,13 +201,21 @@ export const confirmCopySchema = z.object({
 });
 
 export const refineVisualSchema = z.object({
-  visualIntent: z.string().trim().min(10, "请至少描述 10 个字的画面想法").max(180),
+  visualIntent: z
+    .string()
+    .trim()
+    .min(10, "请至少描述 10 个字的画面想法")
+    .max(420, "画面想法最多 420 字，请保留创意并精简后重试"),
   idempotencyKey: z.string().uuid()
 });
 
 export const confirmVisualSchema = z.object({
   sourceDraftCreatedAt: z.string().datetime(),
-  description: z.string().trim().min(10, "请至少保留 10 个字的画面描述").max(420),
+  description: z
+    .string()
+    .trim()
+    .min(10, "请至少保留 10 个字的画面描述")
+    .max(420, "画面描述最多 420 字，请保留创意并精简后重试"),
   idempotencyKey: z.string().uuid()
 });
 
@@ -230,7 +238,7 @@ export type VisualPromptInput = Pick<
   EmployeeActivityInput,
   "category" | "themeKeywords" | "visualIntent"
 > &
-  Partial<Pick<EmployeeActivityInput, "activityName" | "sessions" | "contact" | "qrPayload">>;
+  Partial<Omit<EmployeeActivityInput, "outputFormat" | "category" | "themeKeywords" | "visualIntent">>;
 
 export function campaignBriefFromLegacyInput(
   input: EmployeeActivityInput

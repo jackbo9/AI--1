@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { regenerateAssetSchema } from "@/contracts/poster";
-import { findJob, updateJob } from "@/server/job-store";
+import { claimJobAction, findJob, JobActionError } from "@/server/job-store";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -57,32 +57,33 @@ export async function POST(
     );
   }
 
-  await updateJob(jobId, (item) => ({
-    ...item,
-    actionIdempotencyKeys: [
-      ...(item.actionIdempotencyKeys ?? []),
-      parsed.data.idempotencyKey
-    ],
-    status: "READY_FOR_VISUAL_INPUT",
-    currentStep: "请确认新的主视觉描述",
-    visualInput: {
-      originalIntent:
-        item.confirmedVisual?.description ??
-        item.visualInput?.originalIntent ??
-        "",
-      sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
-      createdAt: new Date().toISOString()
-    },
-    visualDraft: item.visualDraft
-      ? {
-          ...item.visualDraft,
-          createdAt: new Date().toISOString(),
-          sourceCopyCreatedAt: item.copyDraft?.createdAt ?? item.visualDraft.sourceCopyCreatedAt
-        }
-      : undefined,
-    confirmedVisual: undefined,
-    error: undefined
-  }));
+  try {
+    await claimJobAction(jobId, parsed.data.idempotencyKey, ["READY_FOR_REVIEW"], (item) => ({
+      ...item,
+      actionIdempotencyKeys: [
+        ...(item.actionIdempotencyKeys ?? []),
+        parsed.data.idempotencyKey
+      ],
+      status: "READY_FOR_VISUAL_INPUT",
+      currentStep: "请确认新的主视觉描述",
+      visualInput: {
+        originalIntent:
+          item.confirmedVisual?.description ??
+          item.visualInput?.originalIntent ??
+          "",
+        sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
+        createdAt: new Date().toISOString()
+      },
+      visualDraft: undefined,
+      confirmedVisual: undefined,
+      error: undefined
+    }));
+  } catch (error) {
+    if (error instanceof JobActionError) {
+      return NextResponse.json({ error: { code: "RESULT_NOT_READY", message: "当前任务尚不能重新生成主视觉" } }, { status: 409 });
+    }
+    throw error;
+  }
 
   return NextResponse.json(
     { jobId, status: "READY_FOR_VISUAL_INPUT" },

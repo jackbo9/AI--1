@@ -80,6 +80,44 @@ const fallbackPath = path.join(
   "employee-activity-fallback.svg"
 );
 
+/**
+ * Runs the same font/asset/layout checks as the renderer without creating an
+ * output file. Call this before an image-model request so an impossible T01
+ * document never consumes an image call.
+ */
+export async function preflightEmployeeActivity(document: PosterDocument) {
+  const [fallbackBytes, assets] = await Promise.all([
+    readFile(fallbackPath),
+    loadEmbeddedBrandAssets()
+  ]);
+  const fallbackData = dataUriForPath(fallbackPath, fallbackBytes);
+  const qr =
+    document.includeQr && document.qrPayload
+      ? await QRCode.toDataURL(document.qrPayload, {
+          width: 144,
+          margin: 0,
+          errorCorrectionLevel: "M"
+        })
+      : "";
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 1080, height: 1920 },
+      deviceScaleFactor: 1
+    });
+    await page.addInitScript("globalThis.__name = (target) => target;");
+    await page.goto("about:blank");
+    await page.setContent(
+      employeeActivityPosterMarkup(document, fallbackData, qr, assets),
+      { waitUntil: "load" }
+    );
+    await assertRenderReadiness(page);
+    await assertLayoutCapacity(page);
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function renderEmployeeActivity(
   document: PosterDocument,
   illustrationPath: string,

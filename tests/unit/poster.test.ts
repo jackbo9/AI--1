@@ -74,7 +74,8 @@ describe("employee activity v1.7 contract", () => {
     expect(JSON.stringify(brief)).not.toContain("上海总部一层多功能厅");
     expect(JSON.stringify(brief)).not.toContain("2026-09-18");
     expect(brief.negative).toContain("Logo");
-    expect(brief.composition).toBe(t01CompositionContract);
+    expect(brief.composition).not.toContain(t01CompositionContract);
+    expect(brief.composition).toContain("几位同事");
     expect(brief.style).toBe(t01VisualStyleContract);
   });
 

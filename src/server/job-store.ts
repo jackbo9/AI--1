@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import crypto from "node:crypto";
 import path from "node:path";
 import type {
   Artifact,
@@ -18,6 +19,7 @@ import { activityTemplateFamilyManifest } from "@/templates/activity-template-fa
 
 const dataDir = path.join(process.cwd(), "data");
 const jobFile = path.join(dataDir, "jobs.json");
+let mutationQueue: Promise<void> = Promise.resolve();
 
 type StoredGenerationJob = Omit<
   GenerationJob,
@@ -46,7 +48,19 @@ async function readJobs(): Promise<CampaignGenerationJob[]> {
 
 async function saveJobs(jobs: GenerationJob[]) {
   await mkdir(dataDir, { recursive: true });
-  await writeFile(jobFile, JSON.stringify(jobs, null, 2));
+  const temporaryFile = `${jobFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryFile, JSON.stringify(jobs, null, 2));
+    await rename(temporaryFile, jobFile);
+  } finally {
+    await unlink(temporaryFile).catch(() => undefined);
+  }
+}
+
+function withMutation<T>(operation: () => Promise<T>) {
+  const next = mutationQueue.then(operation, operation);
+  mutationQueue = next.then(() => undefined, () => undefined);
+  return next;
 }
 
 export function normalizeStoredJob(
@@ -176,24 +190,67 @@ export async function findByKey(key: string) {
 }
 
 export async function createJob(job: GenerationJob) {
-  const jobs = await readJobs();
-  const normalized = normalizeStoredJob(job);
-  jobs.unshift(normalized);
-  await saveJobs(jobs);
-  return normalized;
+  return withMutation(async () => {
+    const jobs = await readJobs();
+    const existing = jobs.find((item) => item.idempotencyKey === job.idempotencyKey);
+    if (existing) return existing;
+    const normalized = normalizeStoredJob(job);
+    jobs.unshift(normalized);
+    await saveJobs(jobs);
+    return normalized;
+  });
 }
 
 export async function updateJob(
   id: string,
   change: (job: CampaignGenerationJob) => GenerationJob
 ) {
-  const jobs = await readJobs();
-  const index = jobs.findIndex((job) => job.id === id);
-  if (index < 0) throw new Error("任务不存在");
-  jobs[index] = normalizeStoredJob({
-    ...change(jobs[index]),
-    updatedAt: new Date().toISOString()
+  return withMutation(async () => {
+    const jobs = await readJobs();
+    const index = jobs.findIndex((job) => job.id === id);
+    if (index < 0) throw new Error("任务不存在");
+    jobs[index] = normalizeStoredJob({
+      ...change(jobs[index]),
+      updatedAt: new Date().toISOString()
+    });
+    await saveJobs(jobs);
+    return jobs[index];
   });
-  await saveJobs(jobs);
-  return jobs[index];
+}
+
+export class JobActionError extends Error {
+  constructor(
+    readonly code: "ACTION_REUSED" | "ACTION_NOT_ALLOWED" | "STALE_ACTION",
+    message: string
+  ) {
+    super(message);
+    this.name = "JobActionError";
+  }
+}
+
+/** Claim an action and mutate its job in one serialized read-modify-write. */
+export async function claimJobAction(
+  id: string,
+  idempotencyKey: string,
+  allowedStatuses: string[],
+  change: (job: CampaignGenerationJob) => GenerationJob
+) {
+  return withMutation(async () => {
+    const jobs = await readJobs();
+    const index = jobs.findIndex((job) => job.id === id);
+    if (index < 0) throw new Error("任务不存在");
+    const current = jobs[index];
+    if (current.actionIdempotencyKeys?.includes(idempotencyKey)) {
+      throw new JobActionError("ACTION_REUSED", "该操作已提交");
+    }
+    if (!allowedStatuses.includes(current.status)) {
+      throw new JobActionError("ACTION_NOT_ALLOWED", "当前任务状态不允许执行该操作");
+    }
+    jobs[index] = normalizeStoredJob({
+      ...change(current),
+      updatedAt: new Date().toISOString()
+    });
+    await saveJobs(jobs);
+    return jobs[index];
+  });
 }
