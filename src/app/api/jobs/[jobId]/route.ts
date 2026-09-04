@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
 import { findJob } from "@/server/job-store";
+import { latestPortraitPreviewOutputPath } from "@/server/portrait-preview";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -13,7 +14,6 @@ export async function GET(_: Request, context: { params: Promise<{ jobId: string
   const job = await findJob((await context.params).jobId);
   if (!job) return NextResponse.json({ error: { code: "JOB_NOT_FOUND", message: "未找到该任务" } }, { status: 404 });
   if (job.userId !== identity.userId) return forbiddenResponse();
-  const artifact = [...job.artifacts].reverse().find(item => item.renderTargetId === "portrait_1080x1920" && item.status === "READY" && item.outputPath);
-  const outputPath = job.versions.at(-1)?.outputPath ?? artifact?.outputPath;
+  const outputPath = latestPortraitPreviewOutputPath(job);
   return NextResponse.json({ ...job, actionIdempotencyKeys: undefined, previewUrl: outputPath ? `/api/files/${path.basename(outputPath)}` : undefined });
 }
