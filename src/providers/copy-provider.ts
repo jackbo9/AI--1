@@ -2,14 +2,16 @@ import { z } from "zod";
 import { configured, serverEnv } from "@/lib/env";
 import {
   posterDocumentSchema,
+  t01PortraitSubtitleMaxCharacters,
+  textCharacterCount,
   type EmployeeActivityInput,
   type PosterDocument
 } from "@/contracts/poster";
 import { ProviderError, requestJson } from "./provider-error";
 
-const copyPromptVersion = "employee-activity-copy-v1-8";
+const copyPromptVersion = "employee-activity-copy-v1-9";
 const systemPrompt =
-  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、qrAssetId、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。title、outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。subtitle 是 T01 竖版海报实际展示的副标题：必须是一句自然、简洁的中文，不换行，不超过 40 个字（含标点），不得复述日期、时间、地点、联系人或报名方式。summary 仅保留补充信息，不替代 subtitle。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、qrAssetId、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
 
 const deepSeekResponseSchema = z.object({
   choices: z
@@ -69,10 +71,10 @@ export async function generateCopy(
                 {
                   role: "user",
                   content: JSON.stringify({
-                    task: "优化允许编辑的标题、副标题、摘要、活动亮点和参与方式，并返回完整 PosterDocumentV1_7。",
+                    task: "保留锁定标题；基于补充说明生成可直接排入 T01 竖版的短副标题，并返回完整 PosterDocumentV1_7。",
                     constraints: {
-                      titleMaxLength: 40,
-                      subtitleMaxLength: 56,
+                      title: "逐字保留 input.activityName，不改写、不扩写",
+                      subtitle: `T01 竖版实际展示字段；一句中文，不换行，最多 ${t01PortraitSubtitleMaxCharacters} 个字（含标点）；信息不足时返回空字符串，不要用长段落填充`,
                       summaryMaxLength: 150,
                       highlights: "保留输入；为空时返回空数组",
                       participationSteps: "保留输入；为空时返回空数组"
@@ -121,6 +123,7 @@ export async function generateCopy(
         prize: input.prize
       });
       assertImmutable(input, document);
+      assertT01CopyCapacity(document);
 
       return {
         document,
@@ -215,6 +218,25 @@ function assertImmutable(
     throw new ProviderError(
       "IMMUTABLE_FIELD_CHANGED",
       "重要活动信息被意外改写"
+    );
+  }
+}
+
+function assertT01CopyCapacity(document: PosterDocument) {
+  if (
+    textCharacterCount(document.subtitle) > t01PortraitSubtitleMaxCharacters
+  ) {
+    throw new ProviderError(
+      "LLM_INVALID_OUTPUT",
+      `文案服务返回的副标题超过 T01 模板 ${t01PortraitSubtitleMaxCharacters} 字限制`,
+      true
+    );
+  }
+  if (/[\r\n]/.test(document.subtitle)) {
+    throw new ProviderError(
+      "LLM_INVALID_OUTPUT",
+      "文案服务返回的副标题包含换行，无法直接排入 T01 模板",
+      true
     );
   }
 }

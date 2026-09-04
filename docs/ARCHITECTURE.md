@@ -180,3 +180,9 @@ interface RenderProvider {
 - 模型、Prompt 版本和用量。
 - 重试次数及是否使用降级资产。
 - 最终输出、校验结果与用户操作。
+
+## 9. 2026-09-04 云端 Demo 实际部署
+
+当前 Demo 已在阿里云杭州 ECS 上以单个 Next.js 进程运行，Nginx 终止 IP HTTPS，systemd 负责开机启动和失败重启。Web/异步任务仍共享进程；任务 JSON、上传图片、生成图片保存在 `/opt/ai-zhihui/shared/data`，没有引入 PostgreSQL、Redis 或新的模型供应商。
+
+应用仅监听本机 3000，公网 443 通过飞书会话保护业务 API；80 用于证书验证和跳转。Let's Encrypt IP 短期证书通过 systemd 定时检查续期。环境变量文件不进入源码，运行账户为 poster。飞书后台切换及实际用户验收尚未完成，详见 `deploy/README.md`；这仍是 Demo 部署，不等于生产基础设施或全部视觉回归已通过。

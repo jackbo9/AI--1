@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import {
   campaignBriefFromLegacyInput,
   createJobSchema,
-  posterDocumentSchema
+  posterDocumentSchema,
+  t01PortraitTitleMaxCharacters,
+  textCharacterCount
 } from "@/contracts/poster";
 import { createJob, findByKey } from "@/server/job-store";
 import { runJob } from "@/worker/run-job";
@@ -37,6 +39,20 @@ export async function POST(request: Request) {
         }
       },
       { status: 400 }
+    );
+  }
+  if (
+    textCharacterCount(parsed.data.input.activityName) >
+    t01PortraitTitleMaxCharacters
+  ) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "T01_TITLE_TOO_LONG",
+          message: `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，请在生成文案前精简主题`
+        }
+      },
+      { status: 422 }
     );
   }
 

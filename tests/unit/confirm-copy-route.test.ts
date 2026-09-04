@@ -17,11 +17,11 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(findJob).mockResolvedValue({ userId: "owner", input, status: "READY_FOR_COPY_REVIEW", copyDraft: { document } } as Awaited<ReturnType<typeof findJob>>);
 });
-it("confirms a 57–150 character supplement and retains the locked deadline", async () => {
+it("confirms the short subtitle and retains the longer supplement separately", async () => {
   const response = await POST(request(), { params: Promise.resolve({ jobId: "test" }) });
   expect(response.status).toBe(202);
   expect(await response.json()).toMatchObject({ status: "READY_FOR_VISUAL_INPUT" });
-  expect(preflightEmployeeActivity).toHaveBeenCalledWith(expect.objectContaining({ subtitle: "活动说明".repeat(20), deadline: "9月16日" }), { qrDataUri: undefined });
+  expect(preflightEmployeeActivity).toHaveBeenCalledWith(expect.objectContaining({ subtitle: "一起参加", summary: "活动说明".repeat(20), deadline: "9月16日" }), { qrDataUri: undefined });
   expect(claimJobAction).toHaveBeenCalledOnce();
 });
 it("returns a JSON error without committing when the renderer fails unexpectedly", async () => {

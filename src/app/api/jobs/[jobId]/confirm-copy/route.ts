@@ -112,9 +112,9 @@ async function confirmCopy(
     deadline: input.deadline,
     rules: parsed.data.content.rules,
     prize: parsed.data.content.prize,
-    // The editable supplement is the actual top explanation in T01. Keep
-    // summary as a compatibility alias for older preview/read paths.
-    subtitle: parsed.data.content.summary,
+    // `subtitle` is the T01 portrait slot and has its own capacity contract.
+    // Keep `summary` as supplemental copy for legacy/read paths.
+    subtitle: parsed.data.content.subtitle,
     summary: parsed.data.content.summary
   });
   const confirmedDocument = confirmedCampaignDocumentFromPoster(

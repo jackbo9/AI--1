@@ -2,7 +2,8 @@
 
 最后更新：2026-09-04
 视觉方案执行更新：前端不标注“体育赛事”，入口保持原样。确认文本作为生图唯一创意正文，新增 optional `confirmedDescription`/`visualStyleMode` 保留旧 brief 兼容；不再重置人物、色彩或截断复制动作/环境。优化草稿显示颜色，超过确认容量会明确失败，不退回仅 composition 丢失其他字段。`VISUAL_STYLE_MODE=editorial|legacy` 默认 editorial；legacy 只回退附加视觉指导，不恢复确认内容被覆盖。editorial 构图按设计要求左上留白、核心 X=68%–78%/Y=48%–58%，不加入旧版整片底部禁区。当前仍是一图裁切，不是自动扩图。
-确认文案空响应修复：旧 subtitle 56 字与 summary 150 字不一致，确认时复制导致未捕获校验异常；现统一为 150 字，实际模板容量仍由 preflight 检查。confirm-copy 顶层异常统一返回 JSON，截止时间保留原始输入。新增接口回归测试覆盖 80 字补充说明与渲染异常，当前 72 项测试、类型检查和 Lint 通过。
+T01 文案容量更新：填写页在调用 AI 前明确提示并限制竖版主题最多 5 个字，服务端也会在创建任务前返回 `T01_TITLE_TOO_LONG`，不消耗文案或图片调用。文案 Prompt v1.9 将 `subtitle` 定义为实际海报副标题，要求一句、不换行、最多 40 字；模型超限会被校验并重试。确认文案不再把 150 字 `summary` 复制进副标题，副标题和补充说明分别保存。confirm-copy 顶层异常统一返回 JSON，截止时间保留原始输入。
+UI 手工挑拣整合：未直接合并 `codex/ui-polish`（`f78e3e8`）；保留二维码上传和上述文案契约，接入其安全的视觉确认工作台与本地四步 Fixture。`/?fixture=1` 仅在 `AUTH_MODE=local` 下开放，不调用 API、模型或渲染器，也不伪造多候选图片/历史版本能力。当前本地已通过 TypeScript、Lint 和 75 项单元／接口测试；生产构建与云端验收以本次发布记录为准。
 二维码背景污染修复：T01 生图构图不再命名二维码、Logo、页脚等排版用途，只描述自然留白；图片接口固定追加禁止编码图案的约束。确认生图版本更新为 `visual-confirmed-v2-background-only`。二维码开关、链接和上传资产仍只用于确定性排版。已有背景内的假二维码不会因代码更新消失，需新生成或局部清理素材。
 当前分支：`codex/slice-demo`  
 当前阶段：T01 四规格模板及 Demo 接入已实现；当前运行方式、验证范围和限制以第 18–19 节为准，前文阶段记录保留为历史背景。
@@ -815,3 +816,13 @@ git clean
 - 新增 `POST /api/uploads/qr` 与 `GET /api/uploads/qr/:assetId`。上传内容仅允许 PNG/JPEG/WebP，服务端校验 magic bytes、5MB 上限及 96–8192px 尺寸，保存到忽略 Git 的 `data/uploads/qr/`；读取按资源 owner 校验且私有禁缓存。
 - `EmployeeActivityInput`、`PosterDocument` 和 immutable source 新增 `qrAssetId`。链接和上传图片必须二选一；生成前再次校验资源所有者，渲染时作为 Data URI 放入原有受控二维码槽，不交给 LLM 或图片模型。
 - 当前只验证图片文件与模板加载，尚未接入二维码内容解码／可扫码验证；设计评审仍需以实际扫码设备确认最终容错率和印刷规格。
+
+## 22. 2026-09-04 阿里云 Demo 部署
+
+已在杭州 ECS（Ubuntu 24.04、2 核 4 GiB）启动 `https://47.114.33.166`，Nginx + systemd 单进程运行，JSON/图片保存在 shared/data。飞书后台切换和真实用户端到端验收仍待完成；本机历史数据未迁移。IP HTTPS 证书签发、自动续期定时器及模拟续期已验证。
+
+服务器 TypeScript、Lint、72 项测试、生产构建通过，横版/Banner/长图 Fixture 渲染通过。竖版有一例 Linux 重复 PNG 严格哈希检查失败（首组仅 20 个文本区域像素不同），未放宽断言，不应宣称全部视觉回归通过。已更新 Playwright/PostCSS/Sharp/Vitest 的相关安全版本；更新后的完整 npm 审计因接口超时未完成。
+
+部署目录、飞书回调、权限、运维及剩余限制见 `deploy/README.md`。在真实飞书联调完成前，暂留获用户授权的部署公钥，完成后移除。
+
+云端登录修复：构建未加载飞书环境时，首页曾被预渲染为 local 身份。首页现声明 `force-dynamic`，按每次请求校验会话；工作区右上角也不再写死“本地演示”。避免将静态首页 200 当作飞书鉴权正确的证据。

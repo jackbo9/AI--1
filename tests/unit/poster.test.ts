@@ -4,7 +4,10 @@ import twoSessions from "../fixtures/employee-activity.two-sessions.json";
 import missing from "../fixtures/employee-activity.missing.json";
 import {
   editablePosterContentSchema,
-  employeeActivityInputSchema
+  employeeActivityInputSchema,
+  t01PortraitSubtitleMaxCharacters,
+  t01PortraitTitleMaxCharacters,
+  textCharacterCount
 } from "@/contracts/poster";
 import { generateCopy } from "@/providers/copy-provider";
 import { validatePoster } from "@/validation/poster-validation";
@@ -82,6 +85,16 @@ describe("employee activity v1.7 contract", () => {
     expect(parsed.title).toBe("秋日同行");
     expect("sessions" in parsed).toBe(false);
     expect("audience" in parsed).toBe(false);
+  });
+
+  it("enforces the T01 title and subtitle presentation budgets", () => {
+    expect(textCharacterCount("羽球挑战赛")).toBe(t01PortraitTitleMaxCharacters);
+    expect(
+      editablePosterContentSchema.safeParse({
+        title: "羽球挑战赛",
+        subtitle: "副".repeat(t01PortraitSubtitleMaxCharacters + 1)
+      }).success
+    ).toBe(false);
   });
 
   it("removes immutable details from the illustration brief", async () => {

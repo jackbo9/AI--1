@@ -1,0 +1,24 @@
+[Unit]
+Description=AI Zhihui demo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=poster
+Group=poster
+WorkingDirectory=/opt/ai-zhihui/current
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/ai-zhihui/shared/browser
+ExecStart=/usr/local/bin/node --env-file=/opt/ai-zhihui/shared/app.env node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=120
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

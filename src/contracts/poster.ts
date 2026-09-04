@@ -7,6 +7,14 @@ import {
 
 export const outputFormatSchema = z.literal("portrait_1080x1920");
 export const activityCategorySchema = z.enum(["team", "festival", "competition"]);
+// The portrait T01 title is a 120px, single-line slot. Keep this separate
+// from the broader stored-document schema so legacy jobs remain readable.
+export const t01PortraitTitleMaxCharacters = 5;
+export const t01PortraitSubtitleMaxCharacters = 40;
+
+export function textCharacterCount(value: string) {
+  return Array.from(value.trim()).length;
+}
 
 export const activitySessionSchema = z.object({
   label: z.string().trim().min(1, "请填写场次名称").max(24),
@@ -165,7 +173,14 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
 
 export const editablePosterContentSchema = z.object({
   title: z.string().trim().min(1).max(40),
-  subtitle: z.string().trim().max(150),
+  subtitle: z
+    .string()
+    .trim()
+    .max(
+      t01PortraitSubtitleMaxCharacters,
+      `副标题最多 ${t01PortraitSubtitleMaxCharacters} 个字，请精简后重试`
+    )
+    .refine((value) => !/[\r\n]/.test(value), "副标题不能换行"),
   summary: z.string().trim().max(150).default(""),
   highlights: z.array(z.string().trim().min(1).max(22)).max(4).default([]),
   participationSteps: z.array(z.string().trim().min(1).max(52)).max(4).default([]),
