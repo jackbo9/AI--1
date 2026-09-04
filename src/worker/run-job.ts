@@ -68,7 +68,7 @@ export async function runVisualRefinement(jobId: string, visualIntent: string) {
     if (
       !job ||
       !job.campaignBrief ||
-      !["READY_FOR_VISUAL_INPUT", "READY_FOR_VISUAL_REVIEW"].includes(job.status)
+      !["READY_FOR_VISUAL_INPUT", "REFINING_VISUAL", "READY_FOR_VISUAL_REVIEW"].includes(job.status)
     ) {
       return;
     }

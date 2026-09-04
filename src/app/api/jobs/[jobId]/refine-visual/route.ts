@@ -38,6 +38,11 @@ export async function POST(
     actionIdempotencyKeys: [...(item.actionIdempotencyKeys ?? []), parsed.data.idempotencyKey],
     status: "REFINING_VISUAL",
     currentStep: "准备优化画面描述",
+    visualInput: {
+      originalIntent: parsed.data.visualIntent,
+      sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
+      createdAt: new Date().toISOString()
+    },
     error: undefined
   }));
   void runVisualRefinement(jobId, parsed.data.visualIntent);
