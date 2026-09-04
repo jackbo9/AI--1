@@ -7,6 +7,7 @@ import {
   requireApiIdentity,
   unauthorizedResponse
 } from "@/server/auth";
+import { readJsonRequest } from "@/server/request-json";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,14 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
-  const parsed = refineVisualSchema.safeParse(await request.json());
+  const body = await readJsonRequest(request);
+  if (!body.ok) {
+    return NextResponse.json(
+      { error: { code: "INVALID_VISUAL_INPUT", message: body.message } },
+      { status: 400 }
+    );
+  }
+  const parsed = refineVisualSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "INVALID_VISUAL_INPUT", message: parsed.error.issues[0]?.message ?? "画面描述有误" } },

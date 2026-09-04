@@ -58,7 +58,9 @@ describe("employee activity template family manifest", () => {
     expect(banner.modules).toEqual([
       "brand_header",
       "title",
-      "primary_session",
+      "all_sessions",
+      "audience",
+      "subtitle",
       "footer"
     ]);
   });

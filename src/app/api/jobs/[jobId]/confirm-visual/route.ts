@@ -7,6 +7,7 @@ import {
   requireApiIdentity,
   unauthorizedResponse
 } from "@/server/auth";
+import { readJsonRequest } from "@/server/request-json";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,19 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
-  const parsed = confirmVisualSchema.safeParse(await request.json());
+  const body = await readJsonRequest(request);
+  if (!body.ok) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "INVALID_VISUAL_CONFIRMATION",
+          message: body.message
+        }
+      },
+      { status: 400 }
+    );
+  }
+  const parsed = confirmVisualSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "INVALID_VISUAL_CONFIRMATION", message: parsed.error.issues[0]?.message ?? "主视觉描述有误" } },

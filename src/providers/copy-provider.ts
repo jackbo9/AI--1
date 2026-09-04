@@ -92,6 +92,12 @@ export async function generateCopy(
                 "LLM_REQUEST_FAILED",
                 "文案服务暂时不可用",
                 true
+              ),
+            invalidResponse: () =>
+              new ProviderError(
+                "LLM_INVALID_OUTPUT",
+                "文案服务返回了空响应或非 JSON 数据",
+                true
               )
           }
         )

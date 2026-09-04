@@ -26,6 +26,7 @@ type RequestOptions = {
   retries?: number;
   classify: (status: number) => ProviderError;
   networkError: () => ProviderError;
+  invalidResponse?: () => ProviderError;
 };
 
 const wait = (milliseconds: number) =>
@@ -50,7 +51,25 @@ export async function requestJson(
         if (!error.retryable || attempt === retries) throw error;
         lastError = error;
       } else {
-        return (await response.json()) as unknown;
+        const text = await response.text();
+        const invalidResponse =
+          options.invalidResponse?.() ?? options.networkError();
+
+        if (!text.trim()) {
+          if (!invalidResponse.retryable || attempt === retries) {
+            throw invalidResponse;
+          }
+          lastError = invalidResponse;
+        } else {
+          try {
+            return JSON.parse(text) as unknown;
+          } catch {
+            if (!invalidResponse.retryable || attempt === retries) {
+              throw invalidResponse;
+            }
+            lastError = invalidResponse;
+          }
+        }
       }
     } catch (error) {
       if (error instanceof ProviderError) {

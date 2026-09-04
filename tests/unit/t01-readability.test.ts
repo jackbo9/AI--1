@@ -21,8 +21,8 @@ function analysis(
 }
 
 const passingDark = {
-  treatment: "dark_text_light_scrim" as const,
-  scrimStrength: 0.2 as const,
+  treatment: "dark_text_clean" as const,
+  scrimStrength: 0 as const,
   passRate: 1,
   p05Contrast: 5,
   minimumContrast: 4.5,
@@ -30,7 +30,7 @@ const passingDark = {
 };
 
 const passingLight = {
-  treatment: "light_text_dark_scrim" as const,
+  treatment: "light_text_clean" as const,
   scrimStrength: 0 as const,
   passRate: 1,
   p05Contrast: 6,
@@ -48,7 +48,7 @@ describe("T01 readability treatment", () => {
     ).toBe(false);
   });
 
-  it("uses the lowest passing light scrim for a mid-light textured region", () => {
+  it("only selects clean text treatments without a background scrim", () => {
     const selection = selectT01Treatments(
       ["header", "title", "sessions", "audience", "participation", "qr", "footer"].map(
         (id) =>
@@ -67,13 +67,13 @@ describe("T01 readability treatment", () => {
       )
     );
     expect(selection?.sessions).toMatchObject({
-      treatment: "dark_text_light_scrim",
-      scrimStrength: 0.2,
+      treatment: "dark_text_clean",
+      scrimStrength: 0,
       textTone: "dark"
     });
   });
 
-  it("selects the formal inverse company logo for dark header treatment", () => {
+  it("selects the formal inverse company logo for a clean light-text header", () => {
     const selections = selectT01Treatments(
       ["header", "title", "sessions", "audience", "participation", "qr", "footer"].map(
         (id) =>

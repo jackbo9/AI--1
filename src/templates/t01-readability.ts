@@ -1,12 +1,8 @@
-export const T01_SCRIM_STRENGTHS = [0, 0.12, 0.2, 0.28, 0.36] as const;
-
-export type T01ScrimStrength = (typeof T01_SCRIM_STRENGTHS)[number];
+export type T01ScrimStrength = 0;
 
 export const T01_TEXT_TREATMENTS = [
   "dark_text_clean",
-  "dark_text_light_scrim",
-  "light_text_dark_scrim",
-  "fallback_background"
+  "light_text_clean"
 ] as const;
 
 export type T01TextTreatment = (typeof T01_TEXT_TREATMENTS)[number];
@@ -57,7 +53,7 @@ export type T01ContrastCheck = {
 };
 
 export type T01CandidateMeasurement = T01ContrastCheck & {
-  treatment: Exclude<T01TextTreatment, "fallback_background">;
+  treatment: T01TextTreatment;
   scrimStrength: T01ScrimStrength;
 };
 
@@ -70,7 +66,7 @@ export type T01RegionAnalysis = {
 };
 
 export type T01ZoneTreatment = {
-  treatment: Exclude<T01TextTreatment, "fallback_background">;
+  treatment: T01TextTreatment;
   textTone: T01TextTone;
   scrimStrength: T01ScrimStrength;
   bounds: T01Rect;
@@ -78,19 +74,13 @@ export type T01ZoneTreatment = {
 
 export type T01ReadabilityReport = {
   contractVersion: "t01-readability-v1";
-  backgroundMode: "input" | "fallback";
-  fallbackReason?: "no_input_treatment_passed";
+  backgroundMode: "input";
   logoVariant: T01LogoVariant;
   treatments: Record<T01ReadabilityRegion, T01ZoneTreatment>;
   initialAnalysis: T01RegionAnalysis[];
   finalAnalysis: T01RegionAnalysis[];
   passed: boolean;
 };
-
-export type T01ScrimMask = Pick<
-  T01ZoneTreatment,
-  "treatment" | "scrimStrength" | "bounds"
->;
 
 const PASS_RATE = 0.95;
 
@@ -109,10 +99,10 @@ export function selectZoneTreatment(
     analysis.luminance.p50 < 0.18
       ? [
           ...analysis.candidates.filter(
-            (item) => item.treatment === "light_text_dark_scrim"
+            (item) => item.treatment === "light_text_clean"
           ),
           ...analysis.candidates.filter(
-            (item) => item.treatment !== "light_text_dark_scrim"
+            (item) => item.treatment !== "light_text_clean"
           )
         ]
       : analysis.candidates;
@@ -121,7 +111,7 @@ export function selectZoneTreatment(
 
   return {
     treatment: candidate.treatment,
-    textTone: candidate.treatment === "light_text_dark_scrim" ? "light" : "dark",
+    textTone: candidate.treatment === "light_text_clean" ? "light" : "dark",
     scrimStrength: candidate.scrimStrength,
     bounds: analysis.bounds
   };
@@ -143,7 +133,7 @@ function selectZoneTreatmentWithWarnings(
   analysis: T01RegionAnalysis
 ): T01ZoneTreatment | undefined {
   const candidates = analysis.candidates
-    .filter((candidate) => candidate.scrimStrength === 0 || candidate.scrimStrength === 0.12)
+    .filter((candidate) => candidate.scrimStrength === 0)
     .sort((left, right) => {
       if (left.passed !== right.passed) return left.passed ? -1 : 1;
       if (right.p05Contrast !== left.p05Contrast) return right.p05Contrast - left.p05Contrast;
@@ -153,7 +143,7 @@ function selectZoneTreatmentWithWarnings(
   if (!candidate) return undefined;
   return {
     treatment: candidate.treatment,
-    textTone: candidate.treatment === "light_text_dark_scrim" ? "light" : "dark",
+    textTone: candidate.treatment === "light_text_clean" ? "light" : "dark",
     scrimStrength: candidate.scrimStrength,
     bounds: analysis.bounds
   };
@@ -163,49 +153,4 @@ export function logoVariantForTreatment(
   treatments: Record<T01ReadabilityRegion, T01ZoneTreatment>
 ): T01LogoVariant {
   return treatments.header.textTone === "light" ? "inverse" : "primary";
-}
-
-export function t01ScrimMasks(
-  treatments: Record<T01ReadabilityRegion, T01ZoneTreatment>
-): T01ScrimMask[] {
-  const masks: T01ScrimMask[] = [];
-  const sessionTreatment = treatments.sessions;
-  const audienceTreatment = treatments.audience;
-  const mergeInfo =
-    sessionTreatment.treatment === audienceTreatment.treatment &&
-    sessionTreatment.scrimStrength === audienceTreatment.scrimStrength &&
-    sessionTreatment.scrimStrength > 0;
-
-  if (mergeInfo) {
-    masks.push({
-      treatment: sessionTreatment.treatment,
-      scrimStrength: sessionTreatment.scrimStrength,
-      bounds: {
-        x: Math.min(sessionTreatment.bounds.x, audienceTreatment.bounds.x),
-        y: Math.min(sessionTreatment.bounds.y, audienceTreatment.bounds.y),
-        width: Math.max(
-          sessionTreatment.bounds.x + sessionTreatment.bounds.width,
-          audienceTreatment.bounds.x + audienceTreatment.bounds.width
-        ) - Math.min(sessionTreatment.bounds.x, audienceTreatment.bounds.x),
-        height:
-          Math.max(
-            sessionTreatment.bounds.y + sessionTreatment.bounds.height,
-            audienceTreatment.bounds.y + audienceTreatment.bounds.height
-          ) - Math.min(sessionTreatment.bounds.y, audienceTreatment.bounds.y)
-      }
-    });
-  }
-
-  (Object.keys(treatments) as T01ReadabilityRegion[]).forEach((region) => {
-    if (mergeInfo && (region === "sessions" || region === "audience")) return;
-    const treatment = treatments[region];
-    if (treatment.scrimStrength) {
-      masks.push({
-        treatment: treatment.treatment,
-        scrimStrength: treatment.scrimStrength,
-        bounds: treatment.bounds
-      });
-    }
-  });
-  return masks;
 }

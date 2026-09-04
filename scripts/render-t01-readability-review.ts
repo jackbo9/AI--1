@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { campaignBundleFixtures } from "../tests/fixtures/campaign-bundle";
 import type { PosterDocument } from "../src/contracts/poster";
-import { renderEmployeeActivity } from "../src/templates/employee-activity";
+import {
+  PosterRenderError,
+  renderEmployeeActivity
+} from "../src/templates/employee-activity";
 
 const document = (() => {
   const source = campaignBundleFixtures.find((fixture) => fixture.id === "normal");
@@ -49,7 +52,7 @@ const fixtureRoot = path.join(
 type ReadabilityFixture = {
   id: string;
   file: string;
-  fallback?: boolean;
+  expectWarning?: boolean;
   absolute?: boolean;
 };
 
@@ -59,7 +62,7 @@ const cases: readonly ReadabilityFixture[] = [
   { id: "autumn-high-texture", file: "autumn-high-texture.svg" },
   { id: "light-title-dark-copy", file: "light-title-dark-copy.svg" },
   { id: "dark-title-light-copy", file: "dark-title-light-copy.svg" },
-  { id: "checker-fallback", file: "checker-fallback.svg", fallback: true },
+  { id: "checker-warning", file: "checker-fallback.svg", expectWarning: true },
   {
     id: "default-fallback",
     file: path.join(
@@ -85,25 +88,37 @@ async function renderCase(item: ReadabilityFixture) {
   const first = await renderEmployeeActivity(
     document,
     source,
-    "t01-readability-" + item.id
+    "t01-readability-" + item.id,
+    { readabilityMode: "trial" }
   );
   const second = await renderEmployeeActivity(
     document,
     source,
-    "t01-readability-" + item.id + "-repeat"
+    "t01-readability-" + item.id + "-repeat",
+    { readabilityMode: "trial" }
   );
   const [firstBytes, secondBytes] = await Promise.all([
     readFile(first.outputPath),
     readFile(second.outputPath)
   ]);
-  if (!first.readability.passed || !second.readability.passed) {
-    throw new Error(item.id + ": 对比度发布门未通过");
+  if (first.readability.backgroundMode !== "input") {
+    throw new Error(item.id + ": 不应自动替换背景");
   }
   if (digest(firstBytes) !== digest(secondBytes)) {
     throw new Error(item.id + ": 重复渲染的 PNG 不一致");
   }
-  if (item.fallback && first.readability.backgroundMode !== "fallback") {
-    throw new Error(item.id + ": 未触发品牌降级背景");
+  if (
+    Object.values(first.readability.treatments).some(
+      (treatment) => treatment.scrimStrength !== 0
+    )
+  ) {
+    throw new Error(item.id + ": 不应添加背景遮罩");
+  }
+  if (
+    item.expectWarning !== undefined &&
+    item.expectWarning !== !first.readability.passed
+  ) {
+    throw new Error(item.id + ": 可读性警告结果不符合 Fixture 预期");
   }
   const details = Object.entries(first.readability.treatments)
     .map(
@@ -132,6 +147,24 @@ async function renderCase(item: ReadabilityFixture) {
 async function main() {
   for (const item of cases) {
     await renderCase(item);
+  }
+  const checker = cases.find((item) => item.expectWarning);
+  if (!checker) throw new Error("缺少严格模式失败 Fixture");
+  try {
+    await renderEmployeeActivity(
+      document,
+      fixturePath(checker),
+      "t01-readability-strict-rejection"
+    );
+    throw new Error("严格模式未阻止不可读背景");
+  } catch (error) {
+    if (
+      !(error instanceof PosterRenderError) ||
+      error.code !== "brand.readability.contrast_failed"
+    ) {
+      throw error;
+    }
+    console.log("PASS checker-warning strict=blocked");
   }
 }
 

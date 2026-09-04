@@ -13,6 +13,7 @@ import {
   requireApiIdentity,
   unauthorizedResponse
 } from "@/server/auth";
+import { readJsonRequest } from "@/server/request-json";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,14 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
-  const parsed = confirmCopySchema.safeParse(await request.json());
+  const body = await readJsonRequest(request);
+  if (!body.ok) {
+    return NextResponse.json(
+      { error: { code: "INVALID_COPY", message: body.message } },
+      { status: 400 }
+    );
+  }
+  const parsed = confirmCopySchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       {

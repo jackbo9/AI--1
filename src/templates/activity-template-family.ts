@@ -53,6 +53,9 @@ export const activityModuleSchema = z.enum([
   "primary_session",
   "all_sessions",
   "audience",
+  "deadline",
+  "contact",
+  "rules",
   "highlights",
   "participation",
   "notice",
@@ -72,7 +75,7 @@ export const renderTargetManifestSchema = z.object({
   safeArea: pixelInsetsSchema,
   titleLevel: z.enum(["H0", "H1"]),
   modules: z.array(activityModuleSchema),
-  backgroundMode: z.literal("full_bleed"),
+  backgroundMode: z.enum(["full_bleed", "image_slot"]),
   focalArea: normalizedRectSchema,
   textSafeArea: normalizedRectSchema,
   logoZones: z.object({
@@ -80,6 +83,7 @@ export const renderTargetManifestSchema = z.object({
     administration: pixelRectSchema
   }),
   qrZone: pixelRectSchema.nullable(),
+  qrPlacement: z.enum(["fixed", "content_flow"]).optional(),
   overflow: z.object({
     titleMaxLines: z.number().int().min(1).max(3),
     titleStrategy: z.literal("block_export"),
@@ -159,7 +163,7 @@ export const activityTemplateFamilyManifest =
       landscape_1920x1080: {
         id: "landscape_1920x1080",
         templateId: "employee-activity-landscape",
-        templateVersion: "1.0.0-draft",
+        templateVersion: "t01-figma-2026-09-04-v1",
         dimensions: {
           width: 1920,
           heightMode: "fixed",
@@ -171,17 +175,16 @@ export const activityTemplateFamilyManifest =
           "brand_header",
           "title",
           "subtitle",
-          "summary",
-          "primary_session",
-          "highlights",
-          "cta",
+          "all_sessions",
+          "audience",
+          "rules",
           "footer"
         ],
         backgroundMode: "full_bleed",
         focalArea: { x: 0.52, y: 0.18, width: 0.43, height: 0.65 },
         textSafeArea: { x: 0.038, y: 0.2, width: 0.47, height: 0.62 },
         logoZones: {
-          company: { x: 72, y: 80, width: 280, height: 82.5179 },
+          company: { x: 81, y: 82, width: 280, height: 82.5179 },
           administration: {
             x: 1771.5,
             y: 83.0088,
@@ -191,20 +194,20 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: null,
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 1,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/Landscape/1920×1080.svg",
           note:
-            "双标识按 SVG 原始坐标测量；横版只投影核心事实，不通过整体缩字承载完整规则。"
+            "Figma 191:3112 / 案例 191:3677：单行120px标题，描述、全部场次、参与对象与规则；超出固定容量阻止导出。"
         }
       },
       banner_2227x950: {
         id: "banner_2227x950",
         templateId: "employee-activity-banner",
-        templateVersion: "1.0.0-draft",
+        templateVersion: "t01-figma-2026-09-04-v1",
         dimensions: {
           width: 2227,
           heightMode: "fixed",
@@ -215,14 +218,16 @@ export const activityTemplateFamilyManifest =
         modules: [
           "brand_header",
           "title",
-          "primary_session",
+          "all_sessions",
+          "audience",
+          "subtitle",
           "footer"
         ],
         backgroundMode: "full_bleed",
         focalArea: { x: 0.58, y: 0.15, width: 0.37, height: 0.7 },
         textSafeArea: { x: 0.036, y: 0.22, width: 0.48, height: 0.58 },
         logoZones: {
-          company: { x: 72, y: 80, width: 280, height: 82.5179 },
+          company: { x: 81, y: 82, width: 280, height: 82.5179 },
           administration: {
             x: 2078.5,
             y: 83.0088,
@@ -232,20 +237,20 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: null,
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 1,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/Banner/2227×950.svg",
           note:
-            "双标识按 SVG 原始坐标测量；Banner 只保留主题与关键时间信息。"
+            "Figma 191:3138 / 案例 191:3708：单行120px标题、两行核心事实及四行描述；无二维码和详细规则槽位。"
         }
       },
       longform_1080xAuto: {
         id: "longform_1080xAuto",
         templateId: "employee-activity-longform",
-        templateVersion: "1.0.0-draft",
+        templateVersion: "t01-figma-2026-09-04-v1",
         dimensions: {
           width: 1080,
           heightMode: "auto",
@@ -253,13 +258,17 @@ export const activityTemplateFamilyManifest =
           maxHeight: 12000
         },
         safeArea: { top: 82, right: 72, bottom: 72, left: 72 },
-        titleLevel: "H1",
+        titleLevel: "H0",
         modules: [
           "brand_header",
           "title",
           "subtitle",
           "summary",
           "all_sessions",
+          "audience",
+          "deadline",
+          "contact",
+          "rules",
           "highlights",
           "participation",
           "notice",
@@ -267,7 +276,7 @@ export const activityTemplateFamilyManifest =
           "qr",
           "footer"
         ],
-        backgroundMode: "full_bleed",
+        backgroundMode: "image_slot",
         focalArea: { x: 0.42, y: 0.06, width: 0.52, height: 0.34 },
         textSafeArea: { x: 0.067, y: 0.08, width: 0.52, height: 0.34 },
         logoZones: {
@@ -279,7 +288,8 @@ export const activityTemplateFamilyManifest =
             height: 76.5001
           }
         },
-        qrZone: { x: 97, y: 2563, width: 238, height: 238 },
+        qrZone: { x: 96, y: 2562, width: 240, height: 240 },
+        qrPlacement: "content_flow",
         overflow: {
           titleMaxLines: 3,
           titleStrategy: "block_export",
@@ -288,7 +298,7 @@ export const activityTemplateFamilyManifest =
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/Longform/1080×3000.svg",
           note:
-            "双标识、内容卡和二维码区按 3000px 设计样例测量；运行时高度必须按内容自动计算，不能固定为 3000px。"
+            "Figma 191:3158：独立936×780图片槽、120px标题、信息卡及规则卡；二维码坐标仅为3000px样例参考，运行时随内容流布局，缺失组隐藏。"
         }
       }
     }

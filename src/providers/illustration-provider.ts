@@ -78,14 +78,20 @@ export async function generateIllustration(
           timeoutMs: 90_000,
           retries: 1,
           classify: classifyImageStatus,
-          networkError: () =>
-            new ProviderError(
-              "IMAGE_GENERATION_FAILED",
-              "主视觉生成服务暂时不可用",
-              true
-            )
-        }
-      )
+            networkError: () =>
+              new ProviderError(
+                "IMAGE_GENERATION_FAILED",
+                "主视觉生成服务暂时不可用",
+                true
+              ),
+            invalidResponse: () =>
+              new ProviderError(
+                "IMAGE_GENERATION_FAILED",
+                "主视觉服务返回了空响应或非 JSON 数据",
+                true
+              )
+          }
+        )
     );
 
     const image = payload.data[0];

@@ -117,7 +117,6 @@ async function main() {
         ),
         poster: path.basename(rendered.outputPath),
         backgroundMode: rendered.readability.backgroundMode,
-        fallbackReason: rendered.readability.fallbackReason ?? null,
         treatments
       },
       null,

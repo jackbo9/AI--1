@@ -206,14 +206,8 @@ export async function runVisualStage(
         "T01 对比度发布门未通过，Artifact 不会进入 READY。"
       );
     }
-    const finalAssetMode =
-      rendered.readability.backgroundMode === "fallback"
-        ? "fallback"
-        : illustration.mode;
-    const finalAssetDetail =
-      rendered.readability.backgroundMode === "fallback"
-        ? "Seedream 主视觉已生成，但未通过 T01 图文可读性门禁；成品已改用极简品牌降级背景。"
-        : illustration.detail;
+    const finalAssetMode = illustration.mode;
+    const finalAssetDetail = illustration.detail;
     const artifactId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const portraitTarget =

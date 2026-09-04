@@ -6,6 +6,7 @@ import {
   requireApiIdentity,
   unauthorizedResponse
 } from "@/server/auth";
+import { readJsonRequest } from "@/server/request-json";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,14 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
-  const parsed = regenerateAssetSchema.safeParse(await request.json());
+  const body = await readJsonRequest(request);
+  if (!body.ok) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: body.message } },
+      { status: 400 }
+    );
+  }
+  const parsed = regenerateAssetSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       {

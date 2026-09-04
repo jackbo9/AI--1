@@ -72,6 +72,36 @@ describe("provider request boundary", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("maps an empty successful response to a stable provider error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      requestJson(
+        "https://provider.invalid/test",
+        { method: "POST" },
+        {
+          timeoutMs: 1_000,
+          retries: 0,
+          classify: () =>
+            new ProviderError("LLM_REQUEST_FAILED", "请求失败", false),
+          networkError: () =>
+            new ProviderError("LLM_REQUEST_FAILED", "网络失败", true),
+          invalidResponse: () =>
+            new ProviderError(
+              "LLM_INVALID_OUTPUT",
+              "服务返回空响应或非 JSON 数据",
+              false
+            )
+        }
+      )
+    ).rejects.toMatchObject({
+      code: "LLM_INVALID_OUTPUT",
+      message: "服务返回空响应或非 JSON 数据"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps downloaded image extensions consistent with their bytes", () => {
     expect(
       detectImageFormat(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))

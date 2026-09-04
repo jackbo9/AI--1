@@ -6,11 +6,9 @@ import type { PosterDocument } from "@/contracts/poster";
 import { brandHeaderMarkup, loadEmbeddedBrandAssets } from "./brand-header";
 import {
   T01_READABILITY_REGIONS,
-  T01_SCRIM_STRENGTHS,
   contrastPasses,
   logoVariantForTreatment,
   selectT01Treatments,
-  t01ScrimMasks,
   type T01CandidateMeasurement,
   type T01ReadabilityReport,
   type T01RegionAnalysis,
@@ -73,7 +71,7 @@ export type EmployeeActivityRenderOptions = {
   readabilityMode?: "strict" | "trial";
 };
 
-const fallbackPath = path.join(
+const layoutReferenceBackgroundPath = path.join(
   process.cwd(),
   "public",
   "brand",
@@ -87,10 +85,10 @@ const fallbackPath = path.join(
  */
 export async function preflightEmployeeActivity(document: PosterDocument) {
   const [fallbackBytes, assets] = await Promise.all([
-    readFile(fallbackPath),
+    readFile(layoutReferenceBackgroundPath),
     loadEmbeddedBrandAssets()
   ]);
-  const fallbackData = dataUriForPath(fallbackPath, fallbackBytes);
+  const fallbackData = dataUriForPath(layoutReferenceBackgroundPath, fallbackBytes);
   const qr =
     document.includeQr && document.qrPayload
       ? await QRCode.toDataURL(document.qrPayload, {
@@ -124,13 +122,11 @@ export async function renderEmployeeActivity(
   jobId: string,
   options: EmployeeActivityRenderOptions = {}
 ): Promise<EmployeeActivityRenderResult> {
-  const [imageBytes, fallbackBytes, assets] = await Promise.all([
+  const [imageBytes, assets] = await Promise.all([
     readFile(illustrationPath),
-    readFile(fallbackPath),
     loadEmbeddedBrandAssets()
   ]);
   const imageData = dataUriForPath(illustrationPath, imageBytes);
-  const fallbackData = dataUriForPath(fallbackPath, fallbackBytes);
   const qr =
     document.includeQr && document.qrPayload
       ? await QRCode.toDataURL(document.qrPayload, {
@@ -164,30 +160,15 @@ export async function renderEmployeeActivity(
 
     const initialAnalysis = await analyzeBackground(page);
     const readabilityMode = options.readabilityMode ?? "strict";
-    let treatments = selectT01Treatments(initialAnalysis, {
+    const treatments = selectT01Treatments(initialAnalysis, {
       allowWarnings: readabilityMode === "trial"
     });
-    let backgroundMode: "input" | "fallback" = "input";
-    let fallbackReason: "no_input_treatment_passed" | undefined;
 
     if (!treatments && readabilityMode === "strict") {
-      if (illustrationPath === fallbackPath) {
-        throw new PosterRenderError(
-          "brand.readability.contrast_failed",
-          "品牌降级背景仍无法满足 T01 对比度发布门，已阻止导出。"
-        );
-      }
-      await replaceBackground(page, fallbackData);
-      const fallbackAnalysis = await analyzeBackground(page);
-      treatments = selectT01Treatments(fallbackAnalysis);
-      backgroundMode = "fallback";
-      fallbackReason = "no_input_treatment_passed";
-      if (!treatments) {
-        throw new PosterRenderError(
-          "brand.readability.contrast_failed",
-          "原图与品牌降级背景均无法满足 T01 对比度发布门，已阻止导出。"
-        );
-      }
+      throw new PosterRenderError(
+        "brand.readability.contrast_failed",
+        "原始背景未通过 T01 对比度发布门；当前不替换背景也不添加遮罩，已阻止导出。"
+      );
     }
 
     if (!treatments) {
@@ -197,30 +178,27 @@ export async function renderEmployeeActivity(
       );
     }
     const logoVariant = logoVariantForTreatment(treatments);
-    const masks = t01ScrimMasks(treatments);
-    await applyReadabilityTreatment(
+    await applyTextToneTreatment(
       page,
       treatments,
-      masks,
       logoVariant,
       assets.companyLogo,
       assets.companyLogoInverse
     );
-    const finalAnalysis = await analyzeAppliedTreatment(page, treatments, masks);
+    const finalAnalysis = await analyzeAppliedTreatment(page, treatments);
     const passed = finalAnalysis.every((region) =>
       region.candidates.every((candidate) => candidate.passed)
     );
     if (!passed && readabilityMode === "strict") {
       throw new PosterRenderError(
         "brand.readability.contrast_failed",
-        "局部柔性遮罩合成后仍未通过 T01 对比度发布门，已阻止导出。"
+        "原始背景与当前文字颜色组合未通过 T01 对比度发布门，已阻止导出。"
       );
     }
 
     const readability: T01ReadabilityReport = {
       contractVersion: "t01-readability-v1",
-      backgroundMode,
-      ...(fallbackReason ? { fallbackReason } : {}),
+      backgroundMode: "input",
       logoVariant,
       treatments,
       initialAnalysis,
@@ -318,23 +296,10 @@ async function assertLayoutCapacity(page: Page) {
   }
 }
 
-async function replaceBackground(page: Page, source: string) {
-  await page
-    .locator(".background")
-    .evaluate((element, nextSource) => {
-      const image = element as HTMLImageElement;
-      image.src = nextSource;
-    }, source);
-  await page.waitForFunction(() => {
-    const image = document.querySelector<HTMLImageElement>(".background");
-    return Boolean(image?.complete && (image.naturalWidth ?? 0) > 0);
-  });
-}
-
 async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
   return page
     .evaluate(
-      ({ regions, strengths }) => {
+      ({ regions }) => {
         type Region = (typeof regions)[number];
         const image = document.querySelector<HTMLImageElement>(".background");
         if (!image || !image.naturalWidth || !image.naturalHeight) {
@@ -375,7 +340,6 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
         const contrast = (left: number, right: number) =>
           (Math.max(left, right) + 0.05) / (Math.min(left, right) + 0.05);
         const darkLuminance = luminance(72, 72, 74);
-        const clamp = (value: number) => Math.min(1, Math.max(0, value));
         const sampledLuminance = (x: number, y: number) => {
           const offset =
             (Math.min(canvas.height - 1, Math.max(0, Math.round(y))) *
@@ -387,16 +351,6 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
             pixels[offset + 1],
             pixels[offset + 2]
           );
-        };
-        const profile = (x: number, y: number, region: Region) => {
-          const centerX = region.bounds.x + region.bounds.width / 2;
-          const centerY = region.bounds.y + region.bounds.height / 2;
-          const normalizedX =
-            Math.abs(x - centerX) / (region.bounds.width / 2 + 360);
-          const normalizedY =
-            Math.abs(y - centerY) / (region.bounds.height / 2 + 120);
-          const distance = Math.max(normalizedX, normalizedY);
-          return distance <= 0.64 ? 1 : clamp((1 - distance) / 0.36);
         };
         const textRects = (region: Region) => {
           const selectors: Record<string, string[]> = {
@@ -442,9 +396,7 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
           region: Region,
           treatment:
             | "dark_text_clean"
-            | "dark_text_light_scrim"
-            | "light_text_dark_scrim",
-          strength: number
+            | "light_text_clean"
         ) => {
           const samples: number[] = [];
           const values: number[] = [];
@@ -454,18 +406,12 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
             for (let y = rect.y; y < rect.y + rect.height; y += 4) {
               for (let x = rect.x; x < rect.x + rect.width; x += 4) {
               const raw = sampledLuminance(x, y);
-              const alpha = strength * profile(x, y, region);
-              const value =
-                treatment === "dark_text_light_scrim"
-                  ? raw * (1 - alpha) + alpha
-                  : treatment === "light_text_dark_scrim"
-                    ? raw * (1 - alpha)
-                    : raw;
+              const value = raw;
               values.push(value);
               samples.push(
                 contrast(
                   value,
-                  treatment === "light_text_dark_scrim" ? 1 : darkLuminance
+                  treatment === "light_text_clean" ? 1 : darkLuminance
                 )
               );
               if (
@@ -506,25 +452,18 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
           };
         };
         return regions.map((region) => {
-          const clean = summarize(region, "dark_text_clean", 0);
+          const clean = summarize(region, "dark_text_clean");
           const candidates = [
             {
               treatment: "dark_text_clean" as const,
               scrimStrength: 0,
               ...clean
             },
-            ...strengths
-              .filter((strength) => strength > 0)
-              .map((strength) => ({
-                treatment: "dark_text_light_scrim" as const,
-                scrimStrength: strength,
-                ...summarize(region, "dark_text_light_scrim", strength)
-              })),
-            ...strengths.map((strength) => ({
-              treatment: "light_text_dark_scrim" as const,
-              scrimStrength: strength,
-              ...summarize(region, "light_text_dark_scrim", strength)
-            }))
+            {
+              treatment: "light_text_clean" as const,
+              scrimStrength: 0,
+              ...summarize(region, "light_text_clean")
+            }
           ];
           return {
             id: region.id,
@@ -535,7 +474,7 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
           };
         });
       },
-      { regions: T01_READABILITY_REGIONS, strengths: T01_SCRIM_STRENGTHS }
+      { regions: T01_READABILITY_REGIONS }
     )
     .then(
       (analysis): T01RegionAnalysis[] =>
@@ -562,43 +501,20 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
     );
 }
 
-async function applyReadabilityTreatment(
+async function applyTextToneTreatment(
   page: Page,
   treatments: Record<string, T01ZoneTreatment>,
-  masks: { treatment: T01ZoneTreatment["treatment"]; scrimStrength: number; bounds: T01ZoneTreatment["bounds"] }[],
   logoVariant: "primary" | "inverse",
   primaryLogo: string,
   inverseLogo: string
 ) {
   await page.evaluate(
-    ({ selected, masks, variant, companyLogo }) => {
-      document
-        .querySelectorAll("[data-readability-scrim]")
-        .forEach((element) => element.remove());
+    ({ selected, variant, companyLogo }) => {
       Object.entries(selected).forEach(([region, treatment]) => {
         const target = document.querySelector<HTMLElement>(
           "[data-readability-region=\"" + region + "\"]"
         );
         if (target) target.dataset.textTone = treatment.textTone;
-      });
-      masks.forEach((treatment, index) => {
-        const scrim = document.createElement("div");
-        scrim.dataset.readabilityScrim = String(index);
-        scrim.className =
-          "readability-scrim readability-scrim-" + treatment.treatment;
-        scrim.style.left = treatment.bounds.x - 360 + "px";
-        scrim.style.top = treatment.bounds.y - 120 + "px";
-        scrim.style.width = treatment.bounds.width + 720 + "px";
-        scrim.style.height = treatment.bounds.height + 240 + "px";
-        scrim.style.setProperty(
-          "--scrim-strength",
-          String(treatment.scrimStrength)
-        );
-        scrim.style.setProperty(
-          "--scrim-soft-strength",
-          String(treatment.scrimStrength / 2)
-        );
-        document.querySelector(".poster")?.append(scrim);
       });
       const company = document.querySelector<HTMLImageElement>(
         "[data-brand-company-logo]"
@@ -610,7 +526,6 @@ async function applyReadabilityTreatment(
     },
     {
       selected: treatments,
-      masks,
       variant: logoVariant,
       companyLogo: logoVariant === "inverse" ? inverseLogo : primaryLogo
     }
@@ -625,11 +540,10 @@ async function applyReadabilityTreatment(
 
 async function analyzeAppliedTreatment(
   page: Page,
-  treatments: Record<string, T01ZoneTreatment>,
-  masks: { treatment: T01ZoneTreatment["treatment"]; scrimStrength: number; bounds: T01ZoneTreatment["bounds"] }[]
+  treatments: Record<string, T01ZoneTreatment>
 ): Promise<T01RegionAnalysis[]> {
   return page.evaluate(
-    ({ regions, selected, masks }) => {
+    ({ regions, selected }) => {
       const image = document.querySelector<HTMLImageElement>(".background");
       if (!image || !image.naturalWidth || !image.naturalHeight) {
         throw new Error("背景图片未加载");
@@ -668,7 +582,6 @@ async function analyzeAppliedTreatment(
         0.0722 * linear(blue);
       const contrast = (left: number, right: number) =>
         (Math.max(left, right) + 0.05) / (Math.min(left, right) + 0.05);
-      const clamp = (value: number) => Math.min(1, Math.max(0, value));
       const raw = (x: number, y: number) => {
         const offset =
           (Math.min(canvas.height - 1, Math.max(0, Math.round(y))) *
@@ -681,28 +594,6 @@ async function analyzeAppliedTreatment(
           pixels[offset + 2]
         );
       };
-      const profile = (
-        x: number,
-        y: number,
-        treatment: { bounds: { x: number; y: number; width: number; height: number } }
-      ) => {
-        const centerX = treatment.bounds.x + treatment.bounds.width / 2;
-        const centerY = treatment.bounds.y + treatment.bounds.height / 2;
-        const distance = Math.max(
-          Math.abs(x - centerX) / (treatment.bounds.width / 2 + 360),
-          Math.abs(y - centerY) / (treatment.bounds.height / 2 + 120)
-        );
-        return distance <= 0.64 ? 1 : clamp((1 - distance) / 0.36);
-      };
-      const composite = (x: number, y: number) =>
-        masks.reduce((value, treatment) => {
-          if (!treatment.scrimStrength) return value;
-          const alpha =
-            treatment.scrimStrength * profile(x, y, treatment);
-          return treatment.treatment === "dark_text_light_scrim"
-            ? value * (1 - alpha) + alpha
-            : value * (1 - alpha);
-        }, raw(x, y));
       const textRects = (region: (typeof regions)[number]) => {
         const selectors: Record<string, string[]> = {
           header: [
@@ -752,7 +643,7 @@ async function analyzeAppliedTreatment(
         for (const rect of textRects(region)) {
           for (let y = rect.y; y < rect.y + rect.height; y += 4) {
             for (let x = rect.x; x < rect.x + rect.width; x += 4) {
-            const value = composite(x, y);
+            const value = raw(x, y);
             luminances.push(value);
             contrasts.push(
               contrast(
@@ -765,8 +656,8 @@ async function analyzeAppliedTreatment(
               y + 4 < rect.y + rect.height
             ) {
               edgeTotal += 2;
-              if (Math.abs(value - composite(x + 4, y)) > 0.08) edges += 1;
-              if (Math.abs(value - composite(x, y + 4)) > 0.08) edges += 1;
+              if (Math.abs(value - raw(x + 4, y)) > 0.08) edges += 1;
+              if (Math.abs(value - raw(x, y + 4)) > 0.08) edges += 1;
             }
           }
         }
@@ -802,7 +693,7 @@ async function analyzeAppliedTreatment(
         };
       });
     },
-    { regions: T01_READABILITY_REGIONS, selected: treatments, masks }
+    { regions: T01_READABILITY_REGIONS, selected: treatments }
   );
 }
 
@@ -880,7 +771,6 @@ export function employeeActivityPosterMarkup(
     assets.fontFaceCss,
     '* { box-sizing: border-box; } html, body { width: 1080px; height: 1920px; margin: 0; } body { color: #1C1C1E; font-family: "MiSans", sans-serif; }',
     ".poster { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #F5F5F2; } .background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }",
-    ".readability-scrim { position: absolute; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at center, rgb(var(--scrim-color) / var(--scrim-strength)) 0%, rgb(var(--scrim-color) / var(--scrim-strength)) 64%, rgb(var(--scrim-color) / var(--scrim-soft-strength)) 82%, rgb(var(--scrim-color) / 0) 100%); } .readability-scrim-dark_text_light_scrim { --scrim-color: 255 255 255; } .readability-scrim-light_text_dark_scrim { --scrim-color: 0 0 0; }",
     ".brand-header { position: absolute; z-index: 2; top: 80px; left: 72px; right: 72px; height: 82.5179px; display: flex; align-items: center; justify-content: space-between; } .company-logo { width: 280px; height: 82.5179px; object-fit: contain; object-position: left center; } .administration-mark { width: 76.5001px; height: 76.5001px; object-fit: contain; }",
     ".title-region { position: absolute; z-index: 2; left: 81px; top: 223px; width: 720px; } .title { width: 690px; height: 144px; margin: 0; overflow: hidden; color: #1C1C1E; font-size: 120px; font-weight: 600; line-height: 1.2; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: balance; } .subtitle { width: 720px; height: 82px; margin: 25px 0 0; overflow: hidden; color: #000; font-size: 28px; font-weight: 400; line-height: 1.45; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: pretty; } .title-region[data-text-tone=\"light\"] .title, .title-region[data-text-tone=\"light\"] .subtitle { color: #FFF; }",
     ".info-group { position: absolute; z-index: 2; left: 72px; width: 936px; color: #1C1C1E; } .info-group h2 { height: 34px; margin: 0 0 8px; font-size: 28px; font-weight: 600; line-height: 1.2; } .info-group .copy { margin: 0; overflow: hidden; color: #48484A; font-size: 22px; font-weight: 400; line-height: 1.4; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: pretty; } .info-group .copy p { margin: 0; } .info-group[data-text-tone=\"light\"] { color: #FFF; } .info-group[data-text-tone=\"light\"] .copy { color: #FFF; }",
