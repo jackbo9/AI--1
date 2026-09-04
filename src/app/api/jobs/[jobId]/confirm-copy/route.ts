@@ -7,7 +7,6 @@ import {
   posterDocumentSchema
 } from "@/contracts/poster";
 import { findJob, updateJob } from "@/server/job-store";
-import { runVisualStage } from "@/worker/run-job";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -73,7 +72,10 @@ export async function POST(
     includeQr: input.includeQr,
     ctaLabel: input.ctaLabel,
     qrPayload: input.qrPayload,
-    contact: input.contact
+    contact: input.contact,
+    deadline: input.deadline,
+    rules: input.rules,
+    prize: input.prize
   });
   const confirmedDocument = confirmedCampaignDocumentFromPoster(
     document,
@@ -86,16 +88,14 @@ export async function POST(
       ...(item.actionIdempotencyKeys ?? []),
       parsed.data.idempotencyKey
     ],
-    status: "GENERATING_ASSET",
-    currentStep: "已确认文案，准备生成主视觉",
+    status: "READY_FOR_VISUAL_INPUT",
+    currentStep: "等待输入主视觉想法",
     copyDraft: { ...item.copyDraft!, document },
     confirmedDocument,
     error: undefined
   }));
-  void runVisualStage(jobId, document);
-
   return NextResponse.json(
-    { jobId, status: "GENERATING_ASSET" },
+    { jobId, status: "READY_FOR_VISUAL_INPUT" },
     { status: 202 }
   );
 }

@@ -1,11 +1,15 @@
 import crypto from "node:crypto";
 import {
   legacyPortraitInputFromCampaignBrief,
+  type IllustrationBrief,
   visualMasterSchema,
   type PosterDocument
 } from "@/contracts/poster";
 import { generateCopy } from "@/providers/copy-provider";
-import { compileIllustrationBrief } from "@/providers/prompt-compiler";
+import {
+  briefFromConfirmedDescription,
+  compileIllustrationBrief
+} from "@/providers/prompt-compiler";
 import { generateIllustration } from "@/providers/illustration-provider";
 import { ProviderError } from "@/providers/provider-error";
 import {
@@ -16,6 +20,7 @@ import {
 import { validatePoster } from "@/validation/poster-validation";
 import { findJob, updateJob } from "@/server/job-store";
 import { activityTemplateFamilyManifest } from "@/templates/activity-template-family";
+import { serverEnv } from "@/lib/env";
 
 export async function runJob(jobId: string) {
   await runCopyStage(jobId);
@@ -57,9 +62,70 @@ export async function runCopyStage(jobId: string) {
   }
 }
 
+export async function runVisualRefinement(jobId: string, visualIntent: string) {
+  try {
+    const job = await findJob(jobId);
+    if (
+      !job ||
+      !job.campaignBrief ||
+      !["READY_FOR_VISUAL_INPUT", "READY_FOR_VISUAL_REVIEW"].includes(job.status)
+    ) {
+      return;
+    }
+    const sourceCopyCreatedAt = job.copyDraft?.createdAt;
+    if (!sourceCopyCreatedAt) throw new Error("文案版本已失效，请返回重新确认文案");
+
+    await updateJob(jobId, (item) => ({
+      ...item,
+      status: "REFINING_VISUAL",
+      currentStep: "AI 优化画面描述",
+      visualInput: {
+        originalIntent: visualIntent,
+        sourceCopyCreatedAt,
+        createdAt: new Date().toISOString()
+      },
+      error: undefined
+    }));
+
+    const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
+    const compiler = await compileIllustrationBrief({
+      category: input.category,
+      themeKeywords: input.themeKeywords,
+      visualIntent
+    });
+    const description = visualDescriptionFromBrief(compiler.brief);
+    const createdAt = new Date().toISOString();
+    await updateJob(jobId, (item) => ({
+      ...item,
+      status: "READY_FOR_VISUAL_REVIEW",
+      currentStep: "等待确认主视觉描述",
+      visualDraft: {
+        description,
+        brief: compiler.brief,
+        provider: compiler.provider,
+        promptVersion: compiler.promptVersion,
+        sourceCopyCreatedAt,
+        createdAt,
+        fallback: compiler.provider !== "deepseek"
+      }
+    }));
+  } catch (error) {
+    await updateJob(jobId, (item) => ({
+      ...item,
+      status: "READY_FOR_VISUAL_INPUT",
+      currentStep: "画面描述优化失败，可重试",
+      error: {
+        code: error instanceof ProviderError ? error.code : "VISUAL_REFINEMENT_FAILED",
+        message: error instanceof Error ? error.message : "画面描述优化失败，请重试"
+      }
+    }));
+  }
+}
+
 export async function runVisualStage(
   jobId: string,
-  document: PosterDocument
+  document: PosterDocument,
+  confirmedDescription: string
 ) {
   try {
     const job = await findJob(jobId);
@@ -71,7 +137,12 @@ export async function runVisualStage(
       error: undefined
     }));
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
-    const compiler = await compileIllustrationBrief(input);
+    const brief = briefFromConfirmedDescription(confirmedDescription, input);
+    const compiler = {
+      brief,
+      provider: "confirmed-visual",
+      promptVersion: "visual-confirmed-v1"
+    };
     const documentVersionId =
       job.confirmedDocument?.documentVersionId ??
       job.versions.at(-1)?.id ??
@@ -95,12 +166,17 @@ export async function runVisualStage(
     const rendered = await renderEmployeeActivity(
       document,
       illustration.path,
-      outputId
+      outputId,
+      { readabilityMode: serverEnv.READABILITY_MODE }
     );
     const outputPath = rendered.outputPath;
     const posterValidation = validatePoster(input, document);
     const validation = {
       passed: posterValidation.passed && rendered.readability.passed,
+      exportAllowed:
+        posterValidation.passed &&
+        (rendered.readability.passed || serverEnv.READABILITY_MODE === "trial"),
+      strategy: serverEnv.READABILITY_MODE,
       messages: [
         ...posterValidation.messages,
         "T01 可读性：" +
@@ -113,7 +189,7 @@ export async function runVisualStage(
       ],
       readability: rendered.readability
     };
-    if (!validation.passed) {
+    if (!validation.exportAllowed) {
       throw new PosterRenderError(
         "brand.readability.contrast_failed",
         "T01 对比度发布门未通过，Artifact 不会进入 READY。"
@@ -211,6 +287,17 @@ export async function runVisualStage(
   } catch (error) {
     await failJob(jobId, error);
   }
+}
+
+function visualDescriptionFromBrief(brief: IllustrationBrief) {
+  return [
+    `主体：${brief.subject}`,
+    `动作：${brief.action}`,
+    `环境：${brief.setting}`,
+    `构图：${brief.composition.replace(/原生竖版 9:16。?/, "").trim()}`,
+    `风格：${brief.style}`,
+    `氛围：${brief.mood}`
+  ].join("\n");
 }
 
 async function failJob(jobId: string, error: unknown) {

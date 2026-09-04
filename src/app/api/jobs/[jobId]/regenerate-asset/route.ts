@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { regenerateAssetSchema } from "@/contracts/poster";
 import { findJob, updateJob } from "@/server/job-store";
-import { runVisualStage } from "@/worker/run-job";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -64,14 +63,29 @@ export async function POST(
       ...(item.actionIdempotencyKeys ?? []),
       parsed.data.idempotencyKey
     ],
-    status: "GENERATING_ASSET",
-    currentStep: "仅重新生成主视觉",
+    status: "READY_FOR_VISUAL_INPUT",
+    currentStep: "请确认新的主视觉描述",
+    visualInput: {
+      originalIntent:
+        item.confirmedVisual?.description ??
+        item.visualInput?.originalIntent ??
+        "",
+      sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
+      createdAt: new Date().toISOString()
+    },
+    visualDraft: item.visualDraft
+      ? {
+          ...item.visualDraft,
+          createdAt: new Date().toISOString(),
+          sourceCopyCreatedAt: item.copyDraft?.createdAt ?? item.visualDraft.sourceCopyCreatedAt
+        }
+      : undefined,
+    confirmedVisual: undefined,
     error: undefined
   }));
-  void runVisualStage(jobId, latestVersion.posterDocument);
 
   return NextResponse.json(
-    { jobId, status: "GENERATING_ASSET" },
+    { jobId, status: "READY_FOR_VISUAL_INPUT" },
     { status: 202 }
   );
 }

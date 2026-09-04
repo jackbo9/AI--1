@@ -69,6 +69,10 @@ export type EmployeeActivityRenderResult = {
   readability: T01ReadabilityReport;
 };
 
+export type EmployeeActivityRenderOptions = {
+  readabilityMode?: "strict" | "trial";
+};
+
 const fallbackPath = path.join(
   process.cwd(),
   "public",
@@ -79,7 +83,8 @@ const fallbackPath = path.join(
 export async function renderEmployeeActivity(
   document: PosterDocument,
   illustrationPath: string,
-  jobId: string
+  jobId: string,
+  options: EmployeeActivityRenderOptions = {}
 ): Promise<EmployeeActivityRenderResult> {
   const [imageBytes, fallbackBytes, assets] = await Promise.all([
     readFile(illustrationPath),
@@ -120,11 +125,14 @@ export async function renderEmployeeActivity(
     await assertLayoutCapacity(page);
 
     const initialAnalysis = await analyzeBackground(page);
-    let treatments = selectT01Treatments(initialAnalysis);
+    const readabilityMode = options.readabilityMode ?? "strict";
+    let treatments = selectT01Treatments(initialAnalysis, {
+      allowWarnings: readabilityMode === "trial"
+    });
     let backgroundMode: "input" | "fallback" = "input";
     let fallbackReason: "no_input_treatment_passed" | undefined;
 
-    if (!treatments) {
+    if (!treatments && readabilityMode === "strict") {
       if (illustrationPath === fallbackPath) {
         throw new PosterRenderError(
           "brand.readability.contrast_failed",
@@ -144,6 +152,12 @@ export async function renderEmployeeActivity(
       }
     }
 
+    if (!treatments) {
+      throw new PosterRenderError(
+        "brand.readability.contrast_failed",
+        "T01 无法为文字区域选择可用的可读性处理。"
+      );
+    }
     const logoVariant = logoVariantForTreatment(treatments);
     const masks = t01ScrimMasks(treatments);
     await applyReadabilityTreatment(
@@ -158,7 +172,7 @@ export async function renderEmployeeActivity(
     const passed = finalAnalysis.every((region) =>
       region.candidates.every((candidate) => candidate.passed)
     );
-    if (!passed) {
+    if (!passed && readabilityMode === "strict") {
       throw new PosterRenderError(
         "brand.readability.contrast_failed",
         "局部柔性遮罩合成后仍未通过 T01 对比度发布门，已阻止导出。"

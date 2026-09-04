@@ -128,11 +128,35 @@ export function selectZoneTreatment(
 }
 
 export function selectT01Treatments(
-  analysis: T01RegionAnalysis[]
+  analysis: T01RegionAnalysis[],
+  options: { allowWarnings?: boolean } = {}
 ): Record<T01ReadabilityRegion, T01ZoneTreatment> | undefined {
-  const selections = analysis.map((region) => [region.id, selectZoneTreatment(region)] as const);
+  const selections = analysis.map((region) => [
+    region.id,
+    options.allowWarnings ? selectZoneTreatmentWithWarnings(region) : selectZoneTreatment(region)
+  ] as const);
   if (selections.some(([, selection]) => !selection)) return undefined;
   return Object.fromEntries(selections) as Record<T01ReadabilityRegion, T01ZoneTreatment>;
+}
+
+function selectZoneTreatmentWithWarnings(
+  analysis: T01RegionAnalysis
+): T01ZoneTreatment | undefined {
+  const candidates = analysis.candidates
+    .filter((candidate) => candidate.scrimStrength === 0 || candidate.scrimStrength === 0.12)
+    .sort((left, right) => {
+      if (left.passed !== right.passed) return left.passed ? -1 : 1;
+      if (right.p05Contrast !== left.p05Contrast) return right.p05Contrast - left.p05Contrast;
+      return left.scrimStrength - right.scrimStrength;
+    });
+  const candidate = candidates[0];
+  if (!candidate) return undefined;
+  return {
+    treatment: candidate.treatment,
+    textTone: candidate.treatment === "light_text_dark_scrim" ? "light" : "dark",
+    scrimStrength: candidate.scrimStrength,
+    bounds: analysis.bounds
+  };
 }
 
 export function logoVariantForTreatment(

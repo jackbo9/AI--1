@@ -89,9 +89,22 @@ export async function generateCopy(
         )
       );
 
-      const document = posterDocumentSchema.parse(
-        JSON.parse(payload.choices[0].message.content) as unknown
-      );
+      const document = posterDocumentSchema.parse({
+        ...(JSON.parse(payload.choices[0].message.content) as Record<string, unknown>),
+        // The activity theme is a locked fact and is the T01 title. AI may
+        // optimize optional copy, never the title itself.
+        title: input.activityName,
+        sessions: input.sessions,
+        audience: input.audience,
+        notice: input.notice,
+        includeQr: input.includeQr,
+        ctaLabel: input.ctaLabel,
+        qrPayload: input.qrPayload,
+        contact: input.contact,
+        deadline: input.deadline,
+        rules: input.rules,
+        prize: input.prize
+      });
       assertImmutable(input, document);
 
       return {
@@ -209,6 +222,9 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     ctaLabel: input.ctaLabel,
     qrPayload: input.qrPayload,
     contact: input.contact,
+    deadline: input.deadline,
+    rules: input.rules,
+    prize: input.prize,
     immutableSource: {
       outputFormat: true,
       sessions: true,

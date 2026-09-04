@@ -171,6 +171,15 @@ DRAFT
 任一步骤 -> FAILED_RETRYABLE -> QUEUED
 任一步骤 -> FAILED_FINAL
 READY_FOR_REVIEW -> QUEUED   # 局部修改或重新生成新版本
+
+试用版视觉流程在 `READY_FOR_COPY_REVIEW` 后进入：
+
+```text
+READY_FOR_VISUAL_INPUT -> REFINING_VISUAL -> READY_FOR_VISUAL_REVIEW
+READY_FOR_VISUAL_REVIEW -> GENERATING_ASSET
+```
+
+文案确认不会启动图片模型；只有确认视觉草稿后才进入生图。
 ```
 
 任务处理必须幂等。同一 `idempotencyKey` 重复提交不得重复产生收费模型调用或多个最终版本。
@@ -183,6 +192,13 @@ READY_FOR_REVIEW -> QUEUED   # 局部修改或重新生成新版本
 
 请求：场景、原始字段、语言、渠道、模板/风格偏好。  
 响应：`202 Accepted`，返回 `jobId`、`status` 和查询地址。
+
+视觉阶段接口：
+
+- `POST /api/jobs/:jobId/refine-visual`：保存原始画面想法并异步生成可编辑草稿。
+- `POST /api/jobs/:jobId/confirm-visual`：校验草稿版本并使用用户确认的描述生图。
+
+试用版的二维码图片选择目前只在前端保留文件名，不进入任务请求和渲染契约；图片上传后端接入列为待办。当前生成仍只接受 HTTP(S) URL。
 
 ### 查询任务
 

@@ -15,6 +15,8 @@ import type { T01ReadabilityReport } from "@/templates/t01-readability";
 
 export type OutputValidation = {
   passed: boolean;
+  exportAllowed?: boolean;
+  strategy?: "strict" | "trial";
   messages: string[];
   readability?: T01ReadabilityReport;
 };
@@ -76,6 +78,29 @@ export type CopyDraft = {
   createdAt: string;
 };
 
+export type VisualInput = {
+  originalIntent: string;
+  sourceCopyCreatedAt: string;
+  createdAt: string;
+};
+
+export type VisualDraft = {
+  description: string;
+  brief: VisualMaster["brief"];
+  provider: string;
+  model?: string;
+  promptVersion: string;
+  sourceCopyCreatedAt: string;
+  createdAt: string;
+  fallback: boolean;
+};
+
+export type ConfirmedVisual = {
+  description: string;
+  sourceDraftCreatedAt: string;
+  createdAt: string;
+};
+
 export type GenerationJob = {
   id: string;
   traceId: string;
@@ -92,6 +117,9 @@ export type GenerationJob = {
   currentStep: string;
   retryCount: number;
   copyDraft?: CopyDraft;
+  visualInput?: VisualInput;
+  visualDraft?: VisualDraft;
+  confirmedVisual?: ConfirmedVisual;
   confirmedDocument?: ConfirmedCampaignDocument;
   visualMaster?: VisualMaster;
   artifacts?: Artifact[];

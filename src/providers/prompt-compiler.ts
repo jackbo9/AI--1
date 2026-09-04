@@ -2,7 +2,7 @@ import { z } from "zod";
 import { configured, serverEnv } from "@/lib/env";
 import {
   illustrationBriefSchema,
-  type EmployeeActivityInput,
+  type VisualPromptInput,
   type IllustrationBrief
 } from "@/contracts/poster";
 import { ProviderError, requestJson } from "./provider-error";
@@ -28,7 +28,7 @@ const deepSeekResponseSchema = z.object({
 });
 
 export async function compileIllustrationBrief(
-  input: EmployeeActivityInput
+  input: VisualPromptInput
 ): Promise<{
   brief: IllustrationBrief;
   provider: string;
@@ -127,21 +127,16 @@ function classifyLlmStatus(status: number) {
   );
 }
 
-function sanitizeIntent(intent: string, input: EmployeeActivityInput) {
+function sanitizeIntent(intent: string, input: VisualPromptInput) {
   let result = intent;
   for (const blocked of [
     input.activityName,
-    ...input.sessions.flatMap((session) => [
-      session.date,
-      session.time,
-      session.location
-    ]),
+    ...(input.sessions?.flatMap((session) => [session.date, session.time, session.location]) ?? []),
     input.contact,
     input.qrPayload
   ]) {
     if (blocked) result = result.replaceAll(blocked, "");
   }
-
   return result
     .replace(
       /https?:\/\/\S+|\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{5,}\b/g,
@@ -154,7 +149,7 @@ function sanitizeIntent(intent: string, input: EmployeeActivityInput) {
 }
 
 function fallbackBrief(
-  input: EmployeeActivityInput,
+  input: VisualPromptInput,
   intent: string
 ): IllustrationBrief {
   return {
@@ -175,7 +170,31 @@ function fallbackBrief(
 function withT01VisualContract(brief: IllustrationBrief): IllustrationBrief {
   return {
     ...brief,
-    composition: t01CompositionContract,
-    style: t01VisualStyleContract
+    composition: `${brief.composition} ${t01CompositionContract}`.trim(),
+    style: brief.style.trim() || t01VisualStyleContract
+  };
+}
+
+/**
+ * Turns the user's confirmed prose into the structured shape expected by the
+ * image provider. This is deliberately deterministic: confirming a visual
+ * draft must not trigger another hidden LLM rewrite.
+ */
+export function briefFromConfirmedDescription(
+  description: string,
+  input: Pick<VisualPromptInput, "category" | "themeKeywords">
+): IllustrationBrief {
+  const style = /插画|卡通|动漫|手绘|矢量|3d|3D/i.test(description)
+    ? "用户指定的插画风格，保持描述中的视觉语言"
+    : t01VisualStyleContract;
+  return {
+    subject: "企业同事与活动主体",
+    action: description.trim().slice(0, 80),
+    setting: description.trim().slice(0, 80),
+    composition: `${description.trim()}；${t01CompositionContract}`,
+    palette: "黑白灰基底、浅色自然光与少量行政黄",
+    style,
+    mood: input.themeKeywords.join("、") || "温暖、可信、自然",
+    negative
   };
 }

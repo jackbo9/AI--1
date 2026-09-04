@@ -38,31 +38,26 @@ const employeeActivityFieldsSchema = z.object({
       .max(48, "活动名称请控制在 48 字以内"),
     category: activityCategorySchema.default("team"),
     themeKeywords: z.array(z.string().trim().min(1).max(24)).max(6).default([]),
-    description: z.string().trim().min(8, "活动简介至少 8 个字").max(240),
+    // The trial UI treats these as optional narrative fields. Keep the names
+    // for legacy jobs and let the copy projection omit empty slots.
+    description: z.string().trim().max(240).default(""),
     sessions: z.array(activitySessionSchema).min(1).max(2),
     audience: z
       .string()
       .trim()
       .min(1, "请填写参与对象")
       .max(40, "参与对象请控制在 40 字以内"),
-    highlights: z
-      .array(z.string().trim().min(1).max(22))
-      .min(2, "至少填写两项活动亮点")
-      .max(4),
-    participationSteps: z
-      .array(z.string().trim().min(1).max(52))
-      .min(1, "请填写至少一条参与方式")
-      .max(4),
-    notice: z.string().trim().min(1, "请填写注意事项").max(160),
+    highlights: z.array(z.string().trim().min(1).max(22)).max(4).default([]),
+    participationSteps: z.array(z.string().trim().min(1).max(52)).max(4).default([]),
+    notice: z.string().trim().max(160).default(""),
     includeQr: z.boolean().default(false),
     ctaLabel: z.string().trim().max(32).optional().default(""),
     qrPayload: optionalQrPayloadSchema.optional().default(""),
     contact: z.string().trim().max(80).optional().default(""),
-    visualIntent: z
-      .string()
-      .trim()
-      .min(10, "请用至少 10 个字描述主视觉")
-      .max(180)
+    visualIntent: z.string().trim().max(180).default(""),
+    deadline: z.string().trim().max(80).default(""),
+    rules: z.string().trim().max(240).default(""),
+    prize: z.string().trim().max(240).default("")
   });
 
 function validateQrRequirement(
@@ -105,16 +100,19 @@ export const posterDocumentSchema = z.object({
   category: activityCategorySchema,
   title: z.string().min(1).max(40),
   subtitle: z.string().max(56),
-  summary: z.string().min(1).max(150),
+  summary: z.string().max(150).default(""),
   sessions: z.array(activitySessionSchema).min(1).max(2),
   audience: z.string().min(1).max(40),
-  highlights: z.array(z.string().min(1).max(22)).min(2).max(4),
-  participationSteps: z.array(z.string().min(1).max(52)).min(1).max(4),
-  notice: z.string().min(1).max(160),
+  highlights: z.array(z.string().min(1).max(22)).max(4).default([]),
+  participationSteps: z.array(z.string().min(1).max(52)).max(4).default([]),
+  notice: z.string().max(160).default(""),
   includeQr: z.boolean(),
   ctaLabel: z.string().max(32),
   qrPayload: z.string().max(300),
   contact: z.string().max(80),
+  deadline: z.string().max(80).optional(),
+  rules: z.string().max(240).optional(),
+  prize: z.string().max(240).optional(),
   immutableSource: z.object({
     outputFormat: z.literal(true),
     sessions: z.literal(true),
@@ -143,9 +141,12 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
 export const editablePosterContentSchema = z.object({
   title: z.string().trim().min(1).max(40),
   subtitle: z.string().trim().max(56),
-  summary: z.string().trim().min(1).max(150),
-  highlights: z.array(z.string().trim().min(1).max(22)).min(2).max(4),
-  participationSteps: z.array(z.string().trim().min(1).max(52)).min(1).max(4)
+  summary: z.string().trim().max(150).default(""),
+  highlights: z.array(z.string().trim().min(1).max(22)).max(4).default([]),
+  participationSteps: z.array(z.string().trim().min(1).max(52)).max(4).default([]),
+  deadline: z.string().trim().max(80).default(""),
+  rules: z.string().trim().max(240).default(""),
+  prize: z.string().trim().max(240).default("")
 });
 
 export const illustrationBriefSchema = z.object({
@@ -179,6 +180,9 @@ export const generationStatusSchema = z.enum([
   "VALIDATING_INPUT",
   "GENERATING_COPY",
   "READY_FOR_COPY_REVIEW",
+  "READY_FOR_VISUAL_INPUT",
+  "REFINING_VISUAL",
+  "READY_FOR_VISUAL_REVIEW",
   "GENERATING_ASSET",
   "RENDERING",
   "VALIDATING_OUTPUT",
@@ -193,6 +197,17 @@ export const createJobSchema = z.object({
 
 export const confirmCopySchema = z.object({
   content: editablePosterContentSchema,
+  idempotencyKey: z.string().uuid()
+});
+
+export const refineVisualSchema = z.object({
+  visualIntent: z.string().trim().min(10, "请至少描述 10 个字的画面想法").max(180),
+  idempotencyKey: z.string().uuid()
+});
+
+export const confirmVisualSchema = z.object({
+  sourceDraftCreatedAt: z.string().datetime(),
+  description: z.string().trim().min(10, "请至少保留 10 个字的画面描述").max(420),
   idempotencyKey: z.string().uuid()
 });
 
@@ -211,6 +226,11 @@ export type EditablePosterContent = z.infer<typeof editablePosterContentSchema>;
 export type IllustrationBrief = z.infer<typeof illustrationBriefSchema>;
 export type VisualMaster = z.infer<typeof visualMasterSchema>;
 export type GenerationStatus = z.infer<typeof generationStatusSchema>;
+export type VisualPromptInput = Pick<
+  EmployeeActivityInput,
+  "category" | "themeKeywords" | "visualIntent"
+> &
+  Partial<Pick<EmployeeActivityInput, "activityName" | "sessions" | "contact" | "qrPayload">>;
 
 export function campaignBriefFromLegacyInput(
   input: EmployeeActivityInput
