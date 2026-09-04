@@ -788,5 +788,5 @@ git clean
 - 文案确认会把编辑后的补充说明投影到 T01 顶部说明，规则/奖品不再被原始输入覆盖；选填内容全空时跳过文案模型且不生成兜底副标题。
 - JSON 任务存储已改为单进程串行 read-modify-write + 临时文件原子替换，视觉动作使用串行幂等认领；试用导出按具体版本 `exportAllowed ?? passed` 判定。
 - 已执行：`npm run typecheck`、`npm run lint`、`npm test`（45/45）、`npm run build`、`npm run render:t01-readability-review`（4/4），并人工查看高纹理 T01 PNG。桌面/手机完整浏览器流程、真实飞书生图下载、第二用户越权和真实付费图片调用尚未完成。
-- 当前稳定修复提交：`92bb8a3`（`fix: stabilize demo workflow and trial export`）；回退使用 `checkpoint-2026-09-04-pre-ui-visual-split` 标签，未配置远端，不执行推送；`tmp/`、`data/jobs.json`、生成 PNG 与密钥均不纳入提交。
+- 当前稳定修复提交：`7a8f183`（`fix: stabilize demo workflow and trial export`）；回退使用 `checkpoint-2026-09-04-pre-ui-visual-split` 标签，未配置远端，不执行推送；`tmp/`、`data/jobs.json`、生成 PNG 与密钥均不纳入提交。
 - 远端核对：当前仓库未配置 `origin`，未执行推送；`tmp/` 未纳入回退提交。
