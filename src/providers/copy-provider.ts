@@ -7,9 +7,9 @@ import {
 } from "@/contracts/poster";
 import { ProviderError, requestJson } from "./provider-error";
 
-const copyPromptVersion = "employee-activity-copy-v1-6";
+const copyPromptVersion = "employee-activity-copy-v1-7";
 const systemPrompt =
-  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、contact、immutableSource。schemaVersion 必须是 "1.6"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、notice、contact、includeQr、ctaLabel、qrPayload 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、contact、includeQr、ctaLabel、qrPayload、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
 
 const deepSeekResponseSchema = z.object({
   choices: z
@@ -61,7 +61,7 @@ export async function generateCopy(
                 {
                   role: "user",
                   content: JSON.stringify({
-                    task: "优化允许编辑的标题、副标题、摘要、活动亮点和参与方式，并返回完整 PosterDocumentV1_6。",
+                    task: "优化允许编辑的标题、副标题、摘要、活动亮点和参与方式，并返回完整 PosterDocumentV1_7。",
                     constraints: {
                       titleMaxLength: 40,
                       subtitleMaxLength: 56,
@@ -175,6 +175,7 @@ function assertImmutable(
   const immutableMatches =
     document.outputFormat === input.outputFormat &&
     JSON.stringify(document.sessions) === JSON.stringify(input.sessions) &&
+    document.audience === input.audience &&
     document.notice === input.notice &&
     document.contact === input.contact &&
     document.includeQr === input.includeQr &&
@@ -191,7 +192,7 @@ function assertImmutable(
 
 function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
   return {
-    schemaVersion: "1.6",
+    schemaVersion: "1.7",
     scene: "employee_activity",
     locale: "zh-CN",
     outputFormat: input.outputFormat,
@@ -200,6 +201,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     subtitle: "一起出发，把日常过得更有意思",
     summary: input.description,
     sessions: input.sessions,
+    audience: input.audience,
     highlights: input.highlights,
     participationSteps: input.participationSteps,
     notice: input.notice,
@@ -210,6 +212,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     immutableSource: {
       outputFormat: true,
       sessions: true,
+      audience: true,
       contact: true,
       includeQr: true,
       ctaLabel: true,

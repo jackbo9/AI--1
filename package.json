@@ -10,11 +10,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "render:fixture": "tsx scripts/render-fixture.ts",
+    "render:b2-review": "tsx scripts/render-b2-review.ts",
+    "render:t01-readability-review": "tsx scripts/render-t01-readability-review.ts",
     "probe:copy": "node --env-file=.env.local --import tsx scripts/probe-copy-provider.ts",
     "probe:image": "node --env-file=.env.local --import tsx scripts/probe-image-provider.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.73.1",
     "@types/qrcode": "^1.5.6",
     "next": "15.5.25",
     "qrcode": "^1.5.4",

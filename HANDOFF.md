@@ -2,7 +2,7 @@
 
 最后更新：2026-09-03  
 当前分支：`codex/slice-demo`  
-当前阶段：员工活动 P0 A1–A4 已完成，准备接入正式资产并进入 B2 竖版视觉切片
+当前阶段：员工活动 P0 Phase B｜T01 已完成 C3a/C3b/E1a/E2a 本地切片与视觉回归；等待设计方最终评审；不得开始其他规格精修
 
 ## 1. 当前结论
 
@@ -19,7 +19,7 @@
   -> 内容与品牌规则校验
 ```
 
-当前 Demo 已证明这条链路可行。现阶段不继续扩展场景和模板数量，等待正式模板后再进行视觉与字段协议精修。
+当前 Demo 已证明这条链路可行。T01 现在对最终 cover 裁切后文字区执行受控图文适配与发布门；现阶段不继续扩展场景和模板数量。
 
 ## 1.1 2026-09-03 P0 契约进度
 
@@ -48,12 +48,14 @@ longform_1080xAuto
 不是四规格视觉模板已经完成。B2 竖版通过视觉评审前，不批量精修横版、
 Banner 和长图。
 
-资产盘点：
+资产盘点与接入：
 
-- `/Users/ninebot/Desktop/assets/VI_MiSans_202604.zip` 包含 MiSans
-  TTF/OTF 多字重文件。
-- 截至 2026-09-03，本次文件扫描未在 `/Users/ninebot/Desktop/assets`
-  中发现独立 Logo 文件；开始 B1 前需要再次确认 Logo 的实际文件名或位置。
+- 已从 `/Users/ninebot/Desktop/assets/VI_MiSans_202604.zip` 提取
+  MiSans Regular、Medium、Heavy OTF 到 `public/brand/fonts/`。
+- 已从 `/Users/ninebot/Desktop/assets/02 Foundations/Design Foundations/Logo/`
+  接入 `九号公司.svg` 与 `行政.svg`，分别保存为
+  `public/brand/company-logo.svg` 与 `public/brand/administration-mark.svg`。
+- 使用这些文件仅代表本次内部 Demo 技术接入；字体服务端渲染与分发授权说明仍需由资产所有方确认。
 
 ## 2. 场景与模板的产品理解
 
@@ -255,7 +257,7 @@ AI 生成 9:16 无文字完整背景
 
 - Provider：`deepseek`
 - Model：`deepseek-chat`
-- Schema：`PosterDocument 1.6`
+- Schema：`PosterDocument 1.7`（T01 增加不可改写的 `audience`）
 - JSON 可解析。
 - Zod 校验通过。
 - 不可改写字段保持一致。
@@ -537,7 +539,68 @@ POST /api/auth/logout
 - 真实两阶段端到端任务：通过。
 - 输出 PNG 尺寸检查：1080 × 1920。
 
-本轮只完成 A1–A4 契约和 Fixture，未开始 B2 模板实现，因此没有建立或更新正式视觉基线，也未重新执行 `render:fixture`。
+Phase B｜T01 已按 Figma `191:2777` 空白母版和 `191:3642` 体育赛事案例完成实现；
+已人工打开正常与二维码样张检查，但仍未获得设计方批准的视觉回归基线：
+
+- `npm run typecheck`：通过。
+- `npm run lint -- --quiet`：通过。
+- `npm test`：38/38 通过。
+- `npm run render:b2-review`：正常、缺可选字段、二维码与默认资产
+  PNG 已输出为 1080 × 1920；两种多行标题与长文案按预期阻止导出。
+- 已验证：无二维码样张不存在二维码 DOM、说明、CTA 条或箭头；有二维码样张
+  使用 `x=864, y=1574, 144×144`，第三组文本列避让二维码安全区。
+
+### 13.1 T01 C3a/C3b/E1a/E2a 可读性发布门（2026-09-03）
+
+- src/templates/t01-readability.ts 在最终 object-fit: cover 裁切后声明并采样
+  header、title、sessions、audience、participation、qr、footer。每区记录亮度
+  P05/P50/P95、边缘密度、候选色的通过率与 P05 对比度。
+- 发布门的像素样本来自浏览器实际文本 Range 的逐行包围区，而不是整块预留背景；
+  这样不会因文字区内未使用的图像细节误触发降级。遮罩范围仍按完整声明区计算。
+- Prompt Compiler 已升级为 illustration-brief-v4-t01-layout-contract：无论 LLM 返回什么
+  composition，运行时都会写入同一份 T01 构图 contract。它强制原生 9:16、人物/道具仅在
+  x=42–94%、y=30–66% 的中部活动带，顶部、底部信息、二维码和页脚为低纹理留白。
+- treatment 仅可从 dark_text_clean、dark_text_light_scrim、
+  light_text_dark_scrim、fallback_background 选择；遮罩强度仅为
+  0 / 0.12 / 0.20 / 0.28 / 0.36，取最低通过档，不提供用户主题或自由遮罩控制。
+- 22px 正文、18px 页脚/二维码说明按 4.5:1；28px 分组标题与 120px 标题按
+  3:1。实现用每区 P05 必须达到对应阈值，且通过像素至少 95%，不以平均值放行。
+- 遮罩以横向出血、上下长渐隐的局部雾化渐变实现；无圆角、描边、阴影和白色信息卡。
+  时间/地点与参与对象在同一 treatment 时合并为一层，避免可见的叠层边界；
+  参与方式、二维码说明和页脚保持独立选择。
+- 当前秋日 Fixture 结果：顶部/标题/页脚 dark_text_clean@0，时间地点与参与对象
+  dark_text_light_scrim@0.28，参与方式保持 dark_text_clean@0。
+- 深色 header 会选择 light_text_dark_scrim@0 与 inverse 公司 Logo；inverse 版本从
+  正式黑色 SVG 主文件的同一矢量路径生成，不使用 CSS filter。
+- 品牌降级背景已改为 v2 极简底图：仅保留浅色基底与右下弱行政黄光晕，不再包含人物、道具或
+  额外叙事内容；它只承担失败兜底。
+- 若所有受控文字/遮罩候选均不达标，渲染器切换品牌降级背景并重新分析；降级背景仍失败时抛出
+  brand.readability.contrast_failed，不写出 PNG。只有 validation.passed=true 的
+  READY Artifact/Version 可由下载接口读取。每次结果将完整的 treatment、初始分析和合成后验证
+  写入 Artifact 与 GenerationVersion。
+- 多背景回归：浅色低纹理、深色低纹理、秋日高纹理、标题浅/正文深、标题深/正文浅、
+  无法通过的棋盘背景和默认降级背景均已固定；每种背景重复渲染的 PNG SHA-256 一致。
+
+本轮实际执行：
+
+- npm run typecheck：通过。
+- npm run lint -- --quiet：通过。
+- npm test：44/44 通过。
+- npm run render:b2-review：通过；既有标题/容量阻断行为保持。
+- npm run render:t01-readability-review：7/7 背景类别通过，棋盘背景按预期触发品牌降级。
+- 已人工打开秋日局部遮罩、反白 Logo 深色标题和失败背景降级的 1080 × 1920 PNG。
+
+尚未验证：
+
+- 尚未用新的 Seedream 实拍背景重新跑一次真实飞书端到端任务；当前多背景为固定 SVG 回归，
+  真实秋日样张仍需设计方验收。
+- 2026-09-03 已用新的 v4 layout / 纪实摄影 Prompt 发起一次真实 Seedream 探针：
+  当前 `size: "2K"` 集成参数返回原生 `1600 × 2848` JPEG（约 9:16），
+  最终使用输入背景通过；仅 sessions 区使用 `dark_text_light_scrim@0.12`，
+  未触发 fallback。单次耗时约 38.6 秒。
+- 该结果只证明本模型在本次请求中能响应竖版与安全区描述；模型没有暴露已验证的硬坐标、
+  固定安全区、种子或确定性构图控制，仍须保留模板侧门禁并继续采样。
+- 视觉门禁测量背景像素而非 OCR/字符覆盖率；极端字形抗锯齿与第三方图片解码差异尚未纳入。
 
 ## 14. 已知风险与限制
 
@@ -553,12 +616,14 @@ POST /api/auth/logout
 
 ### 视觉限制
 
-- BrandSpec v1 与四规格 Manifest 已锁定，正式 HTML/CSS 尚未实现。
-- MiSans 字体包已找到，但字体文件和授权说明尚未接入项目。
-- 独立 Logo 文件位置仍待确认。
-- 当前品牌校验仍是基础内容检查。
-- 全幅背景模式已进入契约，但尚未实现。
-- 当前图片模型仍使用方形 2K 输出，正式竖版背景需要调整比例。
+- B2 只实现 `portrait_1080x1920`；横版、Banner 和长图仍只有 Manifest，
+  未开始视觉精修。
+- B2 使用全幅背景、MiSans Regular/Semibold、公司 Logo 左 / 行政标识右、
+  标题最多一行、固定二维码区和浅色品牌降级背景，但尚未完成设计方人工视觉评审。
+- 当前图片模型仍使用方形 2K 输出；Prompt 已要求 9:16 的中右主体和左侧
+  信息安全区，真实模型的比例参数仍待供应商能力与设计方确认。
+- 当前品牌校验仍以模板资产可用、字体加载、标题三行和正文容量为主；
+  尚未接入 OCR / 像素级品牌校验。
 
 ### 飞书限制
 
@@ -682,17 +747,18 @@ git clean
 
 ### P0：B1 正式资产接入
 
-- [ ] 从 MiSans 压缩包提取本切片实际使用的字重。
+- [x] 从 MiSans 压缩包提取本切片实际使用的 Regular / Medium / Heavy 字重。
 - [ ] 确认字体服务端渲染授权说明。
-- [ ] 找到公司 Logo 与行政标识正式源文件及颜色/反白版本。
-- [ ] 实现共享 Brand Header；字体或标识未加载时阻止渲染。
+- [x] 找到公司 Logo 与行政标识正式源文件；公司反白版由同一正式 SVG 矢量主文件生成，
+  但独立的品牌签发反白资产尚未提供。
+- [x] 实现共享 Brand Header；字体或任一标识未加载时阻止渲染。
 
 ### P1：B2 竖版正式切片
 
-- [ ] 只实现 `portrait_1080x1920` 全幅背景切片。
-- [ ] 用 A4 Fixtures 生成首批评审 PNG。
-- [ ] 检查 MiSans、双标识、H0/H1、标题三行、安全区和二维码。
-- [ ] 竖版通过视觉评审前，不批量精修横版、Banner 和长图。
+- [x] 只实现 `portrait_1080x1920` 全幅背景切片。
+- [x] 用 A4 Fixtures 生成首批评审 PNG（`npm run render:b2-review`）。
+- [x] 检查 MiSans、双标识、H0 标题、标题三行、安全区、二维码和正文容量。
+- [ ] 设计方完成 B2 竖版视觉评审；通过前，不批量精修横版、Banner 和长图。
 
 ### P2：飞书结果通知
 

@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { regenerateAssetSchema } from "@/contracts/poster";
 import { findJob, updateJob } from "@/server/job-store";
 import { runVisualStage } from "@/worker/run-job";
+import {
+  forbiddenResponse,
+  requireApiIdentity,
+  unauthorizedResponse
+} from "@/server/auth";
 
 export const runtime = "nodejs";
 
@@ -9,6 +14,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ jobId: string }> }
 ) {
+  const identity = await requireApiIdentity();
+  if (!identity) return unauthorizedResponse();
   const parsed = regenerateAssetSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -30,6 +37,7 @@ export async function POST(
       { status: 404 }
     );
   }
+  if (job.userId !== identity.userId) return forbiddenResponse();
   if (job.actionIdempotencyKeys?.includes(parsed.data.idempotencyKey)) {
     return NextResponse.json(
       { jobId, status: job.status, reused: true },

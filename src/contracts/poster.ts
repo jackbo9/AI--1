@@ -40,6 +40,11 @@ const employeeActivityFieldsSchema = z.object({
     themeKeywords: z.array(z.string().trim().min(1).max(24)).max(6).default([]),
     description: z.string().trim().min(8, "活动简介至少 8 个字").max(240),
     sessions: z.array(activitySessionSchema).min(1).max(2),
+    audience: z
+      .string()
+      .trim()
+      .min(1, "请填写参与对象")
+      .max(40, "参与对象请控制在 40 字以内"),
     highlights: z
       .array(z.string().trim().min(1).max(22))
       .min(2, "至少填写两项活动亮点")
@@ -81,7 +86,7 @@ export const employeeActivityInputSchema = employeeActivityFieldsSchema
 
 export const campaignBriefSchema = employeeActivityFieldsSchema
   .extend({
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.literal("1.1"),
     scene: z.literal("employee_activity"),
     locale: z.literal("zh-CN"),
     brandSpecVersion: brandSpecVersionSchema,
@@ -93,7 +98,7 @@ export const campaignBriefSchema = employeeActivityFieldsSchema
   .superRefine(validateQrRequirement);
 
 export const posterDocumentSchema = z.object({
-  schemaVersion: z.literal("1.6"),
+  schemaVersion: z.literal("1.7"),
   scene: z.literal("employee_activity"),
   locale: z.literal("zh-CN"),
   outputFormat: outputFormatSchema,
@@ -102,6 +107,7 @@ export const posterDocumentSchema = z.object({
   subtitle: z.string().max(56),
   summary: z.string().min(1).max(150),
   sessions: z.array(activitySessionSchema).min(1).max(2),
+  audience: z.string().min(1).max(40),
   highlights: z.array(z.string().min(1).max(22)).min(2).max(4),
   participationSteps: z.array(z.string().min(1).max(52)).min(1).max(4),
   notice: z.string().min(1).max(160),
@@ -112,6 +118,7 @@ export const posterDocumentSchema = z.object({
   immutableSource: z.object({
     outputFormat: z.literal(true),
     sessions: z.literal(true),
+    audience: z.literal(true),
     contact: z.literal(true),
     includeQr: z.literal(true),
     ctaLabel: z.literal(true),
@@ -127,10 +134,10 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
     immutableSource: true
   })
   .extend({
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.literal("1.1"),
     brandSpecVersion: brandSpecVersionSchema,
     documentVersionId: z.string().uuid(),
-    sourceCopySchemaVersion: z.literal("1.6")
+    sourceCopySchemaVersion: z.literal("1.7")
   });
 
 export const editablePosterContentSchema = z.object({
@@ -145,9 +152,9 @@ export const illustrationBriefSchema = z.object({
   subject: z.string().min(2).max(80),
   action: z.string().min(2).max(80),
   setting: z.string().min(2).max(80),
-  composition: z.string().min(2).max(80),
+  composition: z.string().min(2).max(420),
   palette: z.string().min(2).max(60),
-  style: z.string().min(2).max(60),
+  style: z.string().min(2).max(120),
   mood: z.string().min(2).max(60),
   negative: z.literal("不要文字、字母、数字、Logo、二维码、水印、签名")
 });
@@ -211,7 +218,7 @@ export function campaignBriefFromLegacyInput(
   const facts = employeeActivityFieldsSchema.parse(input);
   return campaignBriefSchema.parse({
     ...facts,
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     scene: "employee_activity",
     locale: "zh-CN",
     brandSpecVersion: 1,
@@ -235,16 +242,16 @@ export function confirmedCampaignDocumentFromPoster(
 ): ConfirmedCampaignDocument {
   return confirmedCampaignDocumentSchema.parse({
     ...document,
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     brandSpecVersion: 1,
     documentVersionId,
-    sourceCopySchemaVersion: "1.6"
+    sourceCopySchemaVersion: "1.7"
   });
 }
 
 export const posterDocumentJsonSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
-  title: "PosterDocumentV1_6",
+  title: "PosterDocumentV1_7",
   type: "object",
   required: [
     "schemaVersion",
@@ -256,6 +263,7 @@ export const posterDocumentJsonSchema = {
     "subtitle",
     "summary",
     "sessions",
+    "audience",
     "highlights",
     "participationSteps",
     "notice",
@@ -266,12 +274,13 @@ export const posterDocumentJsonSchema = {
     "immutableSource"
   ],
   properties: {
-    schemaVersion: { const: "1.6" },
+    schemaVersion: { const: "1.7" },
     scene: { const: "employee_activity" },
     locale: { const: "zh-CN" },
     outputFormat: { const: "portrait_1080x1920" },
     title: { type: "string", maxLength: 40 },
     sessions: { type: "array", minItems: 1, maxItems: 2 },
+    audience: { type: "string", minLength: 1, maxLength: 40 },
     highlights: { type: "array", minItems: 2, maxItems: 4 }
   }
 } as const;

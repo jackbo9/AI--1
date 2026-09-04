@@ -78,9 +78,15 @@ function normalizeLegacyInput(
     throw new Error("旧任务输入格式无效");
   }
   const source = input as Record<string, unknown>;
+  // `audience` became a required fact in PosterDocument 1.7. Only historical
+  // stored jobs receive the migration default; new API input must provide it.
+  const migratedSource =
+    typeof source.audience === "string" && source.audience.trim()
+      ? source
+      : { ...source, audience: "全体员工" };
 
   const phaseOnePointFive = employeeActivityInputSchema.safeParse({
-    ...source,
+    ...migratedSource,
     outputFormat: "portrait_1080x1920",
     includeQr: Boolean(source.qrPayload)
   });
@@ -104,6 +110,7 @@ function normalizeLegacyInput(
         ? source.activityName
         : "历史员工活动",
     category: "team",
+    audience: "全体员工",
     themeKeywords: [],
     description,
     sessions: [

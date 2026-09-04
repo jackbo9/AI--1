@@ -7,6 +7,11 @@ import type {
   EmployeeActivityInput,
   PosterDocument
 } from "@/contracts/poster";
+import {
+  normalizeLines,
+  splitDraftLines
+} from "@/components/multiline-fields";
+import { createClientUuid } from "@/lib/client-uuid";
 
 type Version = {
   assetMode: string;
@@ -51,6 +56,7 @@ const initial: EmployeeActivityInput = {
       details: ["手作体验与下午茶"]
     }
   ],
+  audience: "全体员工",
   highlights: ["轻松互动", "限定手作", "下午茶时光"],
   participationSteps: ["点击活动链接完成报名", "按场次时间到达指定地点"],
   notice: "活动名额有限，请以现场安排为准。",
@@ -95,7 +101,11 @@ const scenes = [
 
 const ideas = ["秋日草坪", "轻松互动", "手作体验", "明亮留白"];
 
-export function ActivityStudio() {
+export function ActivityStudio({
+  identity
+}: {
+  identity: { displayName: string; provider: "local" | "feishu" };
+}) {
   const [form, setForm] = useState<EmployeeActivityInput>(initial);
   const [jobId, setJobId] = useState<string>();
   const [job, setJob] = useState<Job>();
@@ -143,10 +153,7 @@ export function ActivityStudio() {
         itemIndex === index
           ? {
               ...session,
-              [field]:
-                field === "details"
-                  ? value.split("\n").filter(Boolean)
-                  : value
+              [field]: field === "details" ? splitDraftLines(value) : value
             }
           : session
       )
@@ -158,7 +165,7 @@ export function ActivityStudio() {
   ) =>
     setForm((current) => ({
       ...current,
-      [field]: value.split("\n").filter(Boolean)
+      [field]: splitDraftLines(value)
     }));
 
   const addIdea = (idea: string) =>
@@ -175,13 +182,15 @@ export function ActivityStudio() {
     setJob(undefined);
     setCopyContent(undefined);
     setLoadedDraftKey(undefined);
+    const normalizedForm = normalizeInput(form);
+    setForm(normalizedForm);
 
     const response = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        input: form,
-        idempotencyKey: crypto.randomUUID()
+        input: normalizedForm,
+        idempotencyKey: createClientUuid()
       })
     });
     const payload = (await response.json()) as {
@@ -204,12 +213,14 @@ export function ActivityStudio() {
   async function confirmCopy() {
     if (!jobId || !copyContent) return;
     setError(undefined);
+    const normalizedContent = normalizeCopyContent(copyContent);
+    setCopyContent(normalizedContent);
     const response = await fetch(`/api/jobs/${jobId}/confirm-copy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content: copyContent,
-        idempotencyKey: crypto.randomUUID()
+        content: normalizedContent,
+        idempotencyKey: createClientUuid()
       })
     });
     const payload = (await response.json()) as {
@@ -236,7 +247,7 @@ export function ActivityStudio() {
     const response = await fetch(`/api/jobs/${jobId}/regenerate-asset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idempotencyKey: crypto.randomUUID() })
+      body: JSON.stringify({ idempotencyKey: createClientUuid() })
     });
     const payload = (await response.json()) as {
       error?: { message: string };
@@ -286,7 +297,11 @@ export function ActivityStudio() {
         <div className="account">
           <i>九</i>
           <span>
-            本地演示<small>员工活动单切片</small>
+            {identity.displayName}
+            <small>
+              {identity.provider === "feishu" ? "飞书已登录" : "本地演示"} ·
+              员工活动单切片
+            </small>
           </span>
         </div>
       </aside>
@@ -297,7 +312,7 @@ export function ActivityStudio() {
             <b>新建海报</b>
             <span> / 员工活动</span>
           </div>
-          <p>模板 v1.6 · 竖版 1080 × 1920</p>
+          <p>模板 T01 v1.1 · 竖版 1080 × 1920</p>
         </header>
 
         <div className="content-grid">
@@ -377,6 +392,11 @@ export function ActivityStudio() {
                     onChange={(value) =>
                       setForm({ ...form, description: value })
                     }
+                  />
+                  <Field
+                    label="参与对象"
+                    value={form.audience}
+                    onChange={(value) => setForm({ ...form, audience: value })}
                   />
                 </div>
               </Section>
@@ -620,7 +640,7 @@ export function ActivityStudio() {
                       onChange={(value) =>
                         setCopyContent({
                           ...copyContent,
-                          highlights: value.split("\n").filter(Boolean)
+                          highlights: splitDraftLines(value)
                         })
                       }
                     />
@@ -630,9 +650,7 @@ export function ActivityStudio() {
                       onChange={(value) =>
                         setCopyContent({
                           ...copyContent,
-                          participationSteps: value
-                            .split("\n")
-                            .filter(Boolean)
+                          participationSteps: splitDraftLines(value)
                         })
                       }
                     />
@@ -689,7 +707,7 @@ export function ActivityStudio() {
               ) : (
                 <Preview
                   poster={form}
-                  draft={job?.copyDraft?.document}
+                  draft={copyReady ? job?.copyDraft?.document : undefined}
                 />
               )}
             </div>
@@ -698,7 +716,7 @@ export function ActivityStudio() {
                 <a
                   className="download"
                   href={job.previewUrl}
-                  download="employee-activity-v1-6.png"
+                  download="employee-activity-t01.png"
                 >
                   下载 PNG
                 </a>
@@ -812,39 +830,82 @@ function Preview({
   poster: EmployeeActivityInput;
   draft?: PosterDocument;
 }) {
+  const title = draft?.title ?? poster.activityName;
+  const participation = draft?.participationSteps ?? poster.participationSteps;
+
   return (
-    <div className="draft-poster">
-      <div className="draft-brand">✦ NINEBOT</div>
-      <div className="draft-hero">
-        <span>
-          {poster.category === "team"
-            ? "团队活动"
-            : poster.category === "festival"
-              ? "节日主题"
-              : "竞赛活动"}
-        </span>
-        <h3>{draft?.title ?? poster.activityName}</h3>
-        <p>{draft?.summary ?? poster.description}</p>
-        <i>{draft ? "文案已生成 · 待确认" : "主视觉安全区"}</i>
-      </div>
-      <div className="draft-info">
+    <div className="t01-preview">
+      <img
+        className="t01-preview-background"
+        src="/brand/employee-activity-fallback.svg"
+        alt=""
+      />
+      <div className="t01-preview-scrim t01-preview-title-scrim" />
+      <div className="t01-preview-scrim t01-preview-info-scrim" />
+      <header className="t01-preview-header">
+        <img src="/brand/company-logo.svg" alt="九号公司" />
+        <img src="/brand/administration-mark.svg" alt="行政" />
+      </header>
+      <section className="t01-preview-title">
+        <h3>{title}</h3>
+        <p>{draft?.subtitle}</p>
+      </section>
+
+      <section className="t01-preview-info t01-preview-sessions">
+        <h4>活动时间/地点</h4>
         {poster.sessions.map((session) => (
-          <div key={session.label || session.location}>
-            <b>{session.label || "场次名称"}</b>
-            <span>
-              {session.date || "日期"} · {session.time || "时间"}
-            </span>
-            <small>{session.location || "地点"}</small>
-          </div>
+          <p key={`${session.label}-${session.date}`}>
+            {session.date || "日期"} {session.time || "时间"} ·{" "}
+            {session.location || "地点"}
+          </p>
         ))}
-      </div>
-      <div className="draft-tags">
-        {(draft?.highlights ?? poster.highlights).map((highlight) => (
-          <span key={highlight}>{highlight}</span>
+      </section>
+      <section className="t01-preview-info t01-preview-audience">
+        <h4>参与对象</h4>
+        <p>{poster.audience}</p>
+      </section>
+      <section
+        className={`t01-preview-info t01-preview-participation ${
+          poster.includeQr ? "has-qr" : ""
+        }`}
+      >
+        <h4>参与方式</h4>
+        {participation.slice(0, 2).map((step, index) => (
+          <p key={`${index}-${step}`}>{step}</p>
         ))}
-      </div>
-      <p className="draft-notice">{poster.notice}</p>
-      <footer>NINEBOT · 行政智绘</footer>
+      </section>
+      {poster.includeQr && (
+        <aside className="t01-preview-qr">
+          <b>QR</b>
+          <span>扫码报名</span>
+        </aside>
+      )}
+      <footer className="t01-preview-footer">
+        <span>九号行政</span>
+        <span>员工活动</span>
+      </footer>
     </div>
   );
+}
+
+function normalizeInput(input: EmployeeActivityInput): EmployeeActivityInput {
+  return {
+    ...input,
+    highlights: normalizeLines(input.highlights),
+    participationSteps: normalizeLines(input.participationSteps),
+    sessions: input.sessions.map((session) => ({
+      ...session,
+      details: normalizeLines(session.details)
+    }))
+  };
+}
+
+function normalizeCopyContent(
+  content: EditablePosterContent
+): EditablePosterContent {
+  return {
+    ...content,
+    highlights: normalizeLines(content.highlights),
+    participationSteps: normalizeLines(content.participationSteps)
+  };
 }

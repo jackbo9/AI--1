@@ -32,6 +32,8 @@ type AutoArtifactExpectation = {
 export type CampaignBundleFixture = {
   id:
     | "normal"
+    | "two-sessions"
+    | "competition"
     | "title-three-lines"
     | "title-overflow"
     | "missing-optional"
@@ -52,17 +54,18 @@ const baseBrief = campaignBriefFromLegacyInput(
 );
 
 const baseDocument = confirmedCampaignDocumentSchema.parse({
-  schemaVersion: "1.0",
+  schemaVersion: "1.1",
   scene: "employee_activity",
   locale: "zh-CN",
   brandSpecVersion: 1,
   documentVersionId: "0583cdb7-6483-447d-bba7-3be8e7318332",
-  sourceCopySchemaVersion: "1.6",
+  sourceCopySchemaVersion: "1.7",
   category: baseBrief.category,
   title: "秋日同行日",
   subtitle: "一起出发，把日常过得更有意思",
   summary: baseBrief.description,
   sessions: baseBrief.sessions,
+  audience: baseBrief.audience,
   highlights: baseBrief.highlights,
   participationSteps: baseBrief.participationSteps,
   notice: baseBrief.notice,
@@ -141,6 +144,49 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
     expectedArtifacts: expectedArtifacts()
   },
   {
+    id: "two-sessions",
+    campaignBrief: {
+      ...baseBrief,
+      sessions: [
+        ...baseBrief.sessions,
+        {
+          label: "常州站",
+          date: "2026-09-20",
+          time: "14:00–17:30",
+          location: "常州制造基地共享空间",
+          details: []
+        }
+      ]
+    },
+    confirmedDocument: document(
+      "525d55bf-471c-4219-8d3c-01998da30b1d",
+      {
+        sessions: [
+          ...baseBrief.sessions,
+          {
+            label: "常州站",
+            date: "2026-09-20",
+            time: "14:00–17:30",
+            location: "常州制造基地共享空间",
+            details: []
+          }
+        ]
+      }
+    ),
+    visualMode: "generated",
+    expectedArtifacts: expectedArtifacts()
+  },
+  {
+    id: "competition",
+    campaignBrief: { ...baseBrief, category: "competition" },
+    confirmedDocument: document(
+      "49b8eff7-1a2e-4f85-a3a7-6351a11e6e39",
+      { category: "competition" }
+    ),
+    visualMode: "generated",
+    expectedArtifacts: expectedArtifacts()
+  },
+  {
     id: "title-three-lines",
     campaignBrief: baseBrief,
     confirmedDocument: document(
@@ -150,7 +196,9 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
       }
     ),
     visualMode: "generated",
-    expectedArtifacts: expectedArtifacts()
+    expectedArtifacts: expectedArtifacts({
+      portrait: fail("brand.title.max_lines")
+    })
   },
   {
     id: "title-overflow",

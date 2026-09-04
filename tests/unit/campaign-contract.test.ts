@@ -25,6 +25,7 @@ describe("Campaign and Bundle migration contract", () => {
       "longform_1080xAuto"
     ]);
     expect(legacyPortraitInputFromCampaignBrief(campaign)).toEqual(legacyInput);
+    expect(campaign.audience).toBe("全体员工");
   });
 
   it("freezes one confirmed document without binding it to a format", async () => {
@@ -85,6 +86,7 @@ describe("Campaign and Bundle migration contract", () => {
     const normalized = normalizeStoredJob(legacyJob);
 
     expect(normalized.campaignBrief.renderTargets).toHaveLength(4);
+    expect(normalized.input.audience).toBe("全体员工");
     expect(normalized.artifacts).toHaveLength(1);
     expect(normalized.artifacts[0]).toMatchObject({
       renderTargetId: "portrait_1080x1920",

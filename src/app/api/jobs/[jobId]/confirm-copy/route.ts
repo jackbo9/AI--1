@@ -1,10 +1,18 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   confirmCopySchema,
+  confirmedCampaignDocumentFromPoster,
+  legacyPortraitInputFromCampaignBrief,
   posterDocumentSchema
 } from "@/contracts/poster";
 import { findJob, updateJob } from "@/server/job-store";
 import { runVisualStage } from "@/worker/run-job";
+import {
+  forbiddenResponse,
+  requireApiIdentity,
+  unauthorizedResponse
+} from "@/server/auth";
 
 export const runtime = "nodejs";
 
@@ -12,6 +20,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ jobId: string }> }
 ) {
+  const identity = await requireApiIdentity();
+  if (!identity) return unauthorizedResponse();
   const parsed = confirmCopySchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -33,6 +43,7 @@ export async function POST(
       { status: 404 }
     );
   }
+  if (job.userId !== identity.userId) return forbiddenResponse();
   if (job.actionIdempotencyKeys?.includes(parsed.data.idempotencyKey)) {
     return NextResponse.json(
       { jobId, status: job.status, reused: true },
@@ -51,17 +62,23 @@ export async function POST(
     );
   }
 
+  const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
   const document = posterDocumentSchema.parse({
     ...job.copyDraft.document,
     ...parsed.data.content,
-    outputFormat: job.input.outputFormat,
-    sessions: job.input.sessions,
-    notice: job.input.notice,
-    includeQr: job.input.includeQr,
-    ctaLabel: job.input.ctaLabel,
-    qrPayload: job.input.qrPayload,
-    contact: job.input.contact
+    outputFormat: input.outputFormat,
+    sessions: input.sessions,
+    audience: input.audience,
+    notice: input.notice,
+    includeQr: input.includeQr,
+    ctaLabel: input.ctaLabel,
+    qrPayload: input.qrPayload,
+    contact: input.contact
   });
+  const confirmedDocument = confirmedCampaignDocumentFromPoster(
+    document,
+    crypto.randomUUID()
+  );
 
   await updateJob(jobId, (item) => ({
     ...item,
@@ -72,6 +89,7 @@ export async function POST(
     status: "GENERATING_ASSET",
     currentStep: "已确认文案，准备生成主视觉",
     copyDraft: { ...item.copyDraft!, document },
+    confirmedDocument,
     error: undefined
   }));
   void runVisualStage(jobId, document);

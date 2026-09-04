@@ -1,15 +1,21 @@
 import crypto from "node:crypto";
-import type { PosterDocument } from "@/contracts/poster";
+import {
+  legacyPortraitInputFromCampaignBrief,
+  visualMasterSchema,
+  type PosterDocument
+} from "@/contracts/poster";
 import { generateCopy } from "@/providers/copy-provider";
 import { compileIllustrationBrief } from "@/providers/prompt-compiler";
 import { generateIllustration } from "@/providers/illustration-provider";
 import { ProviderError } from "@/providers/provider-error";
 import {
   renderEmployeeActivity,
-  employeeActivityTemplate
+  employeeActivityTemplate,
+  PosterRenderError
 } from "@/templates/employee-activity";
 import { validatePoster } from "@/validation/poster-validation";
 import { findJob, updateJob } from "@/server/job-store";
+import { activityTemplateFamilyManifest } from "@/templates/activity-template-family";
 
 export async function runJob(jobId: string) {
   await runCopyStage(jobId);
@@ -32,7 +38,8 @@ export async function runCopyStage(jobId: string) {
       currentStep: "DeepSeek 生成结构化文案"
     }));
 
-    const copy = await generateCopy(job.input);
+    const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
+    const copy = await generateCopy(input);
     await updateJob(jobId, (item) => ({
       ...item,
       status: "READY_FOR_COPY_REVIEW",
@@ -63,7 +70,14 @@ export async function runVisualStage(
       currentStep: "编译受控主视觉描述",
       error: undefined
     }));
-    const compiler = await compileIllustrationBrief(job.input);
+    const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
+    const compiler = await compileIllustrationBrief(input);
+    const documentVersionId =
+      job.confirmedDocument?.documentVersionId ??
+      job.versions.at(-1)?.id ??
+      crypto.randomUUID();
+    const visualMasterId = crypto.randomUUID();
+    const visualFamilyId = crypto.randomUUID();
 
     await updateJob(jobId, (item) => ({
       ...item,
@@ -78,12 +92,63 @@ export async function runVisualStage(
       currentStep: "合成受控海报"
     }));
     const outputId = `${jobId}-${crypto.randomUUID()}`;
-    const outputPath = await renderEmployeeActivity(
+    const rendered = await renderEmployeeActivity(
       document,
       illustration.path,
       outputId
     );
-    const validation = validatePoster(job.input, document);
+    const outputPath = rendered.outputPath;
+    const posterValidation = validatePoster(input, document);
+    const validation = {
+      passed: posterValidation.passed && rendered.readability.passed,
+      messages: [
+        ...posterValidation.messages,
+        "T01 可读性：" +
+          (rendered.readability.passed ? "通过" : "未通过") +
+          "；Logo " +
+          rendered.readability.logoVariant +
+          "；背景 " +
+          rendered.readability.backgroundMode +
+          "。"
+      ],
+      readability: rendered.readability
+    };
+    if (!validation.passed) {
+      throw new PosterRenderError(
+        "brand.readability.contrast_failed",
+        "T01 对比度发布门未通过，Artifact 不会进入 READY。"
+      );
+    }
+    const finalAssetMode =
+      rendered.readability.backgroundMode === "fallback"
+        ? "fallback"
+        : illustration.mode;
+    const finalAssetDetail =
+      rendered.readability.backgroundMode === "fallback"
+        ? "Seedream 主视觉已生成，但未通过 T01 图文可读性门禁；成品已改用极简品牌降级背景。"
+        : illustration.detail;
+    const artifactId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const portraitTarget =
+      activityTemplateFamilyManifest.renderTargets.portrait_1080x1920;
+    const dimensions = portraitTarget.dimensions;
+    if (dimensions.heightMode !== "fixed") {
+      throw new Error("竖版 RenderTarget 尺寸配置无效");
+    }
+    const visualMaster = visualMasterSchema.parse({
+      id: visualMasterId,
+      visualFamilyId,
+      sourceDocumentVersionId: documentVersionId,
+      promptVersion: compiler.promptVersion,
+      brief: compiler.brief,
+      assets: [
+        {
+          renderTargetId: "portrait_1080x1920",
+          path: illustration.path,
+          mode: illustration.mode
+        }
+      ]
+    });
 
     await updateJob(jobId, (item) => ({
       ...item,
@@ -94,11 +159,34 @@ export async function runVisualStage(
       ...item,
       status: "READY_FOR_REVIEW",
       currentStep: "等待预览确认",
+      visualMaster,
+      artifacts: [
+        ...item.artifacts,
+        {
+          id: artifactId,
+          renderTargetId: "portrait_1080x1920",
+          status: "READY",
+          createdAt,
+          brandSpecVersion: 1,
+          documentVersionId,
+          visualFamilyId,
+          width: dimensions.width,
+          heightMode: "fixed",
+          height: dimensions.height,
+          templateId: employeeActivityTemplate.id,
+          templateVersion: employeeActivityTemplate.version,
+          assetMode: finalAssetMode,
+          assetDetail: finalAssetDetail,
+          assetPath: illustration.path,
+          outputPath,
+          validation
+        }
+      ],
       versions: [
         ...item.versions,
         {
           id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
+          createdAt,
           posterDocument: document,
           outputFormat: document.outputFormat,
           templateVersion: employeeActivityTemplate.version,
@@ -112,8 +200,8 @@ export async function runVisualStage(
             imageProvider: illustration.provider,
             imageModel: illustration.model
           },
-          assetMode: illustration.mode,
-          assetDetail: illustration.detail,
+          assetMode: finalAssetMode,
+          assetDetail: finalAssetDetail,
           assetPath: illustration.path,
           outputPath,
           validation
@@ -127,7 +215,9 @@ export async function runVisualStage(
 
 async function failJob(jobId: string, error: unknown) {
   const code =
-    error instanceof ProviderError ? error.code : "GENERATION_FAILED";
+    error instanceof ProviderError || error instanceof PosterRenderError
+      ? error.code
+      : "GENERATION_FAILED";
   const message =
     error instanceof Error ? error.message : "生成任务未完成，请重试";
 

@@ -52,6 +52,7 @@ export const activityModuleSchema = z.enum([
   "summary",
   "primary_session",
   "all_sessions",
+  "audience",
   "highlights",
   "participation",
   "notice",
@@ -80,7 +81,7 @@ export const renderTargetManifestSchema = z.object({
   }),
   qrZone: pixelRectSchema.nullable(),
   overflow: z.object({
-    titleMaxLines: z.literal(3),
+    titleMaxLines: z.number().int().min(1).max(3),
     titleStrategy: z.literal("block_export"),
     bodyStrategy: z.enum(["fit_declared_modules", "auto_height"])
   }),
@@ -113,7 +114,7 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "1.0.0-draft",
+        templateVersion: "1.2.0-t01-readability",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
@@ -125,18 +126,15 @@ export const activityTemplateFamilyManifest =
           "brand_header",
           "title",
           "subtitle",
-          "summary",
           "all_sessions",
-          "highlights",
+          "audience",
           "participation",
-          "notice",
-          "cta",
           "qr",
           "footer"
         ],
         backgroundMode: "full_bleed",
-        focalArea: { x: 0.42, y: 0.18, width: 0.53, height: 0.55 },
-        textSafeArea: { x: 0.067, y: 0.14, width: 0.52, height: 0.7 },
+        focalArea: { x: 0.42, y: 0.34, width: 0.53, height: 0.45 },
+        textSafeArea: { x: 0.067, y: 0.16, width: 0.866, height: 0.36 },
         logoZones: {
           company: { x: 72, y: 80, width: 280, height: 82.5179 },
           administration: {
@@ -146,16 +144,16 @@ export const activityTemplateFamilyManifest =
             height: 76.5001
           }
         },
-        qrZone: { x: 864, y: 1588, width: 144, height: 144 },
+        qrZone: { x: 864, y: 1574, width: 144, height: 144 },
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 1,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/poster/T01 体育赛事.svg",
           note:
-            "Logo 与二维码区按 SVG 原始坐标测量；焦点区与文字区按全幅背景构图约束记录，B2 视觉评审前仍可调整。"
+            "Figma 191:2777 浅色 T01 母版：全幅背景、单行 H0 标题、三组底部信息及条件二维码；案例 191:3642 的反白色值不构成第二主题。"
         }
       },
       landscape_1920x1080: {

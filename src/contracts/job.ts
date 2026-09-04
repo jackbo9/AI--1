@@ -11,6 +11,13 @@ import type {
   BrandSpecVersion,
   RenderTargetId
 } from "./brand";
+import type { T01ReadabilityReport } from "@/templates/t01-readability";
+
+export type OutputValidation = {
+  passed: boolean;
+  messages: string[];
+  readability?: T01ReadabilityReport;
+};
 
 export type GenerationVersion = {
   id: string;
@@ -31,7 +38,7 @@ export type GenerationVersion = {
   assetDetail?: string;
   assetPath: string;
   outputPath: string;
-  validation: { passed: boolean; messages: string[] };
+  validation: OutputValidation;
 };
 
 export type ArtifactStatus =
@@ -57,7 +64,7 @@ export type Artifact = {
   assetDetail?: string;
   assetPath?: string;
   outputPath?: string;
-  validation: { passed: boolean; messages: string[] };
+  validation: OutputValidation;
   error?: { code: string; message: string };
 };
 

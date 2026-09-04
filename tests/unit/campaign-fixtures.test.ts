@@ -11,6 +11,8 @@ describe("four-target campaign fixture suite", () => {
   it("covers every required P0 boundary", () => {
     expect(campaignBundleFixtures.map((fixture) => fixture.id)).toEqual([
       "normal",
+      "two-sessions",
+      "competition",
       "title-three-lines",
       "title-overflow",
       "missing-optional",
