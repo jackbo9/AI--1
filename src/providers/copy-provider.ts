@@ -7,9 +7,9 @@ import {
 } from "@/contracts/poster";
 import { ProviderError, requestJson } from "./provider-error";
 
-const copyPromptVersion = "employee-activity-copy-v1-7";
+const copyPromptVersion = "employee-activity-copy-v1-8";
 const systemPrompt =
-  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、qrAssetId、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
 
 const deepSeekResponseSchema = z.object({
   choices: z
@@ -114,6 +114,7 @@ export async function generateCopy(
         includeQr: input.includeQr,
         ctaLabel: input.ctaLabel,
         qrPayload: input.qrPayload,
+        qrAssetId: input.qrAssetId,
         contact: input.contact,
         deadline: input.deadline,
         rules: input.rules,
@@ -207,7 +208,8 @@ function assertImmutable(
     document.contact === input.contact &&
     document.includeQr === input.includeQr &&
     document.ctaLabel === input.ctaLabel &&
-    document.qrPayload === input.qrPayload;
+    document.qrPayload === input.qrPayload &&
+    document.qrAssetId === input.qrAssetId;
 
   if (!immutableMatches) {
     throw new ProviderError(
@@ -235,6 +237,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     includeQr: input.includeQr,
     ctaLabel: input.ctaLabel,
     qrPayload: input.qrPayload,
+    qrAssetId: input.qrAssetId,
     contact: input.contact,
     deadline: input.deadline,
     rules: input.rules,
@@ -247,6 +250,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
       includeQr: true,
       ctaLabel: true,
       qrPayload: true,
+      qrAssetId: true,
       notice: true
     }
   };

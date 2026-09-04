@@ -9,9 +9,9 @@ const document = posterDocumentSchema.parse({
   category: "competition", title: "赛事主题", subtitle: "一起运动，享受友好竞赛的乐趣。", summary: "一起运动，享受友好竞赛的乐趣。",
   sessions: [{ label: "第一场", date: "2026-09-18", time: "18:30–20:30", location: "园区体育馆", details: [] }],
   audience: "全体员工", highlights: [], participationSteps: [], notice: "", includeQr: true,
-  ctaLabel: "请选择适合自己的场次报名。", qrPayload: "https://example.com/register", contact: "行政服务台", deadline: "9月16日 18:00",
+  ctaLabel: "请选择适合自己的场次报名。", qrPayload: "https://example.com/register", qrAssetId: "", contact: "行政服务台", deadline: "9月16日 18:00",
   rules: "比赛项目：羽毛球双打\n\n赛制与晋级：小组循环赛，三局两胜。\n\n注意事项：请穿着运动鞋，提前到场。", prize: "",
-  immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, notice: true }
+  immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
 });
 const imagePath = path.resolve(process.argv[2] ?? "public/brand/employee-activity-fallback.svg");
 const outputDirectory = path.join(process.cwd(), "tmp/t01-formats-review");

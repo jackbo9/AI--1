@@ -56,6 +56,7 @@ describe("B1 formal brand assets", () => {
         includeQr: true,
         ctaLabel: true,
         qrPayload: true,
+        qrAssetId: true,
         notice: true
       }
     });
@@ -105,7 +106,7 @@ describe("B1 formal brand assets", () => {
       schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", outputFormat: "portrait_1080x1920", category: input.category,
       title: input.activityName, subtitle: "", summary: input.description, sessions: input.sessions, audience: input.audience,
       highlights: input.highlights, participationSteps: input.participationSteps, notice: input.notice, includeQr: false, ctaLabel: "保留文案不应显示", qrPayload: "", contact: input.contact,
-      immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, notice: true }
+      immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
     });
     const markup = employeeActivityPosterMarkup(document, "data:image/svg+xml;base64,PHN2Zy8+", "", await loadEmbeddedBrandAssets());
     expect(markup).not.toContain("data-poster-qr");

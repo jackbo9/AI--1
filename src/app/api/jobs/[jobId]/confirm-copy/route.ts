@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import {
   confirmCopySchema,
@@ -14,10 +15,29 @@ import {
   unauthorizedResponse
 } from "@/server/auth";
 import { readJsonRequest } from "@/server/request-json";
+import {
+  QrAssetError,
+  readOwnedQrAssetDataUri
+} from "@/server/qr-asset-store";
 
 export const runtime = "nodejs";
 
 export async function POST(
+  request: Request,
+  context: { params: Promise<{ jobId: string }> }
+) {
+  try {
+    return await confirmCopy(request, context);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: { code: "INVALID_COPY", message: "文案内容超出允许范围，请检查补充说明和活动规则后重试" } }, { status: 422 });
+    }
+    console.error("confirm-copy failed", { type: error instanceof Error ? error.name : "UnknownError" });
+    return NextResponse.json({ error: { code: "COPY_CONFIRM_FAILED", message: "文案确认暂未完成，已保留输入，请重试" } }, { status: 500 });
+  }
+}
+
+async function confirmCopy(
   request: Request,
   context: { params: Promise<{ jobId: string }> }
 ) {
@@ -87,8 +107,9 @@ export async function POST(
     includeQr: input.includeQr,
     ctaLabel: input.ctaLabel,
     qrPayload: input.qrPayload,
+    qrAssetId: input.qrAssetId,
     contact: input.contact,
-    deadline: parsed.data.content.deadline,
+    deadline: input.deadline,
     rules: parsed.data.content.rules,
     prize: parsed.data.content.prize,
     // The editable supplement is the actual top explanation in T01. Keep
@@ -101,8 +122,17 @@ export async function POST(
     crypto.randomUUID()
   );
   try {
-    await preflightEmployeeActivity(document);
+    const qrDataUri = input.qrAssetId
+      ? await readOwnedQrAssetDataUri(input.qrAssetId, identity.userId)
+      : undefined;
+    await preflightEmployeeActivity(document, { qrDataUri });
   } catch (error) {
+    if (error instanceof QrAssetError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.code === "QR_ASSET_FORBIDDEN" ? 403 : 422 }
+      );
+    }
     if (error instanceof PosterRenderError) {
       return NextResponse.json({ error: { code: error.code, message: error.message } }, { status: 422 });
     }

@@ -1,5 +1,7 @@
 # 领域、API 与生成契约
 
+2026-09-04 视觉确认补充：IllustrationBrief 可记录 `confirmedDescription`（最多420字）及 `visualStyleMode`（editorial/legacy）。存在确认正文时，图片 Provider 以该正文组装请求，旧 subject/action/setting/palette 不再覆盖它；系统附加构图及禁止项仍生效。优化草稿需展示颜色，超过确认长度返回明确错误，不静默丢弃字段。新增字段可选，旧版本仍可读取。
+
 本文定义 MVP 的稳定边界。实现可以调整，但不得绕开这些契约让 LLM 自由控制版式或业务状态。
 
 ## 1. 核心实体
@@ -198,9 +200,16 @@ READY_FOR_VISUAL_REVIEW -> GENERATING_ASSET
 - `POST /api/jobs/:jobId/refine-visual`：保存原始画面想法并异步生成可编辑草稿。
 - `POST /api/jobs/:jobId/confirm-visual`：校验草稿版本并使用用户确认的描述生图。
 
-T01 视觉契约补充：用户创意描述与固定版式构图约束分开存储；系统约束只在最终图片提示词组装时注入一次，且图片调用前先通过最终 prompt Schema。视觉确认描述上限为 420 字，超限返回可编辑的中文错误，不静默截断。试用期二维码图片选择仅保留前端文件名，后端接入仍为待办；当前任务生成只接受 HTTP(S) 链接。
+T01 视觉契约补充：用户创意描述与固定版式构图约束分开存储；系统约束只在最终图片提示词组装时注入一次，且图片调用前先通过最终 prompt Schema。视觉确认描述上限为 420 字，超限返回可编辑的中文错误，不静默截断。
 
-试用版的二维码图片选择目前只在前端保留文件名，不进入任务请求和渲染契约；图片上传后端接入列为待办。当前生成仍只接受 HTTP(S) URL。
+二维码事实使用 `includeQr`、`qrPayload` 与 `qrAssetId`：链接和上传图片必须二选一，二者均为空时关闭二维码。`qrAssetId` 是受保护本地资产引用，不接受浏览器传入文件路径或公网图片 URL；它与二维码链接一起是不可改写字段，且绝不进入 LLM 或图片模型 Prompt。
+
+### 二维码图片上传（2026-09-04）
+
+- `POST /api/uploads/qr`：仅接受 `multipart/form-data` 中的 `file`；服务端通过 magic bytes 校验 PNG/JPEG/WebP，不信任客户端 MIME；最大 5MB，图片边长限制为 96–8192px。
+- 成功后返回 `{ assetId, previewUrl, filename, width, height }`。Demo 将原图私有保存到 `data/uploads/qr/`，metadata 同目录原子写入；该目录不提交 Git。
+- `GET /api/uploads/qr/:assetId`：仅资源所有者可读，`Cache-Control: private, no-store`；不暴露磁盘路径。
+- 渲染时上传图片转换为内嵌 Data URI 注入受控二维码槽；URL 模式仍由服务端 `qrcode` 包生成 PNG。当前只校验文件格式、尺寸与模板加载，**未验证上传图片是否为可扫码二维码**。
 
 T01 Demo 当前使用可读性观察模式：成功生成的背景不会因对比度不通过而替换为默认资产，也不会添加局部背景遮罩。渲染结果继续保存原图上的深／浅文字选择、像素测量与 `passed`。`trial` 只在字体、Logo、容量等硬检查通过时令 `exportAllowed=true`，同时保留可读性警告；`strict` 令其不可导出。图片模型调用失败的默认资产降级仍独立记录，不能伪装成可读性失败结果。
 

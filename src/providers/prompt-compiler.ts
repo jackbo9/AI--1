@@ -6,11 +6,13 @@ import {
   type IllustrationBrief
 } from "@/contracts/poster";
 import { ProviderError, requestJson } from "./provider-error";
+import { editorialDirection } from "./visual-direction";
 
-const promptVersion = "illustration-brief-v4-t01-layout-contract";
+const promptVersion = `illustration-brief-v6-${serverEnv.VISUAL_STYLE_MODE ?? "editorial"}`;
+export const backgroundNegative = "不要文字、字母、数字、Logo、二维码、条码、水印、签名；不要绘制任何扫码图案、黑白编码方格或占位码。只生成场景背景与活动主体。" as const;
 const negative = "不要文字、字母、数字、Logo、二维码、水印、签名" as const;
 export const t01CompositionContract =
-  "原生竖版 9:16，不要方图裁切。人物和主要道具只在画面 x=42–94%、y=30–66% 的中部活动带；x=0–100%、y=0–28% 为浅色低纹理 Logo/标题留白；x=0–100%、y=68–82% 为低纹理时间与参与对象留白；x=0–72%、y=83–91% 为参与方式留白；x=78–96%、y=82–92% 留给二维码；y=94–100% 留给页脚。留白区只允许平滑天空、墙面、地面或轻微渐变，不要人物、手、脸、树枝、落叶、道具或高频纹理；不要绘制遮罩。";
+  "原生竖版 9:16，不要方图裁切。人物和主要道具只在画面 x=42–94%、y=30–66% 的中部活动带；x=0–100%、y=0–28% 保持浅色低纹理；x=0–100%、y=68–100% 保持连续、干净、低纹理的自然背景。这些区域只呈现平滑天空、墙面、地面或轻微渐变，不要人物、手、脸、树枝、落叶、道具或高频纹理；不要绘制遮罩、卡片、方框或独立色块。";
 export const t01VisualStyleContract =
   "高端企业活动纪实摄影，真实成年员工、自然姿态、自然光与编辑摄影质感；画面克制、干净、低饱和，使用黑白灰基底与少量行政黄点缀。不是插画、卡通、动漫、手绘、扁平矢量、3D 渲染或玩具质感。";
 const compilerInstruction =
@@ -58,7 +60,7 @@ export async function compileIllustrationBrief(
             temperature: 0.3,
             response_format: { type: "json_object" },
             messages: [
-              { role: "system", content: compilerInstruction },
+              { role: "system", content: compilerInstruction + (serverEnv.VISUAL_STYLE_MODE !== "legacy" ? "\n" + editorialDirection + "\n必须在palette中明确写出所选颜色，style中明确写出表现方式；八个字段合计精简至300字以内，供用户确认。" : "") },
               {
                 role: "user",
                 content: JSON.stringify({
@@ -131,7 +133,6 @@ function classifyLlmStatus(status: number) {
 function sanitizeIntent(intent: string, input: VisualPromptInput) {
   let result = intent;
   for (const blocked of [
-    input.activityName,
     input.audience,
     input.description,
     input.notice,
@@ -153,14 +154,25 @@ function sanitizeIntent(intent: string, input: VisualPromptInput) {
     )
     .replace(/logo|二维码|qr|watermark|水印|电话|手机号|联系人|活动规则|报名须知|奖品/gi, "")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 420);
+    .trim();
 }
 
 function fallbackBrief(
   input: VisualPromptInput,
   intent: string
 ): IllustrationBrief {
+  if (serverEnv.VISUAL_STYLE_MODE !== "legacy") {
+    return {
+      subject: "以画面想法中的主体为准",
+      action: "按画面想法自然呈现，不额外添加人物",
+      setting: "与活动相符的简洁自然环境",
+      composition: intent || "主视觉位于中部偏右，四周自然留白",
+      palette: "优先使用指定颜色，否则按主体材质选择单一主色搭配中性色",
+      style: "优先使用指定表现方式，否则采用真实自然的商业摄影",
+      mood: "专业、自然、简洁",
+      negative
+    };
+  }
   return {
     subject: "企业同事",
     action:
@@ -209,16 +221,17 @@ export function briefFromConfirmedDescription(
   description: string,
   input: VisualPromptInput
 ): IllustrationBrief {
-  const safeDescription = sanitizeIntent(description, input);
-  const style = styleForIntent(safeDescription, t01VisualStyleContract);
-  return {
-    subject: "企业同事与活动主体",
-    action: safeDescription.slice(0, 80) || "自然互动与活动体验",
-    setting: safeDescription.slice(0, 80) || "明亮开阔的企业活动空间",
-    composition: safeDescription || "中部活动带中的同事互动与活动主体",
-    palette: "黑白灰基底、浅色自然光与少量行政黄",
-    style,
-    mood: input.themeKeywords.join("、") || "温暖、可信、自然",
+  const safeDescription = z.string().min(2, "请补充有效的画面想法").max(420, "画面描述最多420字").parse(sanitizeIntent(description, input));
+  return illustrationBriefSchema.parse({
+    confirmedDescription: safeDescription,
+    visualStyleMode: serverEnv.VISUAL_STYLE_MODE ?? "editorial",
+    subject: "以确认描述为准",
+    action: "以确认描述为准",
+    setting: "以确认描述为准",
+    composition: safeDescription,
+    palette: "以确认描述为准",
+    style: "以确认描述为准",
+    mood: "以确认描述为准",
     negative
-  };
+  });
 }

@@ -45,6 +45,7 @@ const probeDocument: PosterDocument = {
   includeQr: false,
   ctaLabel: "",
   qrPayload: "",
+  qrAssetId: "",
   contact: "",
   immutableSource: {
     outputFormat: true,
@@ -54,6 +55,7 @@ const probeDocument: PosterDocument = {
     includeQr: true,
     ctaLabel: true,
     qrPayload: true,
+    qrAssetId: true,
     notice: true
   }
 };

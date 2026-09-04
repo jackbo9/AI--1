@@ -20,6 +20,7 @@ const serverEnvSchema = z.object({
   IMAGE_API_KEY: z.string().optional(),
   IMAGE_MODEL: z.string().optional(),
   IMAGE_SIZE: imageSize,
+  VISUAL_STYLE_MODE: z.enum(["editorial", "legacy"]).default("editorial"),
   READABILITY_MODE: z.enum(["strict", "trial"]).default("strict"),
   FEISHU_APP_ID: z.string().optional(),
   FEISHU_APP_SECRET: z.string().optional(),

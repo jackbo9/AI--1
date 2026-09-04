@@ -30,6 +30,13 @@ const optionalQrPayloadSchema = z
     }
   }, "二维码链接必须是有效的 HTTP 或 HTTPS 地址");
 
+const optionalQrAssetIdSchema = z
+  .string()
+  .uuid()
+  .or(z.literal(""))
+  .optional()
+  .default("");
+
 const employeeActivityFieldsSchema = z.object({
     activityName: z
       .string()
@@ -53,6 +60,7 @@ const employeeActivityFieldsSchema = z.object({
     includeQr: z.boolean().default(false),
     ctaLabel: z.string().trim().max(32).optional().default(""),
     qrPayload: optionalQrPayloadSchema.optional().default(""),
+    qrAssetId: optionalQrAssetIdSchema,
     contact: z.string().trim().max(80).optional().default(""),
     visualIntent: z.string().trim().max(180).default(""),
     deadline: z.string().trim().max(80).default(""),
@@ -61,14 +69,29 @@ const employeeActivityFieldsSchema = z.object({
   });
 
 function validateQrRequirement(
-  input: { includeQr: boolean; qrPayload: string },
+  input: { includeQr: boolean; qrPayload: string; qrAssetId: string },
   context: z.RefinementCtx
 ) {
-  if (input.includeQr && !input.qrPayload) {
+  const sourceCount = Number(Boolean(input.qrPayload)) + Number(Boolean(input.qrAssetId));
+  if (input.includeQr && sourceCount === 0) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["qrPayload"],
-      message: "启用二维码后请填写二维码链接"
+      path: ["includeQr"],
+      message: "启用二维码后请填写二维码链接或上传二维码图片"
+    });
+  }
+  if (input.includeQr && sourceCount > 1) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["qrAssetId"],
+      message: "二维码链接与上传图片只能选择一种"
+    });
+  }
+  if (!input.includeQr && sourceCount > 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["includeQr"],
+      message: "未启用二维码时不能保留二维码链接或图片"
     });
   }
 }
@@ -99,7 +122,7 @@ export const posterDocumentSchema = z.object({
   outputFormat: outputFormatSchema,
   category: activityCategorySchema,
   title: z.string().min(1).max(40),
-  subtitle: z.string().max(56),
+  subtitle: z.string().max(150),
   summary: z.string().max(150).default(""),
   sessions: z.array(activitySessionSchema).min(1).max(2),
   audience: z.string().min(1).max(40),
@@ -109,6 +132,7 @@ export const posterDocumentSchema = z.object({
   includeQr: z.boolean(),
   ctaLabel: z.string().max(32),
   qrPayload: z.string().max(300),
+  qrAssetId: z.string().uuid().or(z.literal("")).default(""),
   contact: z.string().max(80),
   deadline: z.string().max(80).optional(),
   rules: z.string().max(240).optional(),
@@ -121,6 +145,7 @@ export const posterDocumentSchema = z.object({
     includeQr: z.literal(true),
     ctaLabel: z.literal(true),
     qrPayload: z.literal(true),
+    qrAssetId: z.literal(true),
     notice: z.literal(true)
   })
 });
@@ -140,7 +165,7 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
 
 export const editablePosterContentSchema = z.object({
   title: z.string().trim().min(1).max(40),
-  subtitle: z.string().trim().max(56),
+  subtitle: z.string().trim().max(150),
   summary: z.string().trim().max(150).default(""),
   highlights: z.array(z.string().trim().min(1).max(22)).max(4).default([]),
   participationSteps: z.array(z.string().trim().min(1).max(52)).max(4).default([]),
@@ -150,6 +175,8 @@ export const editablePosterContentSchema = z.object({
 });
 
 export const illustrationBriefSchema = z.object({
+  confirmedDescription: z.string().trim().min(2).max(420).optional(),
+  visualStyleMode: z.enum(["editorial", "legacy"]).optional(),
   subject: z.string().min(2).max(80),
   action: z.string().min(2).max(80),
   setting: z.string().min(2).max(80),
@@ -298,6 +325,7 @@ export const posterDocumentJsonSchema = {
     "includeQr",
     "ctaLabel",
     "qrPayload",
+    "qrAssetId",
     "contact",
     "immutableSource"
   ],

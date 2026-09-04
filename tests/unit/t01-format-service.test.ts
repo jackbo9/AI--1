@@ -20,7 +20,7 @@ const input = employeeActivityInputSchema.parse(normal);
 const document = posterDocumentSchema.parse({
   ...input, schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN",
   title: "秋日同行", subtitle: "相聚草坪", summary: "本次活动说明",
-  immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, notice: true }
+  immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
 });
 const now = "2026-09-04T00:00:00.000Z";
 const version: GenerationVersion = {

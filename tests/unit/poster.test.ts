@@ -51,6 +51,26 @@ describe("employee activity v1.7 contract", () => {
     ).toBe(true);
   });
 
+  it("accepts one uploaded QR asset and rejects ambiguous QR sources", () => {
+    const qrAssetId = "b85ee8a8-3b8a-4eba-8cf1-9efcf4156a99";
+    expect(
+      employeeActivityInputSchema.safeParse({
+        ...normal,
+        includeQr: true,
+        qrPayload: "",
+        qrAssetId
+      }).success
+    ).toBe(true);
+    expect(
+      employeeActivityInputSchema.safeParse({
+        ...normal,
+        includeQr: true,
+        qrPayload: "https://example.com/register",
+        qrAssetId
+      }).success
+    ).toBe(false);
+  });
+
   it("allows editing only the copy review fields", () => {
     const parsed = editablePosterContentSchema.parse({
       title: "秋日同行",
@@ -76,7 +96,7 @@ describe("employee activity v1.7 contract", () => {
     expect(brief.negative).toContain("Logo");
     expect(brief.composition).not.toContain(t01CompositionContract);
     expect(brief.composition).toContain("几位同事");
-    expect(brief.style).toBe(t01VisualStyleContract);
+    expect(brief.style).toContain("摄影");
   });
 
   it("uses a labeled T01 photography prompt rather than a free-form cartoon brief", () => {

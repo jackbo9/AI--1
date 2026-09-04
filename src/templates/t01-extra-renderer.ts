@@ -27,7 +27,7 @@ export async function renderT01Extra(
   posterDocument: PosterDocument,
   imagePath: string,
   outputId: string,
-  options: { content?: T01TemplateContent; outputDirectory?: string; readabilityMode?: "strict" | "trial" } = {}
+  options: { content?: T01TemplateContent; outputDirectory?: string; readabilityMode?: "strict" | "trial"; qrDataUri?: string } = {}
 ) {
   if (!/^[a-zA-Z0-9-]+$/.test(outputId)) throw new ExtraRenderError("INVALID_OUTPUT_ID", "输出标识无效");
   const [brand, imageBytes, mediumFont] = await Promise.all([
@@ -35,9 +35,24 @@ export async function renderT01Extra(
     readFile(path.join(process.cwd(), "public/brand/fonts/MiSans-Medium.otf"))
   ]);
   const imageMime = imagePath.endsWith(".svg") ? "image/svg+xml" : /\.jpe?g$/i.test(imagePath) ? "image/jpeg" : imagePath.endsWith(".webp") ? "image/webp" : "image/png";
-  const qr = posterDocument.includeQr && posterDocument.qrPayload
-    ? await QRCode.toDataURL(posterDocument.qrPayload, { width: 240, margin: 4, errorCorrectionLevel: "M" })
-    : undefined;
+  let qr: string | undefined;
+  if (posterDocument.includeQr) {
+    if (posterDocument.qrAssetId) {
+      if (!options.qrDataUri) {
+        throw new ExtraRenderError(
+          "QR_ASSET_UNAVAILABLE",
+          "二维码图片未准备完成，请重新上传后重试"
+        );
+      }
+      qr = options.qrDataUri;
+    } else {
+      qr = await QRCode.toDataURL(posterDocument.qrPayload, {
+        width: 240,
+        margin: 4,
+        errorCorrectionLevel: "M"
+      });
+    }
+  }
   const assets = { companyLogo: brand.companyLogo, administrationLogo: brand.administrationMark, image: `data:${imageMime};base64,${imageBytes.toString("base64")}`, qr };
   const content = options.content ?? t01ContentFromDocument(posterDocument);
   const markup = format === "longform_1080xAuto" ? longformMarkup(content, assets) : wideMarkup(format, content, assets);

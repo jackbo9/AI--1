@@ -29,6 +29,7 @@ const document = (() => {
     includeQr: true,
     ctaLabel: "扫码参与",
     qrPayload: "https://example.com/t01-readability",
+    qrAssetId: "",
     contact: item.contact,
     immutableSource: {
       outputFormat: true,
@@ -38,6 +39,7 @@ const document = (() => {
       includeQr: true,
       ctaLabel: true,
       qrPayload: true,
+      qrAssetId: true,
       notice: true
     }
   } satisfies PosterDocument;

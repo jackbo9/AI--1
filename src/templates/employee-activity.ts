@@ -49,7 +49,8 @@ type PosterRenderErrorCode =
   | "brand.mark.load_failed"
   | "brand.title.max_lines"
   | "content.capacity"
-  | "brand.readability.contrast_failed";
+  | "brand.readability.contrast_failed"
+  | "qr.asset.unavailable";
 
 export class PosterRenderError extends Error {
   constructor(
@@ -69,6 +70,7 @@ export type EmployeeActivityRenderResult = {
 
 export type EmployeeActivityRenderOptions = {
   readabilityMode?: "strict" | "trial";
+  qrDataUri?: string;
 };
 
 const layoutReferenceBackgroundPath = path.join(
@@ -83,20 +85,16 @@ const layoutReferenceBackgroundPath = path.join(
  * output file. Call this before an image-model request so an impossible T01
  * document never consumes an image call.
  */
-export async function preflightEmployeeActivity(document: PosterDocument) {
+export async function preflightEmployeeActivity(
+  document: PosterDocument,
+  options: Pick<EmployeeActivityRenderOptions, "qrDataUri"> = {}
+) {
   const [fallbackBytes, assets] = await Promise.all([
     readFile(layoutReferenceBackgroundPath),
     loadEmbeddedBrandAssets()
   ]);
   const fallbackData = dataUriForPath(layoutReferenceBackgroundPath, fallbackBytes);
-  const qr =
-    document.includeQr && document.qrPayload
-      ? await QRCode.toDataURL(document.qrPayload, {
-          width: 144,
-          margin: 0,
-          errorCorrectionLevel: "M"
-        })
-      : "";
+  const qr = await qrDataUriForDocument(document, options.qrDataUri);
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage({
@@ -127,14 +125,7 @@ export async function renderEmployeeActivity(
     loadEmbeddedBrandAssets()
   ]);
   const imageData = dataUriForPath(illustrationPath, imageBytes);
-  const qr =
-    document.includeQr && document.qrPayload
-      ? await QRCode.toDataURL(document.qrPayload, {
-          width: 144,
-          margin: 0,
-          errorCorrectionLevel: "M"
-        })
-      : "";
+  const qr = await qrDataUriForDocument(document, options.qrDataUri);
   const outputPath = path.join(
     process.cwd(),
     "data",
@@ -210,6 +201,33 @@ export async function renderEmployeeActivity(
   } finally {
     await browser.close();
   }
+}
+
+async function qrDataUriForDocument(
+  document: PosterDocument,
+  uploadedQrDataUri?: string
+) {
+  if (!document.includeQr) return "";
+  if (document.qrAssetId) {
+    if (!uploadedQrDataUri) {
+      throw new PosterRenderError(
+        "qr.asset.unavailable",
+        "二维码图片未准备完成，请重新上传后重试。"
+      );
+    }
+    return uploadedQrDataUri;
+  }
+  if (document.qrPayload) {
+    return QRCode.toDataURL(document.qrPayload, {
+      width: 144,
+      margin: 0,
+      errorCorrectionLevel: "M"
+    });
+  }
+  throw new PosterRenderError(
+    "qr.asset.unavailable",
+    "启用二维码后请提供链接或二维码图片。"
+  );
 }
 
 async function assertRenderReadiness(page: Page) {
@@ -762,7 +780,7 @@ export function employeeActivityPosterMarkup(
     ? '<aside class="qr-region" data-readability-region="qr" data-poster-qr><img class="qr" src="' +
       qr +
       '" alt="活动二维码"><p>' +
-      escape(document.ctaLabel || "扫码参与") +
+      "扫码报名" +
       "</p></aside>"
     : "";
   const participationTitle =
@@ -775,7 +793,7 @@ export function employeeActivityPosterMarkup(
     ".title-region { position: absolute; z-index: 2; left: 81px; top: 223px; width: 720px; } .title { width: 690px; height: 144px; margin: 0; overflow: hidden; color: #1C1C1E; font-size: 120px; font-weight: 600; line-height: 1.2; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: balance; } .subtitle { width: 720px; height: 82px; margin: 25px 0 0; overflow: hidden; color: #000; font-size: 28px; font-weight: 400; line-height: 1.45; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: pretty; } .title-region[data-text-tone=\"light\"] .title, .title-region[data-text-tone=\"light\"] .subtitle { color: #FFF; }",
     ".info-group { position: absolute; z-index: 2; left: 72px; width: 936px; color: #1C1C1E; } .info-group h2 { height: 34px; margin: 0 0 8px; font-size: 28px; font-weight: 600; line-height: 1.2; } .info-group .copy { margin: 0; overflow: hidden; color: #48484A; font-size: 22px; font-weight: 400; line-height: 1.4; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: pretty; } .info-group .copy p { margin: 0; } .info-group[data-text-tone=\"light\"] { color: #FFF; } .info-group[data-text-tone=\"light\"] .copy { color: #FFF; }",
     ".sessions-group { top: 1366px; height: 103px; } .sessions-group .copy { height: 61px; } .audience-group { top: 1477px; height: 103px; } .audience-group .copy { height: 31px; white-space: nowrap; } .participation-group { top: 1588px; height: 158px; } .participation-group .copy { height: 124px; } .participation-group.with-qr { width: 717px; }",
-    ".qr-region { position: absolute; z-index: 2; left: 864px; top: 1574px; width: 144px; } .qr { display: block; width: 144px; height: 144px; border-radius: 16px; background: #F5F5F2; } .qr-region p { margin: 14px 0 0; color: #48484A; font-size: 18px; font-weight: 400; line-height: 1.4; text-align: center; } .qr-region[data-text-tone=\"light\"] p { color: #FFF; }",
+    ".qr-region { position: absolute; z-index: 2; left: 864px; top: 1574px; width: 144px; } .qr { display: block; width: 144px; height: 144px; padding: 8px; border-radius: 16px; background: #F5F5F2; object-fit: contain; } .qr-region p { margin: 14px 0 0; color: #48484A; font-size: 18px; font-weight: 400; line-height: 1.4; text-align: center; } .qr-region[data-text-tone=\"light\"] p { color: #FFF; }",
     ".footer { position: absolute; z-index: 2; right: 72px; bottom: 80px; left: 72px; display: flex; justify-content: space-between; color: #48484A; font-size: 18px; font-weight: 400; line-height: 1.4; } .footer[data-text-tone=\"light\"] { color: #FFF; } .footer p { margin: 0; white-space: nowrap; }"
   ].join("");
   return [

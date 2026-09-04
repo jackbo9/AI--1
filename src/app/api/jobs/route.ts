@@ -11,6 +11,10 @@ import { runJob } from "@/worker/run-job";
 import { requireApiIdentity, unauthorizedResponse } from "@/server/auth";
 import { preflightEmployeeActivity, PosterRenderError } from "@/templates/employee-activity";
 import { readJsonRequest } from "@/server/request-json";
+import {
+  QrAssetError,
+  readOwnedQrAssetDataUri
+} from "@/server/qr-asset-store";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   const identity = await requireApiIdentity();
@@ -56,6 +60,12 @@ export async function POST(request: Request) {
 
   const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input);
   try {
+    const qrDataUri = parsed.data.input.qrAssetId
+      ? await readOwnedQrAssetDataUri(
+          parsed.data.input.qrAssetId,
+          identity.userId
+        )
+      : undefined;
     await preflightEmployeeActivity(
       posterDocumentSchema.parse({
         schemaVersion: "1.7",
@@ -74,6 +84,7 @@ export async function POST(request: Request) {
         includeQr: parsed.data.input.includeQr,
         ctaLabel: parsed.data.input.ctaLabel,
         qrPayload: parsed.data.input.qrPayload,
+        qrAssetId: parsed.data.input.qrAssetId,
         contact: parsed.data.input.contact,
         deadline: parsed.data.input.deadline,
         rules: parsed.data.input.rules,
@@ -86,11 +97,19 @@ export async function POST(request: Request) {
           includeQr: true,
           ctaLabel: true,
           qrPayload: true,
+          qrAssetId: true,
           notice: true
         }
-      })
+      }),
+      { qrDataUri }
     );
   } catch (error) {
+    if (error instanceof QrAssetError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.code === "QR_ASSET_FORBIDDEN" ? 403 : 422 }
+      );
+    }
     if (error instanceof PosterRenderError) {
       return NextResponse.json(
         { error: { code: error.code, message: error.message } },

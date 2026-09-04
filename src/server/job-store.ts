@@ -102,7 +102,7 @@ function normalizeLegacyInput(
   const phaseOnePointFive = employeeActivityInputSchema.safeParse({
     ...migratedSource,
     outputFormat: "portrait_1080x1920",
-    includeQr: Boolean(source.qrPayload)
+    includeQr: Boolean(source.qrPayload || source.qrAssetId)
   });
   if (phaseOnePointFive.success) return phaseOnePointFive.data;
 
@@ -147,6 +147,7 @@ function normalizeLegacyInput(
     includeQr: false,
     ctaLabel: "",
     qrPayload: "",
+    qrAssetId: "",
     contact: "",
     visualIntent: description.slice(0, 180)
   });

@@ -3,7 +3,8 @@ import path from "node:path";
 import { z } from "zod";
 import { configured, serverEnv } from "@/lib/env";
 import type { IllustrationBrief } from "@/contracts/poster";
-import { t01CompositionContract } from "./prompt-compiler";
+import { backgroundNegative, t01CompositionContract } from "./prompt-compiler";
+import { editorialComposition, editorialDirection } from "./visual-direction";
 import {
   ProviderError,
   requestBytes,
@@ -30,6 +31,14 @@ const imageResponseSchema = z.object({
 });
 
 export function seedreamPrompt(brief: IllustrationBrief) {
+  if (brief.confirmedDescription) {
+    return illustrationPromptSchema.parse([
+      "【已确认画面方案】" + brief.confirmedDescription,
+      ...(brief.visualStyleMode === "legacy" ? [] : ["【视觉指导】" + editorialDirection]),
+      "【版式构图】" + (brief.visualStyleMode === "legacy" ? t01CompositionContract : editorialComposition),
+      "【系统强制禁止】" + backgroundNegative
+    ].join("\n"));
+  }
   const prompt = [
     "【画面主体】" + brief.subject,
     "【行为】" + brief.action,
@@ -40,6 +49,7 @@ export function seedreamPrompt(brief: IllustrationBrief) {
     "【氛围】" + brief.mood,
     "【禁止】" + brief.negative,
     "【版式构图】" + t01CompositionContract,
+    "【系统强制禁止】" + backgroundNegative,
   ].join("\n");
   return illustrationPromptSchema.parse(prompt);
 }

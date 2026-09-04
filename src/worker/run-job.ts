@@ -25,6 +25,7 @@ import { validatePoster } from "@/validation/poster-validation";
 import { findJob, updateJob } from "@/server/job-store";
 import { activityTemplateFamilyManifest } from "@/templates/activity-template-family";
 import { serverEnv } from "@/lib/env";
+import { readOwnedQrAssetDataUri } from "@/server/qr-asset-store";
 
 export async function runJob(jobId: string) {
   await runCopyStage(jobId);
@@ -146,9 +147,12 @@ export async function runVisualStage(
     const compiler = {
       brief,
       provider: "confirmed-visual",
-      promptVersion: "visual-confirmed-v1"
+      promptVersion: `visual-confirmed-v3-${brief.visualStyleMode}`
     };
-    await preflightEmployeeActivity(document);
+    const qrDataUri = document.qrAssetId
+      ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
+      : undefined;
+    await preflightEmployeeActivity(document, { qrDataUri });
     const documentVersionId =
       job.confirmedDocument?.documentVersionId ??
       job.versions.at(-1)?.id ??
@@ -173,7 +177,7 @@ export async function runVisualStage(
       document,
       illustration.path,
       outputId,
-      { readabilityMode: serverEnv.READABILITY_MODE }
+      { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
     );
     const outputPath = rendered.outputPath;
     const posterValidation = validatePoster(input, document);
@@ -301,11 +305,15 @@ function visualDescriptionFromBrief(brief: IllustrationBrief) {
     `环境：${brief.setting}`,
     `构图：${brief.composition.replace(/原生竖版 9:16。?/, "").trim()}`,
     `风格：${brief.style}`,
+    `颜色：${brief.palette}`,
     `氛围：${brief.mood}`
   ].join("\n");
   // Preserve the editable creative description intact when labels would push
   // it beyond the confirmation contract; never silently truncate it.
-  return description.length <= 420 ? description : brief.composition.trim();
+  if (description.length > 420) {
+    throw new ProviderError("LLM_INVALID_OUTPUT", "优化后的画面描述过长，请精简画面想法后重试", false);
+  }
+  return description;
 }
 
 async function failJob(jobId: string, error: unknown) {

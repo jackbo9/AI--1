@@ -31,6 +31,7 @@ function portraitDocument(
     includeQr: document.includeQr,
     ctaLabel: document.ctaLabel,
     qrPayload: document.qrPayload,
+    qrAssetId: document.qrAssetId,
     contact: document.contact,
     immutableSource: {
       outputFormat: true,
@@ -40,6 +41,7 @@ function portraitDocument(
       includeQr: true,
       ctaLabel: true,
       qrPayload: true,
+      qrAssetId: true,
       notice: true
     }
   };

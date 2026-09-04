@@ -5,6 +5,7 @@ import type { PosterDocument } from "@/contracts/poster";
 import { findJob, updateJob } from "./job-store";
 import { extraTemplateVersion, renderT01Extra, ExtraRenderError, type ExtraFormat } from "@/templates/t01-extra-renderer";
 import { serverEnv } from "@/lib/env";
+import { readOwnedQrAssetDataUri } from "./qr-asset-store";
 
 export function formatOutputs(job: CampaignGenerationJob) {
   return job.artifacts.map(artifact => ({
@@ -53,7 +54,13 @@ export async function renderClaimedFormat(jobId: string, artifactId: string, for
   if (!job || !artifact || artifact.status !== "RENDERING" || !artifact.assetPath) return;
   // The snapshot was frozen at atomic claim, before any subsequent regeneration.
   try {
-    const rendered = await renderT01Extra(format, document, artifact.assetPath, `${jobId}-${artifact.id}`, { readabilityMode: serverEnv.READABILITY_MODE });
+    const qrDataUri = document.qrAssetId
+      ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
+      : undefined;
+    const renderOptions = qrDataUri
+      ? { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
+      : { readabilityMode: serverEnv.READABILITY_MODE };
+    const rendered = await renderT01Extra(format, document, artifact.assetPath, `${jobId}-${artifact.id}`, renderOptions);
     const contrastPassed = rendered.contrast?.passed ?? true;
     await updateJob(jobId, current => ({ ...current, artifacts: current.artifacts.map(item => item.id !== artifactId ? item : {
       ...item, status: "READY", width: rendered.width, height: rendered.height, outputPath: rendered.outputPath,
