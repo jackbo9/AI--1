@@ -6,8 +6,8 @@
 
 - ECS：杭州，`47.114.33.166`，Ubuntu 24.04，2 vCPU / 4 GiB / 40 GiB。
 - Node.js：22.23.2。网站入口：`https://47.114.33.166`。
-- 源码目录：`/opt/ai-zhihui/releases/20260904`，`current` 符号链接指向该版本。
-- 源码上传时的内容与本地 `915c331` 一致，另包含本轮 package.json / lockfile 安全更新。
+- 源码目录：`/opt/ai-zhihui/releases/20260904-cad2c93`，`current` 符号链接指向该版本。
+- 当前发布源码为本地 Git 节点 `cad2c93`（`feat: enforce T01 copy limits and integrate UI fixture`）。
 - 运行账户：`poster`。Web 与异步任务仍是一个 Next.js 进程，不能启动多副本共享 JSON。
 - `data` 链接到 `/opt/ai-zhihui/shared/data`；本机历史任务未迁移。
 - 环境变量：`/opt/ai-zhihui/shared/app.env`，权限 root:poster 0640。不得提交或打印其内容。
@@ -28,7 +28,8 @@
 
 ## 已验证
 
-- 云服务器上 TypeScript、ESLint、72 个单元/接口测试、生产构建通过。
+- 发布前本地 TypeScript、ESLint、75 个单元/接口测试及生产构建通过；服务器新 release 的生产构建也通过。
+- 新 release 在切流前以本机 `127.0.0.1:3001` 启动验证：未登录首页为 `307`，未登录 `POST /api/jobs` 为 `401`；切流后在本机 3000 与公网 HTTPS 均复验相同结果。
 - 初次部署首页曾被构建为 local 身份的静态页面。已改为 force-dynamic，要求每次请求按运行时环境和会话校验身份；顶部身份文案也改为读取 provider。修复后应验证未登录首页 307 跳转，不再以首页 200 作为验收。
 - 未登录创建任务被拒绝；登录入口跳转 accounts.feishu.cn，回调指向云端 HTTPS，state Cookie 含 Secure/HttpOnly。
 - 竖版固定 Fixture 可输出 PNG；横版 1920×1080、Banner 2227×950、长图 1080×3024 输出成功。

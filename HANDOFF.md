@@ -821,7 +821,7 @@ git clean
 
 已在杭州 ECS（Ubuntu 24.04、2 核 4 GiB）启动 `https://47.114.33.166`，Nginx + systemd 单进程运行，JSON/图片保存在 shared/data。飞书后台切换和真实用户端到端验收仍待完成；本机历史数据未迁移。IP HTTPS 证书签发、自动续期定时器及模拟续期已验证。
 
-服务器 TypeScript、Lint、72 项测试、生产构建通过，横版/Banner/长图 Fixture 渲染通过。竖版有一例 Linux 重复 PNG 严格哈希检查失败（首组仅 20 个文本区域像素不同），未放宽断言，不应宣称全部视觉回归通过。已更新 Playwright/PostCSS/Sharp/Vitest 的相关安全版本；更新后的完整 npm 审计因接口超时未完成。
+服务器历史发布的 TypeScript、Lint、72 项测试、生产构建通过，横版/Banner/长图 Fixture 渲染通过。2026-09-04 新 release `20260904-cad2c93` 已切换：本地新改动的 TypeScript、Lint、75 项测试及生产构建通过，服务器生产构建、未登录首页 307 和未登录创建任务 401 已在本机与公网 HTTPS 复验。竖版有一例 Linux 重复 PNG 严格哈希检查失败（首组仅 20 个文本区域像素不同），未放宽断言，不应宣称全部视觉回归通过。已更新 Playwright/PostCSS/Sharp/Vitest 的相关安全版本；更新后的完整 npm 审计因接口超时未完成。
 
 部署目录、飞书回调、权限、运维及剩余限制见 `deploy/README.md`。在真实飞书联调完成前，暂留获用户授权的部署公钥，完成后移除。
 
