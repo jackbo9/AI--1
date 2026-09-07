@@ -9,7 +9,7 @@ export type T01TextTreatment = (typeof T01_TEXT_TREATMENTS)[number];
 export type T01TextTone = "dark" | "light";
 export type T01LogoVariant = "primary" | "inverse";
 export type T01ReadabilityRegion =
-  | "header"
+  | "hero"
   | "title"
   | "sessions"
   | "audience"
@@ -23,11 +23,7 @@ export type T01ReadabilityRegion =
  * participation sit directly below it. They must use one shared text tone so
  * the block cannot alternate between black and white.
  */
-export const T01_UNIFIED_INFO_REGIONS = [
-  "sessions",
-  "audience",
-  "participation"
-] as const satisfies readonly T01ReadabilityRegion[];
+export const T01_UNIFIED_INFO_REGIONS = [] as const satisfies readonly T01ReadabilityRegion[];
 
 export type T01Rect = {
   x: number;
@@ -49,13 +45,9 @@ export type T01RegionDefinition = {
  * three-line title plus two-line subtitle area.
  */
 export const T01_READABILITY_REGIONS: readonly T01RegionDefinition[] = [
-  { id: "header", bounds: { x: 72, y: 80, width: 936, height: 83 }, minimumContrast: 3 },
-  { id: "title", bounds: { x: 80, y: 223, width: 920, height: 526.2 }, minimumContrast: 4.5 },
-  { id: "sessions", bounds: { x: 72, y: 1283, width: 936, height: 160 }, minimumContrast: 4.5 },
-  { id: "audience", bounds: { x: 72, y: 1459, width: 936, height: 76 }, minimumContrast: 4.5 },
-  { id: "participation", bounds: { x: 72, y: 1551, width: 717, height: 160 }, minimumContrast: 4.5 },
-  { id: "qr", bounds: { x: 864, y: 1732, width: 144, height: 26 }, minimumContrast: 4.5 },
-  { id: "footer", bounds: { x: 72, y: 1815, width: 936, height: 26 }, minimumContrast: 4.5 }
+  // The company logo, separator, and complete title group share one tone.
+  // The administration mark is deliberately excluded: its approved color is fixed.
+  { id: "hero", bounds: { x: 64, y: 64, width: 952, height: 1132 }, minimumContrast: 4.5 }
 ] as const;
 
 export type T01ContrastCheck = {
@@ -246,5 +238,5 @@ function selectZoneTreatmentWithWarnings(
 export function logoVariantForTreatment(
   treatments: Record<T01ReadabilityRegion, T01ZoneTreatment>
 ): T01LogoVariant {
-  return treatments.header.textTone === "light" ? "inverse" : "primary";
+  return treatments.hero.textTone === "light" ? "inverse" : "primary";
 }

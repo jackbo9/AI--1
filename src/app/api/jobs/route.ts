@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       {
         error: {
           code: "T01_TITLE_TOO_LONG",
-          message: `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，实际排版最多三行，请在生成文案前精简主题`
+          message: `T01 竖版主题建议 14 字以内；超过 ${t01PortraitTitleMaxCharacters} 字会被拒绝，最终以实际排版边界为准`
         }
       },
       { status: 422 }

@@ -5,8 +5,7 @@ import { describe, expect, it } from "vitest";
 import normal from "../fixtures/employee-activity.normal.json";
 import {
   employeeActivityPosterMarkup,
-  preflightEmployeeActivity,
-  type PosterRenderError
+  preflightEmployeeActivity
 } from "@/templates/employee-activity";
 import {
   employeeActivityInputSchema,
@@ -93,7 +92,7 @@ async function lineCount(page: import("playwright").Page, selector: string) {
 }
 
 describe("T01 multiline portrait layout", () => {
-  it("keeps 1–3 lines natural, pushes subtitle by 13px, and stays 1080×1920", async () => {
+  it("keeps 1–3 lines natural, pushes subtitle by 22px, and stays 1080×1920", async () => {
     const cases = [
       ["赛事主题", 1],
       ["赛事主题赛事主题赛事", 2],
@@ -119,26 +118,18 @@ describe("T01 multiline portrait layout", () => {
             height: document.querySelector(".poster")?.getBoundingClientRect().height
           };
         });
-        expect(boxes.gap).toBeCloseTo(13, 0);
+        expect(boxes.gap).toBeCloseTo(22, 0);
         expect(boxes.width).toBe(1080);
         expect(boxes.height).toBe(1920);
-        if (expectedLines === 3) expect(boxes.titleHeight).toBeCloseTo(432, 0);
+        if (expectedLines === 3) expect(boxes.titleHeight).toBeCloseTo(498, 0);
       } finally {
         await browser.close();
       }
     }
   }, 20_000);
 
-  it("blocks a fourth line before any image rendering and omits empty subtitle markup", async () => {
-    const overflowing = buildDocument("这是一条超过三行且接近四十字的活动主题用于验证标题溢出会被阻止生成");
-    let error: unknown;
-    try {
-      await preflightEmployeeActivity(overflowing);
-    } catch (caught) {
-      error = caught;
-    }
-    expect((error as PosterRenderError).code).toBe("brand.title.max_lines");
-
+  it("uses the rendered y=1196 boundary rather than the legacy three-line cap and omits empty subtitle markup", async () => {
+    await expect(preflightEmployeeActivity(buildDocument("这是一条接近四十字的活动主题用于验证新版标题按真实边界而非旧三行规则进行预检"))).rejects.toMatchObject({ code: "content.capacity" });
     const { browser, page } = await renderMarkup("赛事主题", "");
     try {
       expect(await page.$("[data-poster-subtitle]")).toBeNull();
@@ -205,8 +196,8 @@ describe("T01 multiline portrait layout", () => {
         };
       });
       expect(layout.order).toEqual([...layout.order].sort((left, right) => left - right));
-      expect(layout.audienceWidth).toBeCloseTo(717, 0);
-      expect(layout.participationWidth).toBeCloseTo(717, 0);
+      expect(layout.audienceWidth).toBeCloseTo(349, 0);
+      expect(layout.participationWidth).toBeCloseTo(320, 0);
       expect(layout.overlapsQr).toBe(false);
       expect(layout.qrLabel).toBe("扫码加入活动");
     } finally {

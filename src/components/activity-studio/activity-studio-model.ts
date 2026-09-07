@@ -94,13 +94,6 @@ export function hydrateForm(current: FormState, job: ActivityJob): FormState {
     ...current,
     activityName: document.title,
     session: document.sessions[0] ?? current.session,
-    secondSession: document.sessions[1]
-      ? {
-          date: document.sessions[1].date,
-          time: document.sessions[1].time,
-          location: document.sessions[1].location
-        }
-      : undefined,
     audience: document.audience,
     supplement: document.subtitle || document.summary,
     rules: document.rules ?? "",
@@ -145,20 +138,9 @@ export function getStatusLabel(job?: ActivityJob) {
 export function validateForm(form: FormState) {
   if (!form.activityName.trim()) return "请填写活动主题";
   if (textCharacterCount(form.activityName) > t01PortraitTitleMaxCharacters) {
-    return `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，实际排版最多三行，请精简后再生成`;
+    return `T01 竖版主题建议 14 字以内；超过 ${t01PortraitTitleMaxCharacters} 字会被拒绝，最终以实际排版边界为准`;
   }
-  const sessions = [
-    form.session,
-    ...(form.secondSession ? [form.secondSession] : [])
-  ];
-  if (
-    sessions.some(
-      (session) =>
-        !session.date || !session.time.trim() || !session.location.trim()
-    )
-  ) {
-    return "请完整填写每一场的日期、时间和地点";
-  }
+  if (!form.session.date || !form.session.time.trim() || !form.session.location.trim()) return "请完整填写日期、时间和地点";
   if (!form.audience.trim()) return "请填写参与对象";
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
@@ -168,18 +150,14 @@ export function validateForm(form: FormState) {
 }
 
 export function normalizeForm(form: FormState): EmployeeActivityInput {
-  const sessions = [
-    form.session,
-    ...(form.secondSession ? [form.secondSession] : [])
-  ];
   return {
     outputFormat: "portrait_1080x1920",
     activityName: form.activityName.trim(),
     category: "team",
     themeKeywords: [],
     description: form.supplement.trim(),
-    sessions: sessions.map((session, index) => ({
-      label: index === 0 ? "第一场" : "第二场",
+    sessions: [form.session].map((session) => ({
+      label: "活动安排",
       date: session.date,
       time: session.time.trim(),
       location: session.location.trim(),

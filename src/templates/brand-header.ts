@@ -5,6 +5,7 @@ type EmbeddedBrandAssets = {
   companyLogo: string;
   companyLogoInverse: string;
   administrationMark: string;
+  registrationArrow: string;
   fontFaceCss: string;
 };
 
@@ -22,9 +23,11 @@ const brandRoot = path.join(process.cwd(), "public", "brand");
 export const brandAssetPaths = {
   companyLogo: path.join(brandRoot, "company-logo.svg"),
   administrationMark: path.join(brandRoot, "administration-mark.svg"),
+  registrationArrow: path.join(brandRoot, "t01-registration-arrow.svg"),
   fonts: {
     regular: path.join(brandRoot, "fonts", "MiSans-Regular.otf"),
-    semibold: path.join(brandRoot, "fonts", "MiSans-Semibold.otf")
+    semibold: path.join(brandRoot, "fonts", "MiSans-Semibold.otf"),
+    bold: path.join(brandRoot, "fonts", "MiSans-Bold.otf")
   }
 } as const;
 
@@ -36,12 +39,14 @@ function dataUri(bytes: Buffer, mimeType: string) {
 
 async function embedBrandAssets(): Promise<EmbeddedBrandAssets> {
   try {
-    const [companyLogo, administrationMark, regular, semibold] =
+    const [companyLogo, administrationMark, registrationArrow, regular, semibold, bold] =
       await Promise.all([
         readFile(brandAssetPaths.companyLogo),
         readFile(brandAssetPaths.administrationMark),
+        readFile(brandAssetPaths.registrationArrow),
         readFile(brandAssetPaths.fonts.regular),
-        readFile(brandAssetPaths.fonts.semibold)
+        readFile(brandAssetPaths.fonts.semibold),
+        readFile(brandAssetPaths.fonts.bold)
       ]);
 
     // The inverse mark is derived only from the approved vector master. This
@@ -54,6 +59,7 @@ async function embedBrandAssets(): Promise<EmbeddedBrandAssets> {
       companyLogo: dataUri(companyLogo, "image/svg+xml"),
       companyLogoInverse: dataUri(companyLogoInverse, "image/svg+xml"),
       administrationMark: dataUri(administrationMark, "image/svg+xml"),
+      registrationArrow: dataUri(registrationArrow, "image/svg+xml"),
       fontFaceCss: [
         `@font-face{font-family:"MiSans";src:url("${dataUri(
           regular,
@@ -63,6 +69,10 @@ async function embedBrandAssets(): Promise<EmbeddedBrandAssets> {
           semibold,
           "font/otf"
         )}") format("opentype");font-style:normal;font-weight:600;font-display:block}`
+        ,`@font-face{font-family:"MiSans";src:url("${dataUri(
+          bold,
+          "font/otf"
+        )}") format("opentype");font-style:normal;font-weight:700;font-display:block}`
       ].join("")
     };
   } catch (error) {

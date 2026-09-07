@@ -86,7 +86,7 @@ export const renderTargetManifestSchema = z.object({
   qrZone: pixelRectSchema.nullable(),
   qrPlacement: z.enum(["fixed", "content_flow"]).optional(),
   overflow: z.object({
-    titleMaxLines: z.number().int().min(1).max(3),
+    titleMaxLines: z.number().int().min(1).max(6),
     titleStrategy: z.literal("block_export"),
     bodyStrategy: z.enum(["fit_declared_modules", "auto_height"])
   }),
@@ -119,13 +119,13 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "1.4.0-unified-info-tone",
+        templateVersion: "2.0.0-figma-426-4",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
           height: 1920
         },
-        safeArea: { top: 80, right: 72, bottom: 72, left: 72 },
+        safeArea: { top: 64, right: 64, bottom: 102, left: 64 },
         titleLevel: "H0",
         modules: [
           "brand_header",
@@ -133,23 +133,22 @@ export const activityTemplateFamilyManifest =
           "subtitle",
           "all_sessions",
           "audience",
-          "participation",
-          "qr",
-          "footer"
+          "rules",
+          "qr"
         ],
         backgroundMode: "full_bleed",
-        focalArea: { x: 0.42, y: 0.34, width: 0.53, height: 0.45 },
-        textSafeArea: { x: 0.067, y: 0.16, width: 0.866, height: 0.36 },
+        focalArea: { x: 0, y: 0, width: 1, height: 0.65625 },
+        textSafeArea: { x: 0.059, y: 0.1156, width: 0.882, height: 0.5073 },
         logoZones: {
-          company: { x: 72, y: 80, width: 280, height: 82.5179 },
+          company: { x: 64, y: 64, width: 224, height: 66.014 },
           administration: {
-            x: 931.5,
-            y: 83.0089,
-            width: 76.5001,
-            height: 76.5001
+            x: 954.8,
+            y: 66.41,
+            width: 61.2,
+            height: 61.2
           }
         },
-        qrZone: { x: 864, y: 1574, width: 144, height: 144 },
+        qrZone: { x: 850, y: 1496, width: 134, height: 134 },
         overflow: {
           titleMaxLines: t01PortraitLayout.titleMaxLines,
           titleStrategy: "block_export",
@@ -158,7 +157,7 @@ export const activityTemplateFamilyManifest =
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/poster/T01 体育赛事.svg",
           note:
-            "Figma 325:317 / 387:709：1080 宽容器，两侧 80px 内边距，120px 标题最多三行；标题与副标题自然流式排列，间距 13px。"
+            "Figma 426:4：64px 水平边距，952px 宽的标题及副标题均自适应高度，二者间距 22px；标题组必须止于 y=1196。"
         }
       },
       landscape_1920x1080: {

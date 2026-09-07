@@ -13,7 +13,6 @@ export type SessionState = {
 export type FormState = {
   activityName: string;
   session: SessionState;
-  secondSession?: SessionState;
   audience: string;
   supplement: string;
   deadline: string;

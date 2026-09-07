@@ -4,10 +4,10 @@ import { seedreamPrompt } from "@/providers/illustration-provider";
 import { editorialComposition } from "@/providers/visual-direction";
 
 describe("background-only image prompt", () => {
-  it("keeps the designer focal range without inheriting the old bottom exclusion", () => {
-    expect(editorialComposition).toContain("X=68%–78%、Y=48%–58%");
-    expect(editorialComposition).toContain("主体可以向右侧、下方或上下延展");
-    expect(editorialComposition).not.toMatch(/68–100|0–28|二维码|Logo|页脚/);
+  it("uses the complete drawable upper area without retaining the old focal restriction", () => {
+    expect(editorialComposition).toContain("完整画面都可承载场景与主体");
+    expect(editorialComposition).toContain("不保留旧版左上留白或中右焦点限制");
+    expect(editorialComposition).not.toMatch(/X=68|0–28|二维码|Logo|页脚/);
   });
   it("keeps confirmed creative text intact and excludes obsolete field defaults", () => {
     const description = "羽毛球与蓝色球拍拍面接触的瞬间，器材超近景，真实高速摄影，无人物，蓝白主色。";
@@ -41,7 +41,7 @@ describe("background-only image prompt", () => {
   });
   it("describes empty regions without naming downstream poster elements", () => {
     expect(t01CompositionContract).not.toMatch(/二维码|扫码|QR|Logo|标题|页脚|报名/i);
-    expect(t01CompositionContract).toContain("低纹理的自然背景");
+    expect(t01CompositionContract).toContain("完整的可绘制区域");
   });
   it("adds mandatory exclusions to the existing saved brief contract", () => {
     const prompt = seedreamPrompt({ subject: "企业同事", action: "共同参与活动", setting: "开阔城市街道", composition: "同事在画面中部自然互动", palette: "黑白灰和黄色", style: "纪实摄影", mood: "活力", negative: "不要文字、字母、数字、Logo、二维码、水印、签名" });

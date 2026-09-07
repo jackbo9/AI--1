@@ -47,13 +47,13 @@ describe("employee activity template family manifest", () => {
     const banner =
       activityTemplateFamilyManifest.renderTargets.banner_2227x950;
 
-    expect(portrait.logoZones.company.x).toBe(72);
-    expect(portrait.logoZones.administration.x).toBe(931.5);
+    expect(portrait.logoZones.company.x).toBe(64);
+    expect(portrait.logoZones.administration.x).toBe(954.8);
     expect(portrait.qrZone).toEqual({
-      x: 864,
-      y: 1574,
-      width: 144,
-      height: 144
+      x: 850,
+      y: 1496,
+      width: 134,
+      height: 134
     });
     expect(banner.modules).toEqual([
       "brand_header",

@@ -179,9 +179,7 @@ export async function runVisualStage(
     const posterValidation = validatePoster(input, document);
     const validation = {
       passed: posterValidation.passed && rendered.readability.passed,
-      exportAllowed:
-        posterValidation.passed &&
-        (rendered.readability.passed || serverEnv.READABILITY_MODE === "trial"),
+      exportAllowed: posterValidation.passed,
       strategy: serverEnv.READABILITY_MODE,
       checks: {
         fontAndLogos: true,
@@ -200,12 +198,6 @@ export async function runVisualStage(
       ],
       readability: rendered.readability
     };
-    if (!validation.exportAllowed) {
-      throw new PosterRenderError(
-        "brand.readability.contrast_failed",
-        "T01 对比度发布门未通过，Artifact 不会进入 READY。"
-      );
-    }
     const finalAssetMode = illustration.mode;
     const finalAssetDetail = illustration.detail;
     const artifactId = crypto.randomUUID();

@@ -74,7 +74,7 @@ export async function generateCopy(
                     task: "保留锁定标题；基于补充说明生成可直接排入 T01 竖版的短副标题，并返回完整 PosterDocumentV1_7。",
                     constraints: {
                       title: "逐字保留 input.activityName，不改写、不扩写",
-                      subtitle: `T01 竖版实际展示字段；一句中文，不换行，最多 ${t01PortraitSubtitleMaxCharacters} 个字（含标点）；信息不足时返回空字符串，不要用长段落填充`,
+                      subtitle: `T01 竖版实际展示字段；宽度 952px、高度自适应，建议 25 个字以内；一句中文，不换行，最多 ${t01PortraitSubtitleMaxCharacters} 个字（含标点）；信息不足时返回空字符串，不要用长段落填充`,
                       summaryMaxLength: 150,
                       highlights: "保留输入；为空时返回空数组",
                       participationSteps: "保留输入；为空时返回空数组"

@@ -73,7 +73,7 @@ it("rejects a title beyond the T01 input capacity before copy generation", async
   await expect(response.json()).resolves.toEqual({
     error: {
       code: "T01_TITLE_TOO_LONG",
-      message: "T01 竖版主题最多 40 个字，实际排版最多三行，请在生成文案前精简主题"
+      message: "T01 竖版主题建议 14 字以内；超过 40 字会被拒绝，最终以实际排版边界为准"
     }
   });
   expect(findByKey).not.toHaveBeenCalled();

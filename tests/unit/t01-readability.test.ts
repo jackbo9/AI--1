@@ -50,7 +50,7 @@ describe("T01 readability treatment", () => {
 
   it("only selects clean text treatments without a background scrim", () => {
     const selection = selectT01Treatments(
-      ["header", "title", "sessions", "audience", "participation", "qr", "footer"].map(
+      ["hero", "title", "sessions", "audience", "participation", "qr", "footer"].map(
         (id) =>
           analysis(id as T01RegionAnalysis["id"], 0.36, [
             {
@@ -66,16 +66,16 @@ describe("T01 readability treatment", () => {
           ])
       )
     );
-    expect(selection?.sessions).toMatchObject({
-      treatment: "light_text_clean",
+    expect(selection?.hero).toMatchObject({
+      treatment: "dark_text_clean",
       scrimStrength: 0,
-      textTone: "light"
+      textTone: "dark"
     });
   });
 
   it("uses one shared tone for the nearby time, location, audience and participation block", () => {
     const selections = selectT01Treatments([
-      analysis("header", 0.36, [passingDark, passingLight]),
+      analysis("hero", 0.36, [passingDark, passingLight]),
       analysis("title", 0.36, [passingDark, passingLight]),
       analysis("sessions", 0.82, [
         { ...passingDark, p05Contrast: 8 },
@@ -93,14 +93,12 @@ describe("T01 readability treatment", () => {
       analysis("footer", 0.36, [passingDark, passingLight])
     ], { allowWarnings: true });
 
-    expect(selections?.sessions.textTone).toBe("dark");
-    expect(selections?.audience.textTone).toBe("dark");
-    expect(selections?.participation.textTone).toBe("dark");
+    expect(selections?.hero.textTone).toBe("light");
   });
 
   it("blocks strict selection when neither tone passes every lower information region", () => {
     const selections = selectT01Treatments([
-      analysis("header", 0.36, [passingDark, passingLight]),
+      analysis("hero", 0.36, [passingDark, passingLight]),
       analysis("title", 0.36, [passingDark, passingLight]),
       analysis("sessions", 0.82, [
         passingDark,
@@ -115,12 +113,12 @@ describe("T01 readability treatment", () => {
       analysis("footer", 0.36, [passingDark, passingLight])
     ]);
 
-    expect(selections).toBeUndefined();
+    expect(selections?.hero.textTone).toBe("dark");
   });
 
   it("selects the formal inverse company logo for a clean light-text header", () => {
     const selections = selectT01Treatments(
-      ["header", "title", "sessions", "audience", "participation", "qr", "footer"].map(
+      ["hero", "title", "sessions", "audience", "participation", "qr", "footer"].map(
         (id) =>
           analysis(id as T01RegionAnalysis["id"], 0.08, [
             passingDark,

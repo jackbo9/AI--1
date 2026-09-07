@@ -19,7 +19,8 @@ describe("B1 formal brand assets", () => {
       brandAssetPaths.companyLogo,
       brandAssetPaths.administrationMark,
       brandAssetPaths.fonts.regular,
-      brandAssetPaths.fonts.semibold
+      brandAssetPaths.fonts.semibold,
+      brandAssetPaths.fonts.bold
     ];
     const sizes = await Promise.all(files.map((file) => stat(file)));
 
@@ -81,23 +82,23 @@ describe("B1 formal brand assets", () => {
     expect(portrait.templateId).toBe(employeeActivityTemplate.id);
     expect(portrait.templateVersion).toBe(employeeActivityTemplate.version);
     expect(portrait.logoZones.company).toMatchObject({
-      x: 72,
-      y: 80,
-      width: 280
+      x: 64,
+      y: 64,
+      width: 224
     });
     expect(portrait.qrZone).toMatchObject({
-      x: 864,
-      y: 1574,
-      width: 144,
-      height: 144
+      x: 850,
+      y: 1496,
+      width: 134,
+      height: 134
     });
   });
 
   it("declares the T01 slot projection without legacy cards or CTA", () => {
     expect(employeeActivityTemplate.slots).toEqual([
-      "brand_header", "full_bleed_background", "title", "subtitle", "sessions", "audience", "participation", "qr", "footer"
+      "brand_header", "full_bleed_background", "title", "subtitle", "sessions", "audience", "activity_rules", "qr"
     ]);
-    expect(activityTemplateFamilyManifest.renderTargets.portrait_1080x1920.overflow.titleMaxLines).toBe(3);
+    expect(activityTemplateFamilyManifest.renderTargets.portrait_1080x1920.overflow.titleMaxLines).toBe(5);
   });
 
   it("omits the complete QR region when the input does not enable it", async () => {

@@ -18,7 +18,7 @@ import { t01PortraitLayout } from "./t01-portrait-layout";
 
 export const employeeActivityTemplate = {
   id: "employee-activity-portrait",
-  version: "1.4.0-unified-info-tone",
+  version: "2.0.0-figma-426-4",
   outputFormat: "portrait_1080x1920",
   width: 1080,
   height: 1920,
@@ -34,9 +34,8 @@ export const employeeActivityTemplate = {
     "subtitle",
     "sessions",
     "audience",
-    "participation",
-    "qr",
-    "footer"
+    "activity_rules",
+    "qr"
   ],
   overflowRules: {
     titleMaxLines: t01PortraitLayout.titleMaxLines,
@@ -151,24 +150,12 @@ export async function renderEmployeeActivity(
     await assertLayoutCapacity(page);
 
     const initialAnalysis = await analyzeBackground(page);
-    const readabilityMode = options.readabilityMode ?? "strict";
-    const treatments = selectT01Treatments(initialAnalysis, {
-      allowWarnings: readabilityMode === "trial"
-    });
-
-    if (!treatments && readabilityMode === "strict") {
-      throw new PosterRenderError(
-        "brand.readability.contrast_failed",
-        "原始背景未通过 T01 对比度发布门；当前不替换背景也不添加遮罩，已阻止导出。"
-      );
-    }
-
-    if (!treatments) {
-      throw new PosterRenderError(
-        "brand.readability.contrast_failed",
-        "T01 无法为文字区域选择可用的可读性处理。"
-      );
-    }
+    // Keep an inspectable result even when neither tone passes. The worker
+    // retries the visual first; after its bounded retries this warning render
+    // is shown with download and regeneration actions.
+    const treatments = selectT01Treatments(initialAnalysis) ??
+      selectT01Treatments(initialAnalysis, { allowWarnings: true });
+    if (!treatments) throw new PosterRenderError("brand.readability.contrast_failed", "无法分析主视觉的文字可读性。");
     const logoVariant = logoVariantForTreatment(treatments);
     await applyTextToneTreatment(
       page,
@@ -181,12 +168,6 @@ export async function renderEmployeeActivity(
     const passed = finalAnalysis.every((region) =>
       region.candidates.every((candidate) => candidate.passed)
     );
-    if (!passed && readabilityMode === "strict") {
-      throw new PosterRenderError(
-        "brand.readability.contrast_failed",
-        "原始背景与当前文字颜色组合未通过 T01 对比度发布门，已阻止导出。"
-      );
-    }
 
     const readability: T01ReadabilityReport = {
       contractVersion: "t01-readability-v1",
@@ -247,10 +228,11 @@ async function assertRenderReadiness(page: Page) {
     ];
     return {
       miSansLoaded:
-        miSansFaces.length === 2 &&
+      miSansFaces.length === 3 &&
         miSansFaces.every((face) => face.status === "loaded") &&
         window.document.fonts.check('400 28px "MiSans"') &&
-        window.document.fonts.check('600 120px "MiSans"'),
+        window.document.fonts.check('600 28px "MiSans"') &&
+        window.document.fonts.check('700 125px "MiSans"'),
       logosLoaded: logoImages.every(
         (image) => image?.complete && (image.naturalWidth ?? 0) > 0
       )
@@ -259,7 +241,7 @@ async function assertRenderReadiness(page: Page) {
   if (!readiness.miSansLoaded) {
     throw new PosterRenderError(
       "brand.font.load_failed",
-      "MiSans 正常与半粗字重未完整加载，已阻止导出。"
+      "MiSans Regular、Medium 与 Bold 未完整加载，已阻止导出。"
     );
   }
   if (!readiness.logosLoaded) {
@@ -273,8 +255,6 @@ async function assertRenderReadiness(page: Page) {
 async function assertLayoutCapacity(page: Page) {
   const layout = await page.evaluate(
     ({
-      maxTitleLines,
-      maxSubtitleLines,
       titleTop,
       titleAreaBottom,
       titleSubtitleGap,
@@ -283,24 +263,9 @@ async function assertLayoutCapacity(page: Page) {
     const title = window.document.querySelector<HTMLElement>(
       "[data-poster-title]"
     );
-    const lineRects = (element: HTMLElement) => {
-      const contentRange = window.document.createRange();
-      contentRange.selectNodeContents(element);
-      return Array.from(contentRange.getClientRects()).filter(
-        (rect) => rect.width > 0.5 && rect.height > 0.5
-      );
-    };
-    const titleRects = title ? lineRects(title) : [];
     const subtitle = window.document.querySelector<HTMLElement>(
       "[data-poster-subtitle]"
     );
-    const subtitleRects = subtitle ? lineRects(subtitle) : [];
-    const titleLineCount = new Set(
-      titleRects.map((rect) => Math.round(rect.top))
-    ).size;
-    const subtitleLineCount = new Set(
-      subtitleRects.map((rect) => Math.round(rect.top))
-    ).size;
     const titleBox = title?.getBoundingClientRect();
     const subtitleBox = subtitle?.getBoundingClientRect();
     const overflows = [
@@ -318,9 +283,7 @@ async function assertLayoutCapacity(page: Page) {
         element.scrollWidth > element.clientWidth + 2
       );
     });
-    const infoStack = window.document.querySelector<HTMLElement>(
-      "[data-t01-info-stack]"
-    );
+    const infoStack = window.document.querySelector<HTMLElement>("[data-t01-info-stack]");
     const qr = window.document.querySelector<HTMLElement>("[data-poster-qr]");
     const infoElements = Array.from(
       window.document.querySelectorAll<HTMLElement>(
@@ -333,16 +296,12 @@ async function assertLayoutCapacity(page: Page) {
       left.top < right.bottom &&
       left.bottom > right.top;
     return {
-      titleOverflow:
-        !title ||
-        titleLineCount > maxTitleLines ||
-        title.scrollWidth > title.clientWidth + 2,
+      titleOverflow: !title || title.scrollWidth > title.clientWidth + 2,
       subtitleOverflow:
         Boolean(subtitle) &&
-        (subtitleLineCount > maxSubtitleLines ||
-          subtitle!.scrollWidth > subtitle!.clientWidth + 2),
+        subtitle!.scrollWidth > subtitle!.clientWidth + 2,
       titleAreaOverflow:
-        Boolean(subtitleBox && subtitleBox.bottom > titleAreaBottom) ||
+        Boolean((subtitleBox ?? titleBox) && (subtitleBox ?? titleBox)!.bottom > titleAreaBottom) ||
         Boolean(titleBox && titleBox.top < titleTop),
       titleSubtitleGapInvalid: Boolean(
         subtitle &&
@@ -362,8 +321,6 @@ async function assertLayoutCapacity(page: Page) {
     };
     },
     {
-      maxTitleLines: t01PortraitLayout.titleMaxLines,
-      maxSubtitleLines: t01PortraitLayout.subtitleMaxLines,
       titleTop: t01PortraitLayout.titleTop,
       titleAreaBottom: t01PortraitLayout.titleAreaBottom,
       titleSubtitleGap: t01PortraitLayout.titleSubtitleGap,
@@ -373,25 +330,25 @@ async function assertLayoutCapacity(page: Page) {
   if (layout.titleOverflow) {
     throw new PosterRenderError(
       "brand.title.max_lines",
-      "标题超过 T01 竖版模板允许的三行，未生成可能遮挡说明区的海报。"
+      "标题超过 T01 竖版文本槽宽度，未生成海报。"
     );
   }
   if (layout.subtitleOverflow) {
     throw new PosterRenderError(
       "content.capacity",
-      "副标题超过 T01 竖版模板允许的两行，未生成可能裁切的海报。"
+      "副标题超过 T01 竖版文本槽宽度，未生成海报。"
     );
   }
   if (layout.titleAreaOverflow || layout.titleSubtitleGapInvalid) {
     throw new PosterRenderError(
       "content.capacity",
-      "T01 标题区超出安全范围或间距不符合模板契约，未生成海报。"
+      "T01 标题组超过 y=1196 的安全边界或间距不符合模板契约，未生成海报。"
     );
   }
   if (layout.infoStackOverflow || layout.qrCollision) {
     throw new PosterRenderError(
       "content.capacity",
-      "时间、地点或参与信息超过 T01 底部安全区，未生成可能遮挡二维码或页脚的海报。"
+      "时间、地点、参与对象或活动规则超过 T01 信息区安全范围，未生成海报。"
     );
   }
   if (layout.contentOverflow) {
@@ -460,11 +417,13 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
         };
         const textRects = (region: Region) => {
           const selectors: Record<string, string[]> = {
-            header: [
+            hero: [
               "[data-brand-company-logo]",
-              "[data-brand-administration-mark]"
+              ".hero-divider",
+              ".hero-eyebrow",
+              "[data-poster-title]",
+              "[data-poster-subtitle]"
             ],
-            title: ["[data-poster-title]", "[data-poster-subtitle]"],
           sessions: [
               "[data-readability-region=\"sessions\"] h2",
               "[data-poster-session-time]",
@@ -478,8 +437,7 @@ async function analyzeBackground(page: Page): Promise<T01RegionAnalysis[]> {
               "[data-readability-region=\"participation\"] h2",
               "[data-poster-participation]"
             ],
-            qr: [".qr-region p"],
-            footer: [".footer p"]
+            qr: [".qr-region p"]
           };
           const rects = (selectors[region.id] ?? []).flatMap((selector) =>
             Array.from(document.querySelectorAll<HTMLElement>(selector)).flatMap(
@@ -703,11 +661,13 @@ async function analyzeAppliedTreatment(
       };
       const textRects = (region: (typeof regions)[number]) => {
         const selectors: Record<string, string[]> = {
-          header: [
+          hero: [
             "[data-brand-company-logo]",
-            "[data-brand-administration-mark]"
+            ".hero-divider",
+            ".hero-eyebrow",
+            "[data-poster-title]",
+            "[data-poster-subtitle]"
           ],
-          title: ["[data-poster-title]", "[data-poster-subtitle]"],
           sessions: [
             "[data-readability-region=\"sessions\"] h2",
             "[data-poster-session-time]",
@@ -721,8 +681,7 @@ async function analyzeAppliedTreatment(
             "[data-readability-region=\"participation\"] h2",
             "[data-poster-participation]"
           ],
-          qr: [".qr-region p"],
-          footer: [".footer p"]
+          qr: [".qr-region p"]
         };
         const rects = (selectors[region.id] ?? []).flatMap((selector) =>
           Array.from(document.querySelectorAll<HTMLElement>(selector)).flatMap(
@@ -842,8 +801,6 @@ function sessionTimesMarkup(document: PosterDocument) {
     .map(
       (session) =>
         "<p>" +
-        escape(session.label) +
-        "｜" +
         chineseDate(session.date) +
         " " +
         escape(session.time) +
@@ -856,7 +813,7 @@ function sessionLocationsMarkup(document: PosterDocument) {
   return document.sessions
     .map(
       (session) =>
-        "<p>" + escape(session.label) + "｜" + escape(session.location) + "</p>"
+        "<p>" + escape(session.location) + "</p>"
     )
     .join("");
 }
@@ -874,24 +831,19 @@ export function employeeActivityPosterMarkup(
   assets: Awaited<ReturnType<typeof loadEmbeddedBrandAssets>>
 ) {
   const qrMarkup = qr
-    ? '<aside class="qr-region" data-readability-region="qr" data-poster-qr><img class="qr" src="' +
+    ? '<aside class="qr-region" data-poster-qr><img class="qr" src="' +
       qr +
       '" alt="活动二维码"><p>' +
       escape(document.ctaLabel || "扫码报名") +
       "</p></aside>"
     : "";
-  const participationTitle =
-    document.category === "competition" ? "赛事规则" : "参与方式";
   const styles = [
     assets.fontFaceCss,
     '* { box-sizing: border-box; } html, body { width: 1080px; height: 1920px; margin: 0; } body { color: #1C1C1E; font-family: "MiSans", sans-serif; }',
-    ".poster { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #F5F5F2; } .background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }",
-    ".brand-header { position: absolute; z-index: 2; top: 80px; left: 72px; right: 72px; height: 82.5179px; display: flex; align-items: center; justify-content: space-between; } .company-logo { width: 280px; height: 82.5179px; object-fit: contain; object-position: left center; } .administration-mark { width: 76.5001px; height: 76.5001px; object-fit: contain; }",
-    ".title-region { position: absolute; z-index: 2; left: 0; top: 223px; width: 1080px; padding: 0 80px; display: flex; flex-direction: column; gap: 13px; } .title { width: 920px; height: auto; flex-shrink: 0; margin: 0; color: #1C1C1E; font-size: 120px; font-weight: 600; line-height: 1.2; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: wrap; } .subtitle { width: 920px; height: auto; flex-shrink: 0; margin: 0; color: #000; font-size: 28px; font-weight: 400; line-height: 1.45; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: wrap; } .title-region[data-text-tone=\"light\"] .title, .title-region[data-text-tone=\"light\"] .subtitle { color: #FFF; }",
-    `.info-stack { position: absolute; z-index: 2; top: ${t01PortraitLayout.infoTop}px; left: 72px; width: ${t01PortraitLayout.infoWidth}px; display: flex; flex-direction: column; gap: ${t01PortraitLayout.infoGroupGap}px; color: #1C1C1E; } .info-group { position: static; width: 100%; color: inherit; } .info-group h2 { height: auto; margin: 0 0 4px; font-size: 32px; font-weight: 600; line-height: 1.2; } .info-group .copy { margin: 0; overflow: visible; color: #48484A; font-size: 24px; font-weight: 400; line-height: 1.4; line-break: strict; word-break: normal; overflow-wrap: break-word; text-wrap: pretty; } .info-group .copy p { margin: 0; } .info-group[data-text-tone="light"] { color: #FFF; } .info-group[data-text-tone="light"] .copy { color: #FFF; }`,
-    `.sessions-group { display: flex; flex-direction: column; gap: ${t01PortraitLayout.infoGroupGap}px; } .session-detail .copy, .audience-group .copy { white-space: nowrap; } .info-stack.with-qr .audience-group, .info-stack.with-qr .participation-group { width: ${t01PortraitLayout.infoQrSafeWidth}px; }`,
-    ".qr-region { position: absolute; z-index: 2; left: 864px; top: 1574px; width: 144px; } .qr { display: block; width: 144px; height: 144px; padding: 8px; border-radius: 16px; background: #F5F5F2; object-fit: contain; } .qr-region p { margin: 14px 0 0; color: #48484A; font-size: 18px; font-weight: 400; line-height: 1.4; text-align: center; } .qr-region[data-text-tone=\"light\"] p { color: #FFF; }",
-    ".footer { position: absolute; z-index: 2; right: 72px; bottom: 80px; left: 72px; display: flex; justify-content: space-between; color: #48484A; font-size: 18px; font-weight: 400; line-height: 1.4; } .footer[data-text-tone=\"light\"] { color: #FFF; } .footer p { margin: 0; white-space: nowrap; }"
+    ".poster { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #fff; } .background { position: absolute; inset: 0 0 660px; width: 100%; height: 1260px; object-fit: cover; object-position: center; } .info-panel { position:absolute; z-index:1; top:1260px; width:1080px; height:660px; background:#F2F2EE; }",
+    ".hero-content { position:absolute; z-index:2; inset:0; } .brand-header { position:absolute; top:64px; left:64px; right:64px; height:66.014px; display:flex; align-items:center; justify-content:space-between; } .company-logo { width:224px; height:66.014px; object-fit:contain; object-position:left center; } .administration-mark { width:61.2px; height:61.2px; object-fit:contain; } .hero-divider { position:absolute; top:184px; left:64px; width:952px; height:2px; background:#151515; } .hero-eyebrow { position:absolute; top:222px; left:64px; margin:0; color:#151515; font-size:26px; font-weight:600; line-height:32.5px; } .title-region { position:absolute; top:292px; left:64px; width:952px; display:flex; flex-direction:column; gap:22px; } .title { width:952px; margin:0; color:#151515; font-size:125px; font-weight:700; line-height:166px; line-break:strict; word-break:normal; overflow-wrap:break-word; text-wrap:balance; } .subtitle { width:952px; margin:0; color:#151515; font-size:28px; font-weight:600; line-height:35px; line-break:strict; word-break:normal; overflow-wrap:break-word; text-wrap:pretty; } .hero-content[data-text-tone=\"light\"] .hero-divider { background:#fff; } .hero-content[data-text-tone=\"light\"] .hero-eyebrow, .hero-content[data-text-tone=\"light\"] .title, .hero-content[data-text-tone=\"light\"] .subtitle { color:#fff; }",
+    ".info-stack { position:absolute; z-index:2; top:1298px; left:64px; width:952px; height:520px; color:#181818; } .info-kicker { position:absolute; top:0; left:0; height:37px; padding:5px 10px; color:#F2F2EE; background:#181818; font-size:21px; font-weight:700; line-height:25.2px; } .info-heading { position:absolute; top:63px; left:0; margin:0; font-size:52px; font-weight:800; line-height:62.4px; } .info-rule { position:absolute; left:0; height:1px; background:#C8C8C1; } .info-rule.top { top:151px; width:952px; } .info-rule.mid { top:306px; width:726px; } .info-rule.bottom { top:480px; width:952px; } .info-rule.vertical { top:151px; width:1px; height:329px; } .info-rule.v1 { left:373px; } .info-rule.v2 { left:750px; } .info-group { position:absolute; top:177px; } .session-time { left:0; width:349px; } .session-location { left:400px; width:320px; } .audience-group { top:336px; left:0; width:349px; } .participation-group { top:336px; left:400px; width:320px; } .info-group h2 { display:flex; gap:14px; align-items:flex-start; margin:0 0 17px; font-size:23px; font-weight:700; line-height:27.6px; } .info-group h2::before { color:#75756F; font-size:20px; font-weight:600; line-height:24px; } .session-time h2::before { content:'01'; } .session-location h2::before { content:'02'; } .audience-group h2::before { content:'03'; } .participation-group h2::before { content:'04'; } .info-group .copy { margin:0; color:#181818; font-size:29px; font-weight:600; line-height:34.8px; overflow-wrap:break-word; } .session-location .copy { font-size:32px; line-height:38.4px; } .audience-group .copy { font-size:28px; line-height:33.6px; } .participation-group .copy { font-size:27px; line-height:32.4px; } .info-group .copy p { margin:0; } .info-note { position:absolute; top:499px; left:0; width:726px; margin:0; color:#75756F; font-size:22px; font-weight:400; line-height:26.4px; }",
+    ".info-crosses { position:absolute; z-index:3; top:1298px; left:64px; width:952px; height:480px; pointer-events:none; } .cross { position:absolute; color:#75756F; font-family:Arial,sans-serif; font-size:32px; font-weight:400; line-height:32px; transform:translate(-50%,-50%); } .c1 { left:0; top:151px; } .c2 { left:373px; top:151px; } .c3 { left:750px; top:151px; } .c4 { left:952px; top:151px; } .c5 { left:0; top:480px; } .c6 { left:750px; top:480px; } .c7 { left:952px; top:480px; } .qr-region { position:absolute; z-index:3; top:1496px; left:850px; width:134px; } .qr { display:block; width:134px; height:134px; padding:0; border:1px solid #C8C8C1; background:#fff; object-fit:contain; } .qr-region p { margin:10px 0 0; color:#181818; font-size:20px; font-weight:400; line-height:24px; text-align:center; } .registration-cta { position:absolute; z-index:3; top:1304px; left:844px; display:flex; align-items:center; gap:6px; } .registration-cta span { display:block; height:37px; padding:5px 10px; color:#181818; background:#F7E600; font-size:21px; font-weight:700; line-height:25.2px; } .registration-cta img { width:34px; height:34px; }"
   ].join("");
   return [
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>',
@@ -899,8 +851,9 @@ export function employeeActivityPosterMarkup(
     "</style></head><body><main class=\"poster\"><img class=\"background\" src=\"",
     image,
     '" alt="活动主视觉">',
+    '<section class="hero-content" data-readability-region="hero">',
     brandHeaderMarkup(assets, "primary"),
-    '<section class="title-region" data-readability-region="title"><h1 class="title" data-poster-title>',
+    '<i class="hero-divider" aria-hidden="true"></i><p class="hero-eyebrow">九号员工活动 / ACTIVITY</p><section class="title-region"><h1 class="title" data-poster-title>',
     escape(document.title),
     "</h1>",
     document.subtitle
@@ -908,29 +861,28 @@ export function employeeActivityPosterMarkup(
         escape(document.subtitle) +
         "</p>"
       : "",
-    "</section>",
-    '<div class="info-stack',
-    qr ? " with-qr" : "",
-    '" data-t01-info-stack><section class="info-group sessions-group" data-readability-region="sessions"><div class="session-detail" data-readability-region="session-time"><h2>',
-    document.category === "competition" ? "比赛时间" : "活动时间",
+    "</section></section><div class=\"info-panel\"></div>",
+    '<div class="info-stack" data-t01-info-stack><b class="info-kicker">活动指南</b><h2 class="info-heading">先看这里。</h2><i class="info-rule top"></i><i class="info-rule mid"></i><i class="info-rule bottom"></i><i class="info-rule vertical v1"></i><i class="info-rule vertical v2"></i><section class="info-group session-time"><h2>',
+    "活动时间",
     '</h2><div class="copy" data-poster-session-time data-poster-sessions>',
     sessionTimesMarkup(document),
-    '</div></div><div class="session-detail" data-readability-region="session-location"><h2>',
-    document.category === "competition" ? "比赛地点" : "活动地点",
+    '</div></section><section class="info-group session-location"><h2>',
+    "活动地点",
     '</h2><div class="copy" data-poster-session-location>',
     sessionLocationsMarkup(document),
-    "</div></div></section>",
-    '<section class="info-group audience-group" data-readability-region="audience"><h2>参与对象</h2><p class="copy" data-poster-audience>',
+    "</div></section>",
+    '<section class="info-group audience-group"><h2>参与对象</h2><p class="copy" data-poster-audience>',
     escape(document.audience),
     "</p></section>",
-    '<section class="info-group participation-group',
-    qr ? " with-qr" : "",
-    '" data-readability-region="participation"><h2>',
-    participationTitle,
+    '<section class="info-group participation-group"><h2>',
+    "活动规则",
     '</h2><div class="copy" data-poster-participation>',
     participationMarkup(document),
-    "</div></section></div>",
+    "</div></section><p class=\"info-note\">",
+    escape(document.notice),
+    "</p></div><div class=\"info-crosses\" aria-hidden=\"true\"><i class=\"cross c1\">+</i><i class=\"cross c2\">+</i><i class=\"cross c3\">+</i><i class=\"cross c4\">+</i><i class=\"cross c5\">+</i><i class=\"cross c6\">+</i><i class=\"cross c7\">+</i></div>",
+    qr ? '<aside class="registration-cta"><span>一起参加</span><img src="' + assets.registrationArrow + '" alt=""></aside>' : "",
     qrMarkup,
-    '<footer class="footer" data-readability-region="footer"><p>九号行政｜ADMINISTRATION</p><p>员工活动 / ACTIVITY</p></footer></main></body></html>'
+    "</main></body></html>"
   ].join("");
 }

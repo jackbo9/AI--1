@@ -149,22 +149,14 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function updateSession(index: 0 | 1, key: keyof SessionState, value: string) {
+  function updateSession(key: keyof SessionState, value: string) {
     setForm((current) => ({
       ...current,
-      [index === 0 ? "session" : "secondSession"]: {
-        ...(index === 0 ? current.session : current.secondSession),
+      session: {
+        ...current.session,
         [key]: value
       }
     }));
-  }
-
-  function addSecondSession() {
-    setForm((current) => ({ ...current, secondSession: { date: "", time: "", location: "" } }));
-  }
-
-  function removeSecondSession() {
-    setForm((current) => ({ ...current, secondSession: undefined }));
   }
 
   function updateQrUrl(value: string) {
@@ -406,8 +398,6 @@ export function useActivityStudioController(fixtureMode: boolean) {
     updateForm,
     updateSession,
     updateQrUrl,
-    addSecondSession,
-    removeSecondSession,
     changeQrMode,
     clearQrAsset,
     uploadQr,

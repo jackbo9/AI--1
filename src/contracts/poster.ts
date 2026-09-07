@@ -7,11 +7,12 @@ import {
 
 export const outputFormatSchema = z.literal("portrait_1080x1920");
 export const activityCategorySchema = z.enum(["team", "festival", "competition"]);
-// T01 uses a 120px title with a measured 1–3 line layout. Keep the input
-// budget separate from the broader 48-character activity field so an
-// impossible document is rejected before any model call.
+// Figma V2 uses 952px-wide, auto-height title slots. Recommendations guide
+// authors; rendered bounds remain the export gate.
 export const t01PortraitTitleMaxCharacters = 40;
 export const t01PortraitSubtitleMaxCharacters = 40;
+export const t01PortraitTitleRecommendedCharacters = 14;
+export const t01PortraitSubtitleRecommendedCharacters = 25;
 
 export function textCharacterCount(value: string) {
   return Array.from(value.trim()).length;
