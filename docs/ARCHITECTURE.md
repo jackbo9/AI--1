@@ -1,6 +1,6 @@
 # 目标架构与技术栈
 
-2026-09-07 T01 标题区：`templates/t01-portrait-layout.ts` 保存竖版标题布局契约，模板与 Manifest 共享 920px 内容宽、120px/144px 标题行盒、最多三行、28px 副标题最多两行及 13px gap。Chromium 预检和正式渲染按实际 Range 行盒检查，不依赖固定标题高度；横版、Banner、长图保持各自容量。2026-09-04 视觉指导：`providers/visual-direction.ts` 保存精简摄影与构图指导，通过集中环境变量 `VISUAL_STYLE_MODE` 可回退。确认后的创意正文不再次调用 LLM，也不重置颜色和主体。该修改不改变前端场景入口及一图四规格裁切方式。
+2026-09-07 图片 Provider：`illustration-provider.ts` 保留同一受控 Prompt 组装结果，并按 `IMAGE_PROVIDER=seedream|openai-images` 映射供应商请求。Seedream 使用方舟 `/api/v3/images/generations` 与 URL 响应；OpenAI Images 兼容网关使用 `/v1/images/generations`、PNG/medium 和 Base64 响应。两者共享格式检测、有限重试、默认品牌资产降级和模型审计；密钥仍只从集中服务端环境变量读取。2026-09-07 T01 标题区：`templates/t01-portrait-layout.ts` 保存竖版标题布局契约，模板与 Manifest 共享 920px 内容宽、120px/144px 标题行盒、最多三行、28px 副标题最多两行及 13px gap。Chromium 预检和正式渲染按实际 Range 行盒检查，不依赖固定标题高度；横版、Banner、长图保持各自容量。2026-09-04 视觉指导：`providers/visual-direction.ts` 保存精简摄影与构图指导，通过集中环境变量 `VISUAL_STYLE_MODE` 可回退。确认后的创意正文不再次调用 LLM，也不重置颜色和主体。该修改不改变前端场景入口及一图四规格裁切方式。
 
 ## 1. 架构原则
 

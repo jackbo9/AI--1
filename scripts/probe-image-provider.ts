@@ -111,7 +111,7 @@ async function main() {
         model: illustration.model,
         baseUrl: new URL(serverEnv.IMAGE_BASE_URL!).origin,
         elapsedMs: Date.now() - startedAt,
-        requestedOutput: "2K (当前集成参数)",
+        requestedOutput: serverEnv.IMAGE_SIZE,
         sourceImage: path.basename(illustration.path),
         sourceDimensions: dimensions,
         sourceAspectRatio: Number(

@@ -19,6 +19,8 @@ export type IllustrationResult = {
   detail?: string;
 };
 
+export type ImageProviderId = "seedream" | "openai-images";
+
 const imageResponseSchema = z.object({
   data: z
     .array(
@@ -56,36 +58,87 @@ export function seedreamPrompt(brief: IllustrationBrief) {
 
 export const illustrationPromptSchema = z.string().trim().min(80).max(2200);
 
+export function imageGenerationEndpoint(
+  provider: ImageProviderId,
+  baseUrl: string
+) {
+  const root = baseUrl.replace(/\/+$/, "");
+  if (provider === "openai-images") {
+    return root.endsWith("/v1")
+      ? `${root}/images/generations`
+      : `${root}/v1/images/generations`;
+  }
+  return `${root}/api/v3/images/generations`;
+}
+
+export function imageGenerationPayload(
+  provider: ImageProviderId,
+  input: {
+    model: string;
+    prompt: string;
+    size: string;
+  }
+) {
+  if (provider === "openai-images") {
+    return {
+      model: input.model,
+      prompt: input.prompt,
+      size: input.size,
+      quality: "medium",
+      output_format: "png",
+      n: 1
+    };
+  }
+  return {
+    model: input.model,
+    prompt: input.prompt,
+    size: input.size,
+    response_format: "url",
+    watermark: false,
+    sequential_image_generation: "disabled",
+    n: 1
+  };
+}
+
 export async function generateIllustration(
   brief: IllustrationBrief,
   jobId: string
 ): Promise<IllustrationResult> {
-  if (!configured.image) {
-    return fallback(jobId, "demo-image", "未配置 Seedream，已使用默认品牌插画");
+  const provider = serverEnv.IMAGE_PROVIDER;
+  const baseUrl = serverEnv.IMAGE_BASE_URL;
+  const apiKey = serverEnv.IMAGE_API_KEY;
+  const model = serverEnv.IMAGE_MODEL;
+  if (
+    !configured.image ||
+    (provider !== "seedream" && provider !== "openai-images") ||
+    !baseUrl ||
+    !apiKey ||
+    !model
+  ) {
+    return fallback(jobId, "demo-image", "未配置图片模型，已使用默认品牌插画");
   }
 
   try {
+    const prompt = seedreamPrompt(brief);
     const payload = imageResponseSchema.parse(
       await requestJson(
-        `${serverEnv.IMAGE_BASE_URL}/api/v3/images/generations`,
+        imageGenerationEndpoint(provider, baseUrl),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${serverEnv.IMAGE_API_KEY}`
+            Authorization: `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: serverEnv.IMAGE_MODEL,
-            prompt: seedreamPrompt(brief),
-            size: serverEnv.IMAGE_SIZE,
-            response_format: "url",
-            watermark: false,
-            sequential_image_generation: "disabled",
-            n: 1
-          })
+          body: JSON.stringify(
+            imageGenerationPayload(provider, {
+              model,
+              prompt,
+              size: serverEnv.IMAGE_SIZE
+            })
+          )
         },
         {
-          timeoutMs: 90_000,
+          timeoutMs: provider === "openai-images" ? 180_000 : 90_000,
           retries: 1,
           classify: classifyImageStatus,
             networkError: () =>
@@ -135,13 +188,13 @@ export async function generateIllustration(
     return {
       path: target,
       mode: "generated",
-      provider: "seedream",
-      model: serverEnv.IMAGE_MODEL ?? "unknown"
+      provider,
+      model
     };
   } catch (error) {
     return fallback(
       jobId,
-      "seedream",
+      provider,
       error instanceof ProviderError
         ? `${error.code}: ${error.message}`
         : "IMAGE_GENERATION_FAILED: 主视觉生成失败"

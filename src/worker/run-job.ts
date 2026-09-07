@@ -158,7 +158,7 @@ export async function runVisualStage(
 
     await updateJob(jobId, (item) => ({
       ...item,
-      currentStep: "Seedream 生成无文字主视觉"
+      currentStep: "图片模型生成无文字主视觉"
     }));
     const assetId = `${jobId}-${crypto.randomUUID()}`;
     const illustration = await generateIllustration(compiler.brief, assetId);

@@ -1,6 +1,6 @@
 # 领域、API 与生成契约
 
-2026-09-07 文案容量补充：T01 竖版的提交主题最多 40 个字，实际排版最多三行；Web 在填写时显示限制，`POST /api/jobs` 在任何模型调用前拒绝超限标题。标题不由 AI 缩写、删字或改写，CSS 自然换行，预检按加载 MiSans 后的 Range 行盒实测。`subtitle` 是实际排入 T01 的副标题，确认时最多 40 字、最多两行；`summary` 保持最多 150 字的补充信息，不能再被隐式复制到 `subtitle`，副标题为空时不输出空槽位。Copy Prompt 必须要求一句、不换行的短副标题，服务端对模型输出再次校验。视觉确认补充：IllustrationBrief 可记录 `confirmedDescription`（最多420字）及 `visualStyleMode`（editorial/legacy）。存在确认正文时，图片 Provider 以该正文组装请求，旧 subject/action/setting/palette 不再覆盖它；系统附加构图及禁止项仍生效。优化草稿需展示颜色，超过确认长度返回明确错误，不静默丢弃字段。新增字段可选，旧版本仍可读取。
+2026-09-07 图片 Provider 补充：确认后的 Illustration Prompt 是供应商无关的不可变输入；切换 `seedream` 与 `openai-images` 只允许映射端点、鉴权、尺寸、响应格式和供应商专属参数，不得重新编写或截断 Prompt。生成版本继续记录实际 Provider、模型和 Prompt 版本。2026-09-07 文案容量补充：T01 竖版的提交主题最多 40 个字，实际排版最多三行；Web 在填写时显示限制，`POST /api/jobs` 在任何模型调用前拒绝超限标题。标题不由 AI 缩写、删字或改写，CSS 自然换行，预检按加载 MiSans 后的 Range 行盒实测。`subtitle` 是实际排入 T01 的副标题，确认时最多 40 字、最多两行；`summary` 保持最多 150 字的补充信息，不能再被隐式复制到 `subtitle`，副标题为空时不输出空槽位。Copy Prompt 必须要求一句、不换行的短副标题，服务端对模型输出再次校验。视觉确认补充：IllustrationBrief 可记录 `confirmedDescription`（最多420字）及 `visualStyleMode`（editorial/legacy）。存在确认正文时，图片 Provider 以该正文组装请求，旧 subject/action/setting/palette 不再覆盖它；系统附加构图及禁止项仍生效。优化草稿需展示颜色，超过确认长度返回明确错误，不静默丢弃字段。新增字段可选，旧版本仍可读取。
 
 本文定义 MVP 的稳定边界。实现可以调整，但不得绕开这些契约让 LLM 自由控制版式或业务状态。
 

@@ -15,7 +15,7 @@ const serverEnvSchema = z.object({
   LLM_BASE_URL: optionalUrl,
   LLM_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().optional(),
-  IMAGE_PROVIDER: z.enum(["seedream", ""]).optional(),
+  IMAGE_PROVIDER: z.enum(["seedream", "openai-images", ""]).optional(),
   IMAGE_BASE_URL: optionalUrl,
   IMAGE_API_KEY: z.string().optional(),
   IMAGE_MODEL: z.string().optional(),
@@ -40,7 +40,8 @@ export const configured = {
       serverEnv.LLM_MODEL
   ),
   image: Boolean(
-    serverEnv.IMAGE_PROVIDER === "seedream" &&
+    (serverEnv.IMAGE_PROVIDER === "seedream" ||
+      serverEnv.IMAGE_PROVIDER === "openai-images") &&
       serverEnv.IMAGE_BASE_URL &&
       serverEnv.IMAGE_API_KEY &&
       serverEnv.IMAGE_MODEL
