@@ -39,9 +39,9 @@ export type T01RegionDefinition = {
 export const T01_READABILITY_REGIONS: readonly T01RegionDefinition[] = [
   { id: "header", bounds: { x: 72, y: 80, width: 936, height: 83 }, minimumContrast: 3 },
   { id: "title", bounds: { x: 80, y: 223, width: 920, height: 526.2 }, minimumContrast: 4.5 },
-  { id: "sessions", bounds: { x: 72, y: 1366, width: 936, height: 103 }, minimumContrast: 4.5 },
-  { id: "audience", bounds: { x: 72, y: 1477, width: 936, height: 103 }, minimumContrast: 4.5 },
-  { id: "participation", bounds: { x: 72, y: 1588, width: 717, height: 158 }, minimumContrast: 4.5 },
+  { id: "sessions", bounds: { x: 72, y: 1283, width: 936, height: 160 }, minimumContrast: 4.5 },
+  { id: "audience", bounds: { x: 72, y: 1459, width: 936, height: 76 }, minimumContrast: 4.5 },
+  { id: "participation", bounds: { x: 72, y: 1551, width: 717, height: 160 }, minimumContrast: 4.5 },
   { id: "qr", bounds: { x: 864, y: 1732, width: 144, height: 26 }, minimumContrast: 4.5 },
   { id: "footer", bounds: { x: 72, y: 1815, width: 936, height: 26 }, minimumContrast: 4.5 }
 ] as const;

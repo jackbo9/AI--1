@@ -8,7 +8,11 @@ import {
   preflightEmployeeActivity,
   type PosterRenderError
 } from "@/templates/employee-activity";
-import { employeeActivityInputSchema, posterDocumentSchema } from "@/contracts/poster";
+import {
+  employeeActivityInputSchema,
+  posterDocumentSchema,
+  type PosterDocument
+} from "@/contracts/poster";
 import { loadEmbeddedBrandAssets } from "@/templates/brand-header";
 
 const input = employeeActivityInputSchema.parse(normal);
@@ -24,7 +28,11 @@ const immutableSource = {
   notice: true as const
 };
 
-function buildDocument(title: string, subtitle = "") {
+function buildDocument(
+  title: string,
+  subtitle = "",
+  patch: Partial<PosterDocument> = {}
+) {
   return posterDocumentSchema.parse({
     schemaVersion: "1.7",
     scene: "employee_activity",
@@ -44,11 +52,12 @@ function buildDocument(title: string, subtitle = "") {
     qrPayload: "",
     qrAssetId: "",
     contact: input.contact,
-    immutableSource
+    immutableSource,
+    ...patch
   });
 }
 
-async function renderMarkup(title: string, subtitle = "") {
+async function renderDocument(posterDocument: PosterDocument, qr = "") {
   const assets = await loadEmbeddedBrandAssets();
   const fallbackPath = path.join(
     process.cwd(),
@@ -60,11 +69,15 @@ async function renderMarkup(title: string, subtitle = "") {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.setContent(
-    employeeActivityPosterMarkup(buildDocument(title, subtitle), fallback, "", assets),
+    employeeActivityPosterMarkup(posterDocument, fallback, qr, assets),
     { waitUntil: "load" }
   );
   await page.evaluate(() => document.fonts.ready);
   return { browser, page };
+}
+
+async function renderMarkup(title: string, subtitle = "") {
+  return renderDocument(buildDocument(title, subtitle));
 }
 
 async function lineCount(page: import("playwright").Page, selector: string) {
@@ -130,6 +143,72 @@ describe("T01 multiline portrait layout", () => {
     try {
       expect(await page.$("[data-poster-subtitle]")).toBeNull();
       expect(await page.content()).not.toContain("summary 不应偷偷进入竖版副标题");
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("keeps the split facts in one flow and protects the QR column", async () => {
+    const posterDocument = buildDocument("双城同行日", "一起出发，认识不同团队的新伙伴", {
+      sessions: [
+        input.sessions[0],
+        {
+          label: "常州站",
+          date: "2026-09-20",
+          time: "14:00–17:30",
+          location: "常州制造基地共享空间",
+          details: []
+        }
+      ],
+      includeQr: true,
+      ctaLabel: "扫码加入活动",
+      qrPayload: "https://example.com/register"
+    });
+    const qr =
+      "data:image/svg+xml;base64," +
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144"/>').toString(
+        "base64"
+      );
+    const { browser, page } = await renderDocument(posterDocument, qr);
+    try {
+      const layout = await page.evaluate(() => {
+        const time = document.querySelector<HTMLElement>(
+          "[data-poster-session-time]"
+        )!;
+        const location = document.querySelector<HTMLElement>(
+          "[data-poster-session-location]"
+        )!;
+        const audience = document.querySelector<HTMLElement>(
+          ".audience-group"
+        )!;
+        const participation = document.querySelector<HTMLElement>(
+          ".participation-group"
+        )!;
+        const qr = document.querySelector<HTMLElement>("[data-poster-qr]")!;
+        const boxes = [time, location, audience, participation].map((element) =>
+          element.getBoundingClientRect()
+        );
+        const qrBox = qr.getBoundingClientRect();
+        const overlapsQr = boxes.some(
+          (box) =>
+            box.left < qrBox.right &&
+            box.right > qrBox.left &&
+            box.top < qrBox.bottom &&
+            box.bottom > qrBox.top
+        );
+        return {
+          order: boxes.map((box) => box.top),
+          audienceWidth: audience.getBoundingClientRect().width,
+          participationWidth: participation.getBoundingClientRect().width,
+          overlapsQr,
+          qrLabel: qr.querySelector("p")?.textContent
+        };
+      });
+      expect(layout.order).toEqual([...layout.order].sort((left, right) => left - right));
+      expect(layout.audienceWidth).toBeCloseTo(717, 0);
+      expect(layout.participationWidth).toBeCloseTo(717, 0);
+      expect(layout.overlapsQr).toBe(false);
+      expect(layout.qrLabel).toBe("扫码加入活动");
     } finally {
       await browser.close();
     }
