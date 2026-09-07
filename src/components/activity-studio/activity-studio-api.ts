@@ -91,3 +91,21 @@ export function requestVisualReplacement(jobId: string, idempotencyKey: string) 
     idempotencyKey
   });
 }
+
+export async function requestQrUpload(file: File) {
+  const formData = new FormData();
+  formData.set("file", file);
+  const response = await fetch("/api/uploads/qr", {
+    method: "POST",
+    body: formData
+  });
+  return {
+    ok: response.ok,
+    payload: await readJson<{
+      assetId?: string;
+      filename?: string;
+      previewUrl?: string;
+      error?: { message?: string };
+    }>(response)
+  };
+}

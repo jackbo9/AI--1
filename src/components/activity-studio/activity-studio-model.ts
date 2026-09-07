@@ -1,4 +1,9 @@
-import type { EmployeeActivityInput, PosterDocument } from "@/contracts/poster";
+import {
+  t01PortraitTitleMaxCharacters,
+  textCharacterCount,
+  type EmployeeActivityInput,
+  type PosterDocument
+} from "@/contracts/poster";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import type {
   ActivityJob,
@@ -8,7 +13,7 @@ import type {
 } from "./types";
 
 export const initialForm: FormState = {
-  activityName: "夏日羽毛球挑战赛",
+  activityName: "羽球挑战赛",
   session: {
     date: "2026-09-18",
     time: "18:30–20:30",
@@ -20,8 +25,14 @@ export const initialForm: FormState = {
   contact: "行政服务台",
   rules: "小组循环赛\n三局两胜",
   prize: "冠军运动礼包\n参与纪念礼",
-  qrUrl: ""
+  qrUrl: "",
+  qrAssetId: "",
+  qrAssetName: ""
 };
+
+export function newFormState(): FormState {
+  return { ...initialForm, session: { ...initialForm.session } };
+}
 
 export const scenes = [
   ["01", "员工活动", "节日 / 安全 / 差旅 / 体育赛事 / 员工俱乐部", "当前切片"],
@@ -56,6 +67,7 @@ export function isJobWorking(job?: ActivityJob) {
 export function createCopyReview(job: ActivityJob): CopyReview | undefined {
   if (!job.copyDraft) return undefined;
   return {
+    subtitle: job.copyDraft.document.subtitle,
     summary: job.copyDraft.document.summary,
     rules: job.copyDraft.document.rules ?? "",
     prize: job.copyDraft.document.prize ?? ""
@@ -90,10 +102,15 @@ export function hydrateForm(current: FormState, job: ActivityJob): FormState {
         }
       : undefined,
     audience: document.audience,
-    supplement: document.summary,
+    supplement: document.subtitle || document.summary,
     rules: document.rules ?? "",
     prize: document.prize ?? "",
     qrUrl: document.qrPayload,
+    qrAssetId: document.qrAssetId,
+    qrAssetPreviewUrl: document.qrAssetId
+      ? `/api/uploads/qr/${document.qrAssetId}`
+      : undefined,
+    qrAssetName: document.qrAssetId ? "已上传二维码图片" : "",
     contact: document.contact,
     deadline: document.deadline ?? ""
   };
@@ -106,6 +123,7 @@ export function createPreviewCopy(
   if (!job?.copyDraft?.document || !copyReview) return job?.copyDraft?.document;
   return {
     ...job.copyDraft.document,
+    subtitle: copyReview.subtitle,
     summary: copyReview.summary,
     rules: copyReview.rules,
     prize: copyReview.prize,
@@ -126,6 +144,9 @@ export function getStatusLabel(job?: ActivityJob) {
 
 export function validateForm(form: FormState) {
   if (!form.activityName.trim()) return "请填写活动主题";
+  if (textCharacterCount(form.activityName) > t01PortraitTitleMaxCharacters) {
+    return `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，请精简后再生成`;
+  }
   const sessions = [
     form.session,
     ...(form.secondSession ? [form.secondSession] : [])
@@ -142,6 +163,7 @@ export function validateForm(form: FormState) {
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }
+  if (form.qrUrl && form.qrAssetId) return "二维码链接与上传图片只能选择一种";
   return undefined;
 }
 
@@ -167,9 +189,10 @@ export function normalizeForm(form: FormState): EmployeeActivityInput {
     highlights: [],
     participationSteps: normalizeLines(splitDraftLines(form.rules)),
     notice: "",
-    includeQr: Boolean(form.qrUrl),
+    includeQr: Boolean(form.qrUrl || form.qrAssetId),
     ctaLabel: "",
     qrPayload: form.qrUrl.trim(),
+    qrAssetId: form.qrAssetId,
     contact: form.contact.trim(),
     visualIntent: "",
     deadline: form.deadline.trim(),

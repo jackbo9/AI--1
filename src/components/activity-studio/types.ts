@@ -1,20 +1,8 @@
-import type { GenerationJob } from "@/contracts/job";
+import type { ActivityStudioFixtureJob } from "@/components/activity-studio-fixture";
 
 export type Stage = 1 | 2 | 3 | 4;
 
-export type ActivityJob = Pick<
-  GenerationJob,
-  | "status"
-  | "currentStep"
-  | "error"
-  | "copyDraft"
-  | "visualInput"
-  | "visualDraft"
-  | "versions"
-> & {
-  id?: string;
-  previewUrl?: string;
-};
+export type ActivityJob = ActivityStudioFixtureJob;
 
 export type SessionState = {
   date: string;
@@ -33,9 +21,13 @@ export type FormState = {
   rules: string;
   prize: string;
   qrUrl: string;
+  qrAssetId: string;
+  qrAssetPreviewUrl?: string;
+  qrAssetName: string;
 };
 
 export type CopyReview = {
+  subtitle: string;
   summary: string;
   rules: string;
   prize: string;
@@ -53,4 +45,9 @@ export type PendingAction =
 export type StudioIdentity = {
   displayName: string;
   provider: "local" | "feishu";
+};
+
+export type ActivityStudioProps = {
+  identity: StudioIdentity;
+  fixtureMode?: boolean;
 };
