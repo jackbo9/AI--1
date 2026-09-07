@@ -9,7 +9,7 @@ import {
   textCharacterCount
 } from "@/contracts/poster";
 import { createJob, findByKey } from "@/server/job-store";
-import { runJob } from "@/worker/run-job";
+import { runCopyStage } from "@/worker/run-job";
 import { requireApiIdentity, unauthorizedResponse } from "@/server/auth";
 import { preflightEmployeeActivity, PosterRenderError } from "@/templates/employee-activity";
 import { readJsonRequest } from "@/server/request-json";
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
         );
   }
 
-  void runJob(job.id);
+  void runCopyStage(job.id);
   return NextResponse.json(
     { jobId: job.id, status: job.status },
     { status: 202 }

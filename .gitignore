@@ -1,4 +1,5 @@
 node_modules/
+.codegraph/
 .next/
 .env.local
 data/jobs.json

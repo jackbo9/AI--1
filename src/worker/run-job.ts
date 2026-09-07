@@ -27,10 +27,6 @@ import { activityTemplateFamilyManifest } from "@/templates/activity-template-fa
 import { serverEnv } from "@/lib/env";
 import { readOwnedQrAssetDataUri } from "@/server/qr-asset-store";
 
-export async function runJob(jobId: string) {
-  await runCopyStage(jobId);
-}
-
 export async function runCopyStage(jobId: string) {
   try {
     const job = await findJob(jobId);
