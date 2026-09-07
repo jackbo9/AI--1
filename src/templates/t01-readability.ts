@@ -17,6 +17,18 @@ export type T01ReadabilityRegion =
   | "qr"
   | "footer";
 
+/**
+ * These regions form one nearby information block in the portrait template.
+ * Time and location are both contained by `sessions`; audience and
+ * participation sit directly below it. They must use one shared text tone so
+ * the block cannot alternate between black and white.
+ */
+export const T01_UNIFIED_INFO_REGIONS = [
+  "sessions",
+  "audience",
+  "participation"
+] as const satisfies readonly T01ReadabilityRegion[];
+
 export type T01Rect = {
   x: number;
   y: number;
@@ -122,12 +134,93 @@ export function selectT01Treatments(
   analysis: T01RegionAnalysis[],
   options: { allowWarnings?: boolean } = {}
 ): Record<T01ReadabilityRegion, T01ZoneTreatment> | undefined {
+  const unifiedInfoIds = new Set<T01ReadabilityRegion>(
+    T01_UNIFIED_INFO_REGIONS
+  );
+  const unifiedInfo = analysis.filter((region) =>
+    unifiedInfoIds.has(region.id)
+  );
+  const unifiedSelections =
+    unifiedInfo.length === T01_UNIFIED_INFO_REGIONS.length
+      ? selectUnifiedInfoTreatments(unifiedInfo, options)
+      : undefined;
+  if (!unifiedSelections) return undefined;
+
   const selections = analysis.map((region) => [
     region.id,
-    options.allowWarnings ? selectZoneTreatmentWithWarnings(region) : selectZoneTreatment(region)
+    unifiedInfoIds.has(region.id)
+      ? unifiedSelections[region.id]
+      : options.allowWarnings
+        ? selectZoneTreatmentWithWarnings(region)
+        : selectZoneTreatment(region)
   ] as const);
   if (selections.some(([, selection]) => !selection)) return undefined;
   return Object.fromEntries(selections) as Record<T01ReadabilityRegion, T01ZoneTreatment>;
+}
+
+function selectUnifiedInfoTreatments(
+  analysis: T01RegionAnalysis[],
+  options: { allowWarnings?: boolean }
+): Partial<Record<T01ReadabilityRegion, T01ZoneTreatment>> | undefined {
+  const treatments = T01_TEXT_TREATMENTS.map((treatment) => {
+    const candidates = analysis.map((region) => ({
+      region,
+      candidate: region.candidates.find(
+        (candidate) =>
+          candidate.treatment === treatment && candidate.scrimStrength === 0
+      )
+    }));
+    if (candidates.some(({ candidate }) => !candidate)) return undefined;
+
+    const complete = candidates as Array<{
+      region: T01RegionAnalysis;
+      candidate: T01CandidateMeasurement;
+    }>;
+    const passingRegions = complete.filter(({ candidate }) => candidate.passed)
+      .length;
+    const p05Contrasts = complete.map(({ candidate }) => candidate.p05Contrast);
+    return {
+      treatment,
+      candidates: complete,
+      passingRegions,
+      minimumP05: Math.min(...p05Contrasts),
+      averageP05:
+        p05Contrasts.reduce((total, value) => total + value, 0) /
+        p05Contrasts.length
+    };
+  }).filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  const eligible = options.allowWarnings
+    ? treatments
+    : treatments.filter(
+        ({ passingRegions }) => passingRegions === analysis.length
+      );
+  const selected = eligible.sort((left, right) => {
+    if (right.passingRegions !== left.passingRegions) {
+      return right.passingRegions - left.passingRegions;
+    }
+    if (right.minimumP05 !== left.minimumP05) {
+      return right.minimumP05 - left.minimumP05;
+    }
+    if (right.averageP05 !== left.averageP05) {
+      return right.averageP05 - left.averageP05;
+    }
+    return left.treatment === "dark_text_clean" ? -1 : 1;
+  })[0];
+  if (!selected) return undefined;
+
+  return Object.fromEntries(
+    selected.candidates.map(({ region, candidate }) => [
+      region.id,
+      {
+        treatment: candidate.treatment,
+        textTone:
+          candidate.treatment === "light_text_clean" ? "light" : "dark",
+        scrimStrength: candidate.scrimStrength,
+        bounds: region.bounds
+      }
+    ])
+  );
 }
 
 function selectZoneTreatmentWithWarnings(

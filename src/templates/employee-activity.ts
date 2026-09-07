@@ -18,7 +18,7 @@ import { t01PortraitLayout } from "./t01-portrait-layout";
 
 export const employeeActivityTemplate = {
   id: "employee-activity-portrait",
-  version: "1.3.0-t01-multiline",
+  version: "1.4.0-unified-info-tone",
   outputFormat: "portrait_1080x1920",
   width: 1080,
   height: 1920,

@@ -67,10 +67,55 @@ describe("T01 readability treatment", () => {
       )
     );
     expect(selection?.sessions).toMatchObject({
-      treatment: "dark_text_clean",
+      treatment: "light_text_clean",
       scrimStrength: 0,
-      textTone: "dark"
+      textTone: "light"
     });
+  });
+
+  it("uses one shared tone for the nearby time, location, audience and participation block", () => {
+    const selections = selectT01Treatments([
+      analysis("header", 0.36, [passingDark, passingLight]),
+      analysis("title", 0.36, [passingDark, passingLight]),
+      analysis("sessions", 0.82, [
+        { ...passingDark, p05Contrast: 8 },
+        { ...passingLight, p05Contrast: 2, passed: false }
+      ]),
+      analysis("audience", 0.12, [
+        { ...passingDark, p05Contrast: 2, passed: false },
+        { ...passingLight, p05Contrast: 9 }
+      ]),
+      analysis("participation", 0.7, [
+        { ...passingDark, p05Contrast: 7 },
+        { ...passingLight, p05Contrast: 2.5, passed: false }
+      ]),
+      analysis("qr", 0.36, [passingDark, passingLight]),
+      analysis("footer", 0.36, [passingDark, passingLight])
+    ], { allowWarnings: true });
+
+    expect(selections?.sessions.textTone).toBe("dark");
+    expect(selections?.audience.textTone).toBe("dark");
+    expect(selections?.participation.textTone).toBe("dark");
+  });
+
+  it("blocks strict selection when neither tone passes every lower information region", () => {
+    const selections = selectT01Treatments([
+      analysis("header", 0.36, [passingDark, passingLight]),
+      analysis("title", 0.36, [passingDark, passingLight]),
+      analysis("sessions", 0.82, [
+        passingDark,
+        { ...passingLight, passed: false }
+      ]),
+      analysis("audience", 0.12, [
+        { ...passingDark, passed: false },
+        passingLight
+      ]),
+      analysis("participation", 0.7, [passingDark, passingLight]),
+      analysis("qr", 0.36, [passingDark, passingLight]),
+      analysis("footer", 0.36, [passingDark, passingLight])
+    ]);
+
+    expect(selections).toBeUndefined();
   });
 
   it("selects the formal inverse company logo for a clean light-text header", () => {

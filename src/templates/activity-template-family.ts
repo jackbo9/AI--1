@@ -119,7 +119,7 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "1.3.0-t01-multiline",
+        templateVersion: "1.4.0-unified-info-tone",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
