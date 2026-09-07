@@ -42,7 +42,16 @@ const input = employeeActivityInputSchema.parse({
 
 describe("activity studio UI fixture", () => {
   it("preserves current T01 text and QR contracts through the fixture flow", () => {
-    const copyJob = createFixtureCopyJob(input, "2026-09-04T08:00:00.000Z");
+    const selectedTargets = [
+      "portrait_1080x1920",
+      "landscape_1920x1080",
+      "longform_1080xAuto"
+    ] as const;
+    const copyJob = createFixtureCopyJob(
+      input,
+      "2026-09-04T08:00:00.000Z",
+      [...selectedTargets]
+    );
     const visualJob = createFixtureVisualDraftJob(
       copyJob,
       "几位同事在室内羽毛球场轻松对打",
@@ -51,6 +60,7 @@ describe("activity studio UI fixture", () => {
     const readyJob = createFixtureReadyJob(visualJob);
 
     expect(copyJob.id).toBe(UI_FIXTURE_JOB_ID);
+    expect(copyJob.renderTargets).toEqual(selectedTargets);
     expect(copyJob.copyDraft?.document.title).toBe(input.activityName);
     expect(copyJob.copyDraft?.document.qrAssetId).toBe("");
     expect(
@@ -60,5 +70,8 @@ describe("activity studio UI fixture", () => {
     expect(visualJob.visualDraft?.description).toContain("左上保持干净留白");
     expect(readyJob.status).toBe("READY_FOR_REVIEW");
     expect(readyJob.previewUrl).toBe("/fixtures/employee-activity-poster.svg");
+    expect(readyJob.versions.map((version) => version.outputFormat)).toEqual(
+      selectedTargets
+    );
   });
 });
