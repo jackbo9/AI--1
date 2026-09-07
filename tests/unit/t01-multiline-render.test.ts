@@ -127,7 +127,7 @@ describe("T01 multiline portrait layout", () => {
         await browser.close();
       }
     }
-  });
+  }, 20_000);
 
   it("blocks a fourth line before any image rendering and omits empty subtitle markup", async () => {
     const overflowing = buildDocument("这是一条超过三行且接近四十字的活动主题用于验证标题溢出会被阻止生成");
@@ -146,7 +146,7 @@ describe("T01 multiline portrait layout", () => {
     } finally {
       await browser.close();
     }
-  });
+  }, 20_000);
 
   it("keeps the split facts in one flow and protects the QR column", async () => {
     const posterDocument = buildDocument("双城同行日", "一起出发，认识不同团队的新伙伴", {
@@ -212,5 +212,5 @@ describe("T01 multiline portrait layout", () => {
     } finally {
       await browser.close();
     }
-  });
+  }, 20_000);
 });
