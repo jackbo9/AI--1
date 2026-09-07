@@ -14,6 +14,9 @@ function job(status: ActivityJob["status"], currentStep = "处理中"): Activity
 
 describe("activity studio model", () => {
   it("keeps the current form validation messages", () => {
+    expect(validateForm({ ...initialForm, renderTargets: [] })).toBe(
+      "请至少选择一种输出尺寸"
+    );
     expect(validateForm({ ...initialForm, activityName: " " })).toBe(
       "请填写活动主题"
     );

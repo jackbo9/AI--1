@@ -4,6 +4,7 @@ import {
   type EmployeeActivityInput,
   type PosterDocument
 } from "@/contracts/poster";
+import type { RenderTargetId } from "@/contracts/brand";
 
 export const UI_FIXTURE_JOB_ID = "ui-fixture-local";
 export const UI_FIXTURE_STORAGE_KEY = "ninebot-ui-fixture-job-v2";
@@ -12,6 +13,7 @@ export type ActivityStudioFixtureJob = {
   id?: string;
   status: string;
   currentStep: string;
+  renderTargets?: RenderTargetId[];
   error?: { code: string; message: string };
   previewUrl?: string;
   copyDraft?: {
@@ -52,12 +54,14 @@ export type ActivityStudioFixtureJob = {
 
 export function createFixtureCopyJob(
   input: EmployeeActivityInput,
-  createdAt = new Date().toISOString()
+  createdAt = new Date().toISOString(),
+  renderTargets: RenderTargetId[] = ["portrait_1080x1920"]
 ): ActivityStudioFixtureJob {
   return {
     id: UI_FIXTURE_JOB_ID,
     status: "READY_FOR_COPY_REVIEW",
     currentStep: "Fixture 文案已准备",
+    renderTargets,
     copyDraft: {
       document: fixtureDocument(input),
       provider: "ui-fixture",
@@ -102,12 +106,10 @@ export function createFixtureReadyJob(
     status: "READY_FOR_REVIEW",
     currentStep: "Fixture 海报已生成",
     previewUrl: "/fixtures/employee-activity-poster.svg",
-    versions: [
-      ...job.versions,
-      {
+    versions: job.renderTargets?.map((outputFormat) => ({
         assetMode: "fallback",
         assetDetail: "前端交互演练固定成品，不调用模型或渲染器",
-        outputFormat: "portrait_1080x1920",
+        outputFormat,
         templateVersion: "ui-fixture-v2",
         modelInfo: {
           copyProvider: "ui-fixture",
@@ -121,8 +123,7 @@ export function createFixtureReadyJob(
           checks: { fontAndLogos: true, capacity: true, outputSize: true },
           readability: { passed: true, backgroundMode: "fixture" }
         }
-      }
-    ]
+      })) ?? job.versions
   };
 }
 

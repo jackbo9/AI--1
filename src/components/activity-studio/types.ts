@@ -1,4 +1,5 @@
 import type { ActivityStudioFixtureJob } from "@/components/activity-studio-fixture";
+import type { RenderTargetId } from "@/contracts/brand";
 
 export type Stage = 1 | 2 | 3 | 4;
 
@@ -11,6 +12,7 @@ export type SessionState = {
 };
 
 export type FormState = {
+  renderTargets: RenderTargetId[];
   activityName: string;
   session: SessionState;
   secondSession?: SessionState;
