@@ -32,6 +32,7 @@ import {
   normalizeForm,
   validateForm
 } from "./activity-studio-model";
+import type { RenderTargetId } from "@/contracts/brand";
 import type {
   ActivityJob,
   CopyReview,
@@ -51,6 +52,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
   const [visualIdea, setVisualIdea] = useState("");
   const [visualDescription, setVisualDescription] = useState("");
   const [qrMode, setQrMode] = useState<QrMode>("none");
+  const [activeRenderTarget, setActiveRenderTarget] =
+    useState<RenderTargetId>("portrait_1080x1920");
   const [qrUploadPending, setQrUploadPending] = useState(false);
   const [error, setError] = useState<string>();
   const [restoring, setRestoring] = useState(false);
@@ -100,6 +103,14 @@ export function useActivityStudioController(fixtureMode: boolean) {
   }, [fixtureMode, job]);
 
   useEffect(() => {
+    setActiveRenderTarget((active) =>
+      form.renderTargets.includes(active)
+        ? active
+        : form.renderTargets[0] ?? "portrait_1080x1920"
+    );
+  }, [form.renderTargets]);
+
+  useEffect(() => {
     if (!job) return;
     const nextStage = getStageForJob(job);
     if (nextStage) setStage(nextStage);
@@ -147,6 +158,17 @@ export function useActivityStudioController(fixtureMode: boolean) {
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleRenderTarget(target: RenderTargetId) {
+    setForm((current) => {
+      const selected = current.renderTargets.includes(target);
+      if (selected && current.renderTargets.length === 1) return current;
+      const renderTargets = selected
+        ? current.renderTargets.filter((item) => item !== target)
+        : [...current.renderTargets, target];
+      return { ...current, renderTargets };
+    });
   }
 
   function updateSession(index: 0 | 1, key: keyof SessionState, value: string) {
@@ -246,7 +268,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
         window.history.replaceState(null, "", `?fixture=1&job=${UI_FIXTURE_JOB_ID}`);
         setJob({ id: UI_FIXTURE_JOB_ID, status: "GENERATING_COPY", currentStep: "Fixture 正在生成文案", versions: [] });
         await pauseFixture();
-        setJob(createFixtureCopyJob(input));
+        setJob(createFixtureCopyJob(input, undefined, form.renderTargets));
         return;
       }
       const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid());
@@ -382,7 +404,9 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setQrMode("none");
     setQrUploadPending(false);
     setError(undefined);
-    setForm(newFormState());
+    const nextForm = newFormState();
+    setForm(nextForm);
+    setActiveRenderTarget(nextForm.renderTargets[0]);
     setStage(1);
   }
 
@@ -397,6 +421,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setVisualIdea,
     visualDescription,
     qrMode,
+    activeRenderTarget,
     qrUploadPending,
     error,
     restoring,
@@ -404,6 +429,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
     previewCopy: createPreviewCopy(job, copyReview),
     statusLabel: getStatusLabel(job),
     updateForm,
+    toggleRenderTarget,
+    setActiveRenderTarget,
     updateSession,
     updateQrUrl,
     addSecondSession,

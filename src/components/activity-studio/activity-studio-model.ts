@@ -4,6 +4,7 @@ import {
   type EmployeeActivityInput,
   type PosterDocument
 } from "@/contracts/poster";
+import type { RenderTargetId } from "@/contracts/brand";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import type {
   ActivityJob,
@@ -13,6 +14,7 @@ import type {
 } from "./types";
 
 export const initialForm: FormState = {
+  renderTargets: ["portrait_1080x1920"],
   activityName: "羽球挑战赛",
   session: {
     date: "2026-09-18",
@@ -31,8 +33,49 @@ export const initialForm: FormState = {
 };
 
 export function newFormState(): FormState {
-  return { ...initialForm, session: { ...initialForm.session } };
+  return {
+    ...initialForm,
+    renderTargets: [...initialForm.renderTargets],
+    session: { ...initialForm.session }
+  };
 }
+
+export const renderTargetOptions: Array<{
+  id: RenderTargetId;
+  name: string;
+  size: string;
+  detail: string;
+  visualGroup: "portrait" | "landscape" | "banner";
+}> = [
+  {
+    id: "portrait_1080x1920",
+    name: "竖版海报",
+    size: "1080 × 1920",
+    detail: "通用活动海报",
+    visualGroup: "portrait"
+  },
+  {
+    id: "landscape_1920x1080",
+    name: "横版海报",
+    size: "1920 × 1080",
+    detail: "屏幕与横向展示",
+    visualGroup: "landscape"
+  },
+  {
+    id: "banner_2227x950",
+    name: "Banner",
+    size: "2227 × 950",
+    detail: "横幅与头图",
+    visualGroup: "banner"
+  },
+  {
+    id: "longform_1080xAuto",
+    name: "长图",
+    size: "1080 × 自适应",
+    detail: "承载完整活动信息",
+    visualGroup: "portrait"
+  }
+];
 
 export const scenes = [
   ["01", "员工活动", "节日 / 安全 / 差旅 / 体育赛事 / 员工俱乐部", "当前切片"],
@@ -92,6 +135,9 @@ export function hydrateForm(current: FormState, job: ActivityJob): FormState {
   if (!document) return current;
   return {
     ...current,
+    renderTargets: job.renderTargets?.length
+      ? job.renderTargets
+      : current.renderTargets,
     activityName: document.title,
     session: document.sessions[0] ?? current.session,
     secondSession: document.sessions[1]
@@ -143,6 +189,7 @@ export function getStatusLabel(job?: ActivityJob) {
 }
 
 export function validateForm(form: FormState) {
+  if (!form.renderTargets.length) return "请至少选择一种输出尺寸";
   if (!form.activityName.trim()) return "请填写活动主题";
   if (textCharacterCount(form.activityName) > t01PortraitTitleMaxCharacters) {
     return `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，请精简后再生成`;
