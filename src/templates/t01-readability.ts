@@ -33,11 +33,12 @@ export type T01RegionDefinition = {
 /**
  * These bounds are evaluated against the 1080 × 1920 cover crop, never the
  * source image. `title` includes its supporting subtitle because its smaller
- * 28 px copy has the stricter release threshold.
+ * 28 px copy has the stricter release threshold. The bounds cover the new
+ * three-line title plus two-line subtitle area.
  */
 export const T01_READABILITY_REGIONS: readonly T01RegionDefinition[] = [
   { id: "header", bounds: { x: 72, y: 80, width: 936, height: 83 }, minimumContrast: 3 },
-  { id: "title", bounds: { x: 81, y: 223, width: 720, height: 251 }, minimumContrast: 4.5 },
+  { id: "title", bounds: { x: 80, y: 223, width: 920, height: 526.2 }, minimumContrast: 4.5 },
   { id: "sessions", bounds: { x: 72, y: 1366, width: 936, height: 103 }, minimumContrast: 4.5 },
   { id: "audience", bounds: { x: 72, y: 1477, width: 936, height: 103 }, minimumContrast: 4.5 },
   { id: "participation", bounds: { x: 72, y: 1588, width: 717, height: 158 }, minimumContrast: 4.5 },

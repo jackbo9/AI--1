@@ -192,13 +192,11 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
     confirmedDocument: document(
       "da2d7319-191d-4510-ac0f-9046215f9a7d",
       {
-        title: "九号全球员工秋季家庭日跨团队协作体验活动"
+        title: "赛事主题赛事主题赛事主题赛事主题"
       }
     ),
     visualMode: "generated",
-    expectedArtifacts: expectedArtifacts({
-      portrait: fail("brand.title.max_lines")
-    })
+    expectedArtifacts: expectedArtifacts()
   },
   {
     id: "title-overflow",
@@ -206,7 +204,7 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
     confirmedDocument: document(
       "5241053f-acbb-4bc4-a23e-02e31678c5df",
       {
-        title: "2026 九号全球员工秋季家庭日暨跨团队协作体验与创意挑战赛"
+        title: "这是一条超过三行且接近四十字的活动主题用于验证标题溢出会被阻止生成"
       }
     ),
     visualMode: "generated",

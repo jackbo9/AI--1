@@ -145,7 +145,7 @@ export function getStatusLabel(job?: ActivityJob) {
 export function validateForm(form: FormState) {
   if (!form.activityName.trim()) return "请填写活动主题";
   if (textCharacterCount(form.activityName) > t01PortraitTitleMaxCharacters) {
-    return `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，请精简后再生成`;
+    return `T01 竖版主题最多 ${t01PortraitTitleMaxCharacters} 个字，实际排版最多三行，请精简后再生成`;
   }
   const sessions = [
     form.session,

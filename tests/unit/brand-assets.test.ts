@@ -97,7 +97,7 @@ describe("B1 formal brand assets", () => {
     expect(employeeActivityTemplate.slots).toEqual([
       "brand_header", "full_bleed_background", "title", "subtitle", "sessions", "audience", "participation", "qr", "footer"
     ]);
-    expect(activityTemplateFamilyManifest.renderTargets.portrait_1080x1920.overflow.titleMaxLines).toBe(1);
+    expect(activityTemplateFamilyManifest.renderTargets.portrait_1080x1920.overflow.titleMaxLines).toBe(3);
   });
 
   it("omits the complete QR region when the input does not enable it", async () => {

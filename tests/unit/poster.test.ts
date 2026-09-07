@@ -88,7 +88,8 @@ describe("employee activity v1.7 contract", () => {
   });
 
   it("enforces the T01 title and subtitle presentation budgets", () => {
-    expect(textCharacterCount("羽球挑战赛")).toBe(t01PortraitTitleMaxCharacters);
+    expect(textCharacterCount("羽球挑战赛")).toBeLessThanOrEqual(t01PortraitTitleMaxCharacters);
+    expect(t01PortraitTitleMaxCharacters).toBe(40);
     expect(
       editablePosterContentSchema.safeParse({
         title: "羽球挑战赛",

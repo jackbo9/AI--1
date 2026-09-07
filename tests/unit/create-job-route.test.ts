@@ -55,13 +55,13 @@ it("starts copy generation once and reuses a repeated submission", async () => {
   expect(runCopyStage).toHaveBeenCalledTimes(1);
 });
 
-it("rejects a title beyond the T01 one-line capacity before copy generation", async () => {
+it("rejects a title beyond the T01 input capacity before copy generation", async () => {
   const request = new Request("http://localhost/api/jobs", {
     method: "POST",
     body: JSON.stringify({
       input: {
         ...normal,
-        activityName: "羽毛球秋日挑战赛"
+        activityName: "这是一条超过四十个字符的活动主题用于验证提交前的容量拦截不会调用文案模型并且不会创建任务"
       },
       idempotencyKey: "ab52c7a3-420c-4eee-9a41-5dce13f3a835"
     })
@@ -73,7 +73,7 @@ it("rejects a title beyond the T01 one-line capacity before copy generation", as
   await expect(response.json()).resolves.toEqual({
     error: {
       code: "T01_TITLE_TOO_LONG",
-      message: "T01 竖版主题最多 5 个字，请在生成文案前精简主题"
+      message: "T01 竖版主题最多 40 个字，实际排版最多三行，请在生成文案前精简主题"
     }
   });
   expect(findByKey).not.toHaveBeenCalled();

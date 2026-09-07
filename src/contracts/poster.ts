@@ -7,9 +7,10 @@ import {
 
 export const outputFormatSchema = z.literal("portrait_1080x1920");
 export const activityCategorySchema = z.enum(["team", "festival", "competition"]);
-// The portrait T01 title is a 120px, single-line slot. Keep this separate
-// from the broader stored-document schema so legacy jobs remain readable.
-export const t01PortraitTitleMaxCharacters = 5;
+// T01 uses a 120px title with a measured 1–3 line layout. Keep the input
+// budget separate from the broader 48-character activity field so an
+// impossible document is rejected before any model call.
+export const t01PortraitTitleMaxCharacters = 40;
 export const t01PortraitSubtitleMaxCharacters = 40;
 
 export function textCharacterCount(value: string) {

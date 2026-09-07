@@ -23,7 +23,9 @@
 .t01-preview-info{position:absolute;z-index:2;left:19px;width:253px}
 .t01-preview-info h4{margin:0 0 3px;font-size:8px;font-weight:700;line-height:1.2}
 .t01-preview-info p{max-height:20px;margin:0;overflow:hidden;font-size:6.5px;line-height:1.45}
-.t01-preview-sessions{top:369px;height:27px}
+.t01-preview-sessions{top:369px;height:auto;display:flex;flex-direction:column;gap:7px}
+.t01-preview-session-block h4{margin:0 0 3px;font-size:8px;font-weight:700;line-height:1.2}
+.t01-preview-session-block p{max-height:20px;margin:0;overflow:hidden;font-size:6.5px;line-height:1.45}
 .t01-preview-audience{top:399px;height:27px}
 .t01-preview-participation{top:429px;height:47px}
 .t01-preview-participation.has-qr{width:194px}

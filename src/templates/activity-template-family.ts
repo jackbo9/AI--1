@@ -3,6 +3,7 @@ import {
   brandSpecVersionSchema,
   renderTargetIdSchema
 } from "@/contracts/brand";
+import { t01PortraitLayout } from "./t01-portrait-layout";
 
 const pixelInsetsSchema = z.object({
   top: z.number().nonnegative(),
@@ -118,7 +119,7 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "1.2.0-t01-readability",
+        templateVersion: "1.3.0-t01-multiline",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
@@ -150,14 +151,14 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: { x: 864, y: 1574, width: 144, height: 144 },
         overflow: {
-          titleMaxLines: 1,
+          titleMaxLines: t01PortraitLayout.titleMaxLines,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/poster/T01 体育赛事.svg",
           note:
-            "Figma 191:2777 浅色 T01 母版：全幅背景、单行 H0 标题、三组底部信息及条件二维码；案例 191:3642 的反白色值不构成第二主题。"
+            "Figma 325:317 / 387:709：1080 宽容器，两侧 80px 内边距，120px 标题最多三行；标题与副标题自然流式排列，间距 13px。"
         }
       },
       landscape_1920x1080: {

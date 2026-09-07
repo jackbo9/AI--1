@@ -1,6 +1,6 @@
 # 领域、API 与生成契约
 
-2026-09-04 文案容量补充：T01 竖版的提交主题最多 5 个字；Web 在填写时显示限制，`POST /api/jobs` 在任何模型调用前拒绝超限标题。`subtitle` 是实际排入 T01 的副标题，确认时最多 40 字；`summary` 保持最多 150 字的补充信息，不能再被隐式复制到 `subtitle`。Copy Prompt 必须要求一句、不换行的短副标题，服务端对模型输出再次校验。视觉确认补充：IllustrationBrief 可记录 `confirmedDescription`（最多420字）及 `visualStyleMode`（editorial/legacy）。存在确认正文时，图片 Provider 以该正文组装请求，旧 subject/action/setting/palette 不再覆盖它；系统附加构图及禁止项仍生效。优化草稿需展示颜色，超过确认长度返回明确错误，不静默丢弃字段。新增字段可选，旧版本仍可读取。
+2026-09-07 文案容量补充：T01 竖版的提交主题最多 40 个字，实际排版最多三行；Web 在填写时显示限制，`POST /api/jobs` 在任何模型调用前拒绝超限标题。标题不由 AI 缩写、删字或改写，CSS 自然换行，预检按加载 MiSans 后的 Range 行盒实测。`subtitle` 是实际排入 T01 的副标题，确认时最多 40 字、最多两行；`summary` 保持最多 150 字的补充信息，不能再被隐式复制到 `subtitle`，副标题为空时不输出空槽位。Copy Prompt 必须要求一句、不换行的短副标题，服务端对模型输出再次校验。视觉确认补充：IllustrationBrief 可记录 `confirmedDescription`（最多420字）及 `visualStyleMode`（editorial/legacy）。存在确认正文时，图片 Provider 以该正文组装请求，旧 subject/action/setting/palette 不再覆盖它；系统附加构图及禁止项仍生效。优化草稿需展示颜色，超过确认长度返回明确错误，不静默丢弃字段。新增字段可选，旧版本仍可读取。
 
 本文定义 MVP 的稳定边界。实现可以调整，但不得绕开这些契约让 LLM 自由控制版式或业务状态。
 
@@ -195,7 +195,7 @@ READY_FOR_VISUAL_REVIEW -> GENERATING_ASSET
 请求：场景、原始字段、语言、渠道、模板/风格偏好。  
 响应：`202 Accepted`，返回 `jobId`、`status` 和查询地址。
 
-T01 竖版入口的 `activityName` 最多 5 个字。超过时返回 `422`
+T01 竖版入口的 `activityName` 最多 40 个字，实际排版最多三行。超过时返回 `422`
 和 `T01_TITLE_TOO_LONG`，此时任务、LLM 和图片调用均不会创建。
 
 视觉阶段接口：
@@ -205,7 +205,7 @@ T01 竖版入口的 `activityName` 最多 5 个字。超过时返回 `422`
 
 确认文案中的 `subtitle` 是竖版海报实际展示的短副标题，最多 40
 个字；`summary` 最多 150 字，作为补充说明单独保存。确认接口不能以
-`summary` 覆盖 `subtitle`。
+`summary` 不覆盖 `subtitle`；`subtitle` 为空时竖版不输出副标题槽位。
 
 T01 视觉契约补充：用户创意描述与固定版式构图约束分开存储；系统约束只在最终图片提示词组装时注入一次，且图片调用前先通过最终 prompt Schema。视觉确认描述上限为 420 字，超限返回可编辑的中文错误，不静默截断。
 
@@ -312,7 +312,7 @@ T01 Demo 当前使用可读性观察模式：成功生成的背景不会因对�
 | 图片模型超时 | 使用风格包默认插画，标记为降级 |
 | 字体加载失败 | 阻止导出，不生成缺字海报 |
 | 公司 Logo 或行政标识加载失败 | 阻止导出，不生成缺少品牌标识的海报 |
-| T01 竖版标题超过一行 | 返回 `brand.title.max_lines`，阻止导出 |
+| T01 竖版标题超过三行 | 返回 `brand.title.max_lines`，阻止导出 |
 | B2 竖版正文超过声明容量 | 返回 `content.capacity`，阻止导出；不得静默裁切重要内容 |
 | 存储上传失败 | 保留本地临时产物并重试，不通知用户已完成 |
 | 飞书通知失败 | 任务仍为完成状态，异步重试通知 |
