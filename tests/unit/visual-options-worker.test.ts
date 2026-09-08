@@ -52,15 +52,6 @@ vi.mock("@/providers/illustration-provider", () => ({
 vi.mock("@/templates/employee-activity", () => ({
   employeeActivityTemplate: { id: "employee-activity", version: "t01-test" },
   preflightEmployeeActivity: vi.fn(),
-  analyzeEmployeeActivityVisual: vi.fn(async () => ({
-    contractVersion: "t01-readability-v1",
-    backgroundMode: "input",
-    logoVariant: "primary",
-    treatments: {},
-    initialAnalysis: [],
-    finalAnalysis: [],
-    passed: true
-  })),
   renderEmployeeActivity: vi.fn(),
   PosterRenderError: class extends Error {
     code = "POSTER_RENDER_FAILED";
@@ -193,7 +184,6 @@ describe("T01 visual options worker", () => {
     await runVisualStage(currentJob.id, document, "第一份描述：蓝色羽毛球高速飞行。");
     const firstOption = currentJob.visualOptions?.[0];
     expect(firstOption?.assetPath).toBe("/tmp/first.png");
-    expect(firstOption?.readability?.logoVariant).toBe("primary");
 
     currentJob = {
       ...currentJob,

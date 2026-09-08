@@ -17,7 +17,6 @@ import {
 import { ProviderError } from "@/providers/provider-error";
 import {
   renderEmployeeActivity,
-  analyzeEmployeeActivityVisual,
   preflightEmployeeActivity,
   employeeActivityTemplate,
   PosterRenderError
@@ -174,14 +173,6 @@ export async function runVisualStage(
     }));
     const assetId = `${jobId}-${crypto.randomUUID()}`;
     const illustration = await generateIllustration(compiler.brief, assetId);
-    const qrDataUri = document.qrAssetId
-      ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
-      : undefined;
-    const readability = await analyzeEmployeeActivityVisual(
-      document,
-      illustration.path,
-      { qrDataUri }
-    ).catch(() => undefined);
     const optionId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
 
@@ -210,8 +201,7 @@ export async function runVisualStage(
           assetMode: illustration.mode,
           assetDetail: illustration.detail,
           imageProvider: illustration.provider,
-          imageModel: illustration.model,
-          readability
+          imageModel: illustration.model
         }
       ],
       selectedVisualOptionId: optionId,
@@ -254,11 +244,7 @@ export async function runSelectedVisualStage(
       document,
       option.assetPath,
       outputId,
-      {
-        readabilityMode: serverEnv.READABILITY_MODE,
-        qrDataUri,
-        readability: option.readability
-      }
+      { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
     );
     const outputPath = rendered.outputPath;
     const posterValidation = validatePoster(input, document);

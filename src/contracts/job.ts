@@ -122,7 +122,6 @@ export type VisualOption = {
   assetDetail?: string;
   imageProvider: string;
   imageModel: string;
-  readability?: T01ReadabilityReport;
 };
 
 export type GenerationJob = {
