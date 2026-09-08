@@ -82,7 +82,20 @@ export function useActivityStudioController(fixtureMode: boolean) {
     if (!storedJobId) {
       const storedDraft = window.localStorage.getItem(T01_DRAFT_STORAGE_KEY);
       if (storedDraft) {
-        try { setForm(JSON.parse(storedDraft) as FormState); } catch { window.localStorage.removeItem(T01_DRAFT_STORAGE_KEY); }
+        try {
+          const restored = JSON.parse(storedDraft) as Partial<FormState>;
+          const renderTargets = restored.renderTargets?.length
+            ? restored.renderTargets
+            : initialForm.renderTargets;
+          setForm({
+            ...initialForm,
+            ...restored,
+            renderTargets,
+            activeRenderTarget: renderTargets.includes(restored.activeRenderTarget ?? initialForm.activeRenderTarget)
+              ? (restored.activeRenderTarget ?? initialForm.activeRenderTarget)
+              : renderTargets[0]!
+          });
+        } catch { window.localStorage.removeItem(T01_DRAFT_STORAGE_KEY); }
       }
       return;
     }
