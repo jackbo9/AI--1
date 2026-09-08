@@ -461,9 +461,20 @@ export function useActivityStudioController(fixtureMode: boolean) {
         );
         return;
       }
+      setJob((current) =>
+        current?.visualOptions?.some((option) => option.id === optionId)
+          ? {
+              ...current,
+              selectedVisualOptionId: optionId,
+              currentStep: "已选择主视觉方案，等待确认"
+            }
+          : current
+      );
       const { ok, payload } = await requestVisualOptionSelection(jobId, optionId);
-      if (!ok) setError(payload.error?.message ?? "切换主视觉方案失败");
-      else await refreshJob(jobId);
+      if (!ok) {
+        setError(payload.error?.message ?? "切换主视觉方案失败");
+        await refreshJob(jobId);
+      }
     } finally {
       setPendingAction(undefined);
     }
