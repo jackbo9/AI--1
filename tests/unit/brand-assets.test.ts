@@ -19,7 +19,7 @@ describe("B1 formal brand assets", () => {
       brandAssetPaths.companyLogo,
       brandAssetPaths.administrationMark,
       brandAssetPaths.fonts.regular,
-      brandAssetPaths.fonts.semibold,
+      brandAssetPaths.fonts.medium,
       brandAssetPaths.fonts.bold
     ];
     const sizes = await Promise.all(files.map((file) => stat(file)));

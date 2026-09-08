@@ -214,10 +214,13 @@ async function qrDataUriForDocument(
 
 async function assertRenderReadiness(page: Page) {
   const readiness = await page.evaluate(async () => {
-    await window.document.fonts.ready;
     const miSansFaces = Array.from(window.document.fonts).filter(
       (face) => face.family.replaceAll('"', "") === "MiSans"
     );
+    // `fonts.ready` only settles faces requested by layout. Explicitly load
+    // all declared T01 weights so a first render cannot race the screenshot.
+    await Promise.all(miSansFaces.map((face) => face.load()));
+    await window.document.fonts.ready;
     const logoImages = [
       window.document.querySelector<HTMLImageElement>(
         "[data-brand-company-logo]"
