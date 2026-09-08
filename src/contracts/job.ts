@@ -107,6 +107,23 @@ export type ConfirmedVisual = {
   createdAt: string;
 };
 
+export type VisualOption = {
+  id: string;
+  createdAt: string;
+  description: string;
+  sourceDraftCreatedAt: string;
+  sourceCopyCreatedAt: string;
+  sourceDocumentVersionId: string;
+  sourceDocument: PosterDocument;
+  promptVersion: string;
+  brief: VisualMaster["brief"];
+  assetPath: string;
+  assetMode: "generated" | "fallback";
+  assetDetail?: string;
+  imageProvider: string;
+  imageModel: string;
+};
+
 export type GenerationJob = {
   id: string;
   traceId: string;
@@ -126,6 +143,9 @@ export type GenerationJob = {
   visualInput?: VisualInput;
   visualDraft?: VisualDraft;
   confirmedVisual?: ConfirmedVisual;
+  visualOptions?: VisualOption[];
+  selectedVisualOptionId?: string;
+  confirmedVisualOptionId?: string;
   confirmedDocument?: ConfirmedCampaignDocument;
   visualMaster?: VisualMaster;
   artifacts?: Artifact[];

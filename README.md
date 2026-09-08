@@ -7,7 +7,7 @@
 ## 本地 UI 演练
 
 启动本地服务后，在 `AUTH_MODE=local` 下访问 `/?fixture=1`，可运行不调用
-API、LLM、图片模型或 Playwright 的四步交互 Fixture。它只用于前端流程
+API、LLM、图片模型或 Playwright 的三步交互 Fixture。它只用于前端流程
 验收，固定演练稿不代表真实生成、品牌校验或可导出质量；飞书模式不会开放。
 
 ## 已锁定方案

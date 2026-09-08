@@ -162,16 +162,10 @@ export async function runVisualStage(
       provider: "confirmed-visual",
       promptVersion: `visual-confirmed-v3-${brief.visualStyleMode}`
     };
-    const qrDataUri = document.qrAssetId
-      ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
-      : undefined;
-    await preflightEmployeeActivity(document, { qrDataUri });
     const documentVersionId =
       job.confirmedDocument?.documentVersionId ??
       job.versions.at(-1)?.id ??
       crypto.randomUUID();
-    const visualMasterId = crypto.randomUUID();
-    const visualFamilyId = crypto.randomUUID();
 
     await updateJob(jobId, (item) => ({
       ...item,
@@ -179,16 +173,76 @@ export async function runVisualStage(
     }));
     const assetId = `${jobId}-${crypto.randomUUID()}`;
     const illustration = await generateIllustration(compiler.brief, assetId);
+    const optionId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
 
     await updateJob(jobId, (item) => ({
       ...item,
-      status: "RENDERING",
-      currentStep: "合成受控海报"
+      status: "READY_FOR_VISUAL_REVIEW",
+      currentStep: "主视觉方案已生成，等待选择",
+      visualOptions: [
+        ...(item.visualOptions ?? []),
+        {
+          id: optionId,
+          createdAt,
+          description: confirmedDescription,
+          sourceDraftCreatedAt:
+            item.confirmedVisual?.sourceDraftCreatedAt ??
+            job.confirmedVisual?.sourceDraftCreatedAt ??
+            item.visualDraft?.createdAt ??
+            createdAt,
+          sourceCopyCreatedAt:
+            item.copyDraft?.createdAt ?? job.copyDraft?.createdAt ?? createdAt,
+          sourceDocumentVersionId: documentVersionId,
+          sourceDocument: document,
+          promptVersion: compiler.promptVersion,
+          brief: compiler.brief,
+          assetPath: illustration.path,
+          assetMode: illustration.mode,
+          assetDetail: illustration.detail,
+          imageProvider: illustration.provider,
+          imageModel: illustration.model
+        }
+      ],
+      selectedVisualOptionId: optionId,
+      error: undefined
+    }));
+  } catch (error) {
+    await failVisualGeneration(jobId, error);
+  }
+}
+
+export async function runSelectedVisualStage(
+  jobId: string,
+  optionId: string
+) {
+  try {
+    const job = await findJob(jobId);
+    if (!job || job.status !== "RENDERING") return;
+    const option = job.visualOptions?.find((item) => item.id === optionId);
+    if (!option) throw new Error("选中的主视觉方案不存在");
+    if (option.sourceCopyCreatedAt !== job.copyDraft?.createdAt) {
+      throw new Error("选中的主视觉来源文案已失效，请重新生成");
+    }
+
+    const document = option.sourceDocument;
+    const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
+    const qrDataUri = document.qrAssetId
+      ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
+      : undefined;
+    await preflightEmployeeActivity(document, { qrDataUri });
+    const visualMasterId = crypto.randomUUID();
+    const visualFamilyId = crypto.randomUUID();
+
+    await updateJob(jobId, (item) => ({
+      ...item,
+      currentStep: "使用选中的主视觉合成海报",
+      error: undefined
     }));
     const outputId = `${jobId}-${crypto.randomUUID()}`;
     const rendered = await renderEmployeeActivity(
       document,
-      illustration.path,
+      option.assetPath,
       outputId,
       { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
     );
@@ -215,8 +269,8 @@ export async function runVisualStage(
       ],
       readability: rendered.readability
     };
-    const finalAssetMode = illustration.mode;
-    const finalAssetDetail = illustration.detail;
+    const finalAssetMode = option.assetMode;
+    const finalAssetDetail = option.assetDetail;
     const artifactId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const portraitTarget =
@@ -228,14 +282,14 @@ export async function runVisualStage(
     const visualMaster = visualMasterSchema.parse({
       id: visualMasterId,
       visualFamilyId,
-      sourceDocumentVersionId: documentVersionId,
-      promptVersion: compiler.promptVersion,
-      brief: compiler.brief,
+      sourceDocumentVersionId: option.sourceDocumentVersionId,
+      promptVersion: option.promptVersion,
+      brief: option.brief,
       assets: [
         {
           renderTargetId: "portrait_1080x1920",
-          path: illustration.path,
-          mode: illustration.mode
+          path: option.assetPath,
+          mode: option.assetMode
         }
       ]
     });
@@ -250,6 +304,14 @@ export async function runVisualStage(
       status: "READY_FOR_REVIEW",
       currentStep: "等待预览确认",
       visualMaster,
+      selectedVisualOptionId: option.id,
+      confirmedVisualOptionId: option.id,
+      confirmedVisual: {
+        description: option.description,
+        sourceDraftCreatedAt: option.sourceDraftCreatedAt,
+        sourceCopyCreatedAt: option.sourceCopyCreatedAt,
+        createdAt
+      },
       artifacts: [
         ...item.artifacts,
         {
@@ -258,7 +320,7 @@ export async function runVisualStage(
           status: "READY",
           createdAt,
           brandSpecVersion: 1,
-          documentVersionId,
+          documentVersionId: option.sourceDocumentVersionId,
           visualFamilyId,
           width: dimensions.width,
           heightMode: "fixed",
@@ -267,7 +329,7 @@ export async function runVisualStage(
           templateVersion: employeeActivityTemplate.version,
           assetMode: finalAssetMode,
           assetDetail: finalAssetDetail,
-          assetPath: illustration.path,
+          assetPath: option.assetPath,
           outputPath,
           validation
         }
@@ -282,17 +344,17 @@ export async function runVisualStage(
           templateVersion: employeeActivityTemplate.version,
           promptVersion:
             item.copyDraft?.promptVersion ?? "employee-activity-copy-v1-6",
-          illustrationPromptVersion: compiler.promptVersion,
+          illustrationPromptVersion: option.promptVersion,
           modelInfo: {
             copyProvider: item.copyDraft?.provider ?? "confirmed-copy",
             copyModel: item.copyDraft?.model ?? "confirmed-copy",
-            compilerProvider: compiler.provider,
-            imageProvider: illustration.provider,
-            imageModel: illustration.model
+            compilerProvider: "confirmed-visual",
+            imageProvider: option.imageProvider,
+            imageModel: option.imageModel
           },
           assetMode: finalAssetMode,
           assetDetail: finalAssetDetail,
-          assetPath: illustration.path,
+          assetPath: option.assetPath,
           outputPath,
           validation
         }
@@ -306,8 +368,41 @@ export async function runVisualStage(
       if (claim.claimed) void renderClaimedFormat(jobId, claim.artifact.id, format, claim.sourceDocument);
     }
   } catch (error) {
-    await failJob(jobId, error);
+    await failSelectedVisualRender(jobId, error);
   }
+}
+
+async function failVisualGeneration(jobId: string, error: unknown) {
+  const code =
+    error instanceof ProviderError || error instanceof PosterRenderError
+      ? error.code
+      : "GENERATION_FAILED";
+  const message =
+    error instanceof Error ? error.message : "主视觉生成未完成，请重试";
+  await updateJob(jobId, (item) => ({
+    ...item,
+    status: "READY_FOR_VISUAL_REVIEW",
+    currentStep: (item.visualOptions?.length ?? 0)
+      ? "新方案生成失败，已保留此前方案"
+      : "主视觉生成失败，可使用当前描述重试",
+    error: { code, message }
+  }));
+}
+
+async function failSelectedVisualRender(jobId: string, error: unknown) {
+  const code =
+    error instanceof ProviderError || error instanceof PosterRenderError
+      ? error.code
+      : "RENDER_FAILED";
+  const message =
+    error instanceof Error ? error.message : "海报排版未完成，请重试";
+  await updateJob(jobId, (item) => ({
+    ...item,
+    status: "READY_FOR_VISUAL_REVIEW",
+    currentStep: "海报排版失败，已保留全部主视觉方案",
+    confirmedVisualOptionId: undefined,
+    error: { code, message }
+  }));
 }
 
 function visualDescriptionFromBrief(brief: IllustrationBrief) {

@@ -23,11 +23,12 @@ let mutationQueue: Promise<void> = Promise.resolve();
 
 type StoredGenerationJob = Omit<
   GenerationJob,
-  "input" | "campaignBrief" | "artifacts"
+  "input" | "campaignBrief" | "artifacts" | "visualOptions"
 > & {
   input: unknown;
   campaignBrief?: CampaignBrief;
   artifacts?: Artifact[];
+  visualOptions?: GenerationJob["visualOptions"];
 };
 
 async function readJobs(): Promise<CampaignGenerationJob[]> {
@@ -75,6 +76,7 @@ export function normalizeStoredJob(
     ...job,
     input,
     campaignBrief,
+    visualOptions: job.visualOptions ?? [],
     artifacts:
       job.artifacts ??
       job.versions.map((version) => artifactFromLegacyVersion(version))

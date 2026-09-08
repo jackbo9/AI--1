@@ -42,6 +42,23 @@ export type ActivityStudioFixtureJob = {
     sourceCopyCreatedAt?: string;
     createdAt: string;
   };
+  visualOptions?: Array<{
+    id: string;
+    createdAt: string;
+    description: string;
+    sourceDraftCreatedAt: string;
+    sourceCopyCreatedAt: string;
+    sourceDocumentVersionId: string;
+    sourceDocument: PosterDocument;
+    promptVersion: string;
+    previewUrl: string;
+    assetMode: "generated" | "fallback";
+    assetDetail?: string;
+    imageProvider: string;
+    imageModel: string;
+  }>;
+  selectedVisualOptionId?: string;
+  confirmedVisualOptionId?: string;
   versions: Array<{
     assetMode: string;
     assetDetail?: string;
@@ -167,13 +184,60 @@ export function createFixtureBaseVisualJobFromCopy(
   };
 }
 
-export function createFixtureReadyJob(
-  job: ActivityStudioFixtureJob
+export function createFixtureVisualOptionJob(
+  job: ActivityStudioFixtureJob,
+  description: string,
+  createdAt = new Date().toISOString()
 ): ActivityStudioFixtureJob {
+  if (!job.copyDraft || !job.visualDraft) {
+    throw new Error("Fixture 视觉描述不存在");
+  }
+  const optionId = `fixture-option-${(job.visualOptions?.length ?? 0) + 1}`;
+  return {
+    ...job,
+    status: "READY_FOR_VISUAL_REVIEW",
+    currentStep: "Fixture 主视觉方案已生成，等待选择",
+    visualOptions: [
+      ...(job.visualOptions ?? []),
+      {
+        id: optionId,
+        createdAt,
+        description,
+        sourceDraftCreatedAt: job.visualDraft.createdAt,
+        sourceCopyCreatedAt: job.copyDraft.createdAt,
+        sourceDocumentVersionId: `fixture-document-${job.copyDraft.createdAt}`,
+        sourceDocument: job.copyDraft.document,
+        promptVersion: job.visualDraft.promptVersion,
+        previewUrl: "/brand/employee-activity-fallback.svg",
+        assetMode: "fallback",
+        assetDetail: "Fixture 固定主视觉，不调用图片模型",
+        imageProvider: "ui-fixture",
+        imageModel: "ui-fixture"
+      }
+    ],
+    selectedVisualOptionId: optionId,
+    confirmedVisual: {
+      description,
+      sourceDraftCreatedAt: job.visualDraft.createdAt,
+      sourceCopyCreatedAt: job.copyDraft.createdAt,
+      createdAt
+    }
+  };
+}
+
+export function createFixtureReadyJob(
+  job: ActivityStudioFixtureJob,
+  optionId = job.selectedVisualOptionId
+): ActivityStudioFixtureJob {
+  if (!optionId || !job.visualOptions?.some((option) => option.id === optionId)) {
+    throw new Error("Fixture 主视觉方案未选中");
+  }
   return {
     ...job,
     status: "READY_FOR_REVIEW",
     currentStep: "Fixture 海报已生成",
+    selectedVisualOptionId: optionId,
+    confirmedVisualOptionId: optionId,
     previewUrl: "/fixtures/employee-activity-poster.svg",
     versions: [
       ...job.versions,

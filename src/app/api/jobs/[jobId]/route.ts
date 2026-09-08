@@ -15,5 +15,14 @@ export async function GET(_: Request, context: { params: Promise<{ jobId: string
   if (!job) return NextResponse.json({ error: { code: "JOB_NOT_FOUND", message: "未找到该任务" } }, { status: 404 });
   if (job.userId !== identity.userId) return forbiddenResponse();
   const outputPath = latestPortraitPreviewOutputPath(job);
-  return NextResponse.json({ ...job, actionIdempotencyKeys: undefined, previewUrl: outputPath ? `/api/files/${path.basename(outputPath)}` : undefined });
+  return NextResponse.json({
+    ...job,
+    actionIdempotencyKeys: undefined,
+    visualOptions: (job.visualOptions ?? []).map((option) => ({
+      ...option,
+      assetPath: undefined,
+      previewUrl: `/api/files/${path.basename(option.assetPath)}`
+    })),
+    previewUrl: outputPath ? `/api/files/${path.basename(outputPath)}` : undefined
+  });
 }

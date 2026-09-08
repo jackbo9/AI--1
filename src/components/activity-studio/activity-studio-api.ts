@@ -96,6 +96,24 @@ export function requestVisualReplacement(jobId: string, idempotencyKey: string) 
   });
 }
 
+export function requestVisualOptionSelection(jobId: string, optionId: string) {
+  return postJson<ErrorPayload>(
+    `/api/jobs/${jobId}/visual-options/select`,
+    { optionId }
+  );
+}
+
+export function requestVisualOptionConfirmation(
+  jobId: string,
+  optionId: string,
+  idempotencyKey: string
+) {
+  return postJson<ErrorPayload>(
+    `/api/jobs/${jobId}/visual-options/confirm`,
+    { optionId, idempotencyKey }
+  );
+}
+
 export async function requestQrUpload(file: File) {
   const formData = new FormData();
   formData.set("file", file);

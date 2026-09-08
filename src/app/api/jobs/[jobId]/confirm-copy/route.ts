@@ -204,6 +204,9 @@ function createConfirmedCopyJob(
     },
     visualDraft,
     confirmedVisual: undefined,
+    visualOptions: [],
+    selectedVisualOptionId: undefined,
+    confirmedVisualOptionId: undefined,
     visualMaster: undefined,
     error: undefined
   };

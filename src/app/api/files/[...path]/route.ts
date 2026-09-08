@@ -15,7 +15,7 @@ export async function GET(
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
   const filename = (await context.params).path.join("/");
-  if (!/^[a-zA-Z0-9-]+\.png$/.test(filename)) {
+  if (!/^[a-zA-Z0-9-]+\.(?:png|jpg|webp|svg)$/.test(filename)) {
     return new NextResponse("Not found", { status: 404 });
   }
   const jobId = filename.match(/^([0-9a-f-]{36})(?:-|\.png)/i)?.[1];
@@ -35,7 +35,10 @@ export async function GET(
       (version.validation.exportAllowed ?? version.validation.passed) &&
       path.basename(version.outputPath) === filename
   );
-  if (!belongsToArtifact && !belongsToLegacyVersion) {
+  const belongsToVisualOption = (job.visualOptions ?? []).some(
+    (option) => path.basename(option.assetPath) === filename
+  );
+  if (!belongsToArtifact && !belongsToLegacyVersion && !belongsToVisualOption) {
     return new NextResponse("Not found", { status: 404 });
   }
   try {
@@ -43,7 +46,7 @@ export async function GET(
       await readFile(path.join(process.cwd(), "data", "generated", filename)),
       {
         headers: {
-          "Content-Type": "image/png",
+          "Content-Type": contentTypeFor(filename),
           "Content-Disposition": "inline; filename=\"" + filename + "\"",
           "Cache-Control": "private, no-store"
         }
@@ -52,4 +55,11 @@ export async function GET(
   } catch {
     return new NextResponse("Not found", { status: 404 });
   }
+}
+
+function contentTypeFor(filename: string) {
+  if (filename.endsWith(".jpg")) return "image/jpeg";
+  if (filename.endsWith(".webp")) return "image/webp";
+  if (filename.endsWith(".svg")) return "image/svg+xml";
+  return "image/png";
 }

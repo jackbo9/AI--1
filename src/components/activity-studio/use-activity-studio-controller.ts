@@ -7,6 +7,7 @@ import {
   createFixtureBaseVisualJobFromCopy,
   createFixtureCopyJob,
   createFixtureReadyJob,
+  createFixtureVisualOptionJob,
   createFixtureVisualDraftJob,
   UI_FIXTURE_JOB_ID,
   UI_FIXTURE_STORAGE_KEY
@@ -19,6 +20,8 @@ import {
   requestJobCreation,
   requestQrUpload,
   requestVisualConfirmation,
+  requestVisualOptionConfirmation,
+  requestVisualOptionSelection,
   requestVisualRefinement,
   requestVisualReplacement
 } from "./activity-studio-api";
@@ -169,14 +172,18 @@ export function useActivityStudioController(fixtureMode: boolean) {
 
   function hydrateJob(loaded: ActivityJob) {
     setForm((current) => hydrateForm(current, loaded));
-    if (loaded.confirmedVisual) {
-      visualDraftCreatedAtRef.current = loaded.confirmedVisual.sourceDraftCreatedAt;
-      visualDescriptionRef.current = loaded.confirmedVisual.description;
-      setVisualDescription(loaded.confirmedVisual.description);
-    } else if (loaded.visualDraft) {
+    const prefersDraft =
+      loaded.visualDraft &&
+      (!loaded.confirmedVisual ||
+        loaded.visualDraft.createdAt > loaded.confirmedVisual.createdAt);
+    if (prefersDraft && loaded.visualDraft) {
       visualDraftCreatedAtRef.current = loaded.visualDraft.createdAt;
       visualDescriptionRef.current = loaded.visualDraft.description;
       setVisualDescription(loaded.visualDraft.description);
+    } else if (loaded.confirmedVisual) {
+      visualDraftCreatedAtRef.current = loaded.confirmedVisual.sourceDraftCreatedAt;
+      visualDescriptionRef.current = loaded.confirmedVisual.description;
+      setVisualDescription(loaded.confirmedVisual.description);
     } else if (loaded.visualInput) {
       visualDescriptionRef.current = loaded.visualInput.originalIntent;
       setVisualDescription(loaded.visualInput.originalIntent);
@@ -422,21 +429,70 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (fixtureMode) {
         setJob((current) => current ? { ...current, status: "GENERATING_ASSET", currentStep: "Fixture 正在生成主视觉" } : current);
         await pauseFixture();
-        setJob((current) => current ? { ...current, status: "RENDERING", currentStep: "Fixture 正在排版" } : current);
-        await pauseFixture();
-        setJob((current) => current?.visualDraft ? createFixtureReadyJob({
-          ...current,
-          confirmedVisual: {
-            description: visualDescription.trim(),
-            sourceDraftCreatedAt: current.visualDraft.createdAt,
-            sourceCopyCreatedAt: current.visualDraft.sourceCopyCreatedAt,
-            createdAt: new Date().toISOString()
-          }
-        }) : current);
+        setJob((current) =>
+          current
+            ? createFixtureVisualOptionJob(current, visualDescription.trim())
+            : current
+        );
         return;
       }
       const { ok, payload } = await requestVisualConfirmation(jobId, job.visualDraft.createdAt, visualDescription.trim(), createClientUuid());
       if (!ok) setError(payload.error?.message ?? "确认视觉描述失败");
+      else await refreshJob(jobId);
+    } finally {
+      setPendingAction(undefined);
+    }
+  }
+
+  async function selectVisualOption(optionId: string) {
+    if (!jobId || job?.status !== "READY_FOR_VISUAL_REVIEW") return;
+    setError(undefined);
+    setPendingAction("selectVisual");
+    try {
+      if (fixtureMode) {
+        setJob((current) =>
+          current?.visualOptions?.some((option) => option.id === optionId)
+            ? {
+                ...current,
+                selectedVisualOptionId: optionId,
+                currentStep: "Fixture 已选择主视觉方案"
+              }
+            : current
+        );
+        return;
+      }
+      const { ok, payload } = await requestVisualOptionSelection(jobId, optionId);
+      if (!ok) setError(payload.error?.message ?? "切换主视觉方案失败");
+      else await refreshJob(jobId);
+    } finally {
+      setPendingAction(undefined);
+    }
+  }
+
+  async function confirmSelectedVisual() {
+    const optionId = job?.selectedVisualOptionId;
+    if (!jobId || !optionId) return setError("请先选择一个主视觉方案");
+    setError(undefined);
+    setPendingAction("confirmAsset");
+    try {
+      if (fixtureMode) {
+        setJob((current) =>
+          current
+            ? { ...current, status: "RENDERING", currentStep: "Fixture 正在排版" }
+            : current
+        );
+        await pauseFixture();
+        setJob((current) =>
+          current ? createFixtureReadyJob(current, optionId) : current
+        );
+        return;
+      }
+      const { ok, payload } = await requestVisualOptionConfirmation(
+        jobId,
+        optionId,
+        createClientUuid()
+      );
+      if (!ok) setError(payload.error?.message ?? "确认主视觉失败");
       else await refreshJob(jobId);
     } finally {
       setPendingAction(undefined);
@@ -541,6 +597,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
     confirmCopy,
     refineVisual,
     confirmVisual,
+    selectVisualOption,
+    confirmSelectedVisual,
     replaceVisual,
     startNewPoster
   };

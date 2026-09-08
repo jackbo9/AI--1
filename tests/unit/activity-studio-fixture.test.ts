@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createFixtureCopyJob,
   createFixtureReadyJob,
+  createFixtureVisualOptionJob,
   createFixtureVisualDraftJob,
   UI_FIXTURE_JOB_ID
 } from "@/components/activity-studio-fixture";
@@ -48,7 +49,12 @@ describe("activity studio UI fixture", () => {
       "几位同事在室内羽毛球场轻松对打",
       "2026-09-04T08:01:00.000Z"
     );
-    const readyJob = createFixtureReadyJob(visualJob);
+    const optionJob = createFixtureVisualOptionJob(
+      visualJob,
+      visualJob.visualDraft!.description,
+      "2026-09-04T08:02:00.000Z"
+    );
+    const readyJob = createFixtureReadyJob(optionJob);
 
     expect(copyJob.id).toBe(UI_FIXTURE_JOB_ID);
     expect(copyJob.copyDraft?.document.title).toBe(input.activityName);
@@ -58,7 +64,10 @@ describe("activity studio UI fixture", () => {
     ).toBeLessThanOrEqual(t01PortraitSubtitleMaxCharacters);
     expect(visualJob.status).toBe("READY_FOR_VISUAL_REVIEW");
     expect(visualJob.visualDraft?.description).toContain("左上保持干净留白");
+    expect(optionJob.visualOptions).toHaveLength(1);
+    expect(optionJob.selectedVisualOptionId).toBe(optionJob.visualOptions?.[0]?.id);
     expect(readyJob.status).toBe("READY_FOR_REVIEW");
+    expect(readyJob.confirmedVisualOptionId).toBe(optionJob.selectedVisualOptionId);
     expect(readyJob.previewUrl).toBe("/fixtures/employee-activity-poster.svg");
   });
 });

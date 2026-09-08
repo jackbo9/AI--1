@@ -71,13 +71,22 @@ export function createCopyReview(job: ActivityJob): CopyReview | undefined {
 export function getStageForJob(job: ActivityJob): Stage | undefined {
   if (job.status === "READY_FOR_COPY_REVIEW") return 1;
   if (
-    ["READY_FOR_VISUAL_INPUT", "REFINING_VISUAL", "READY_FOR_VISUAL_REVIEW"].includes(
+    [
+      "READY_FOR_VISUAL_INPUT",
+      "REFINING_VISUAL",
+      "READY_FOR_VISUAL_REVIEW",
+      "GENERATING_ASSET"
+    ].includes(
       job.status
     )
   ) {
     return 2;
   }
-  if (job.status === "READY_FOR_REVIEW") return 3;
+  if (
+    ["RENDERING", "VALIDATING_OUTPUT", "READY_FOR_REVIEW"].includes(job.status)
+  ) {
+    return 3;
+  }
   return undefined;
 }
 

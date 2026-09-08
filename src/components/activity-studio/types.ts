@@ -40,6 +40,8 @@ export type PendingAction =
   | "copy"
   | "refine"
   | "visual"
+  | "selectVisual"
+  | "confirmAsset"
   | "replace";
 
 export type StudioIdentity = {

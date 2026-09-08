@@ -102,6 +102,7 @@ export async function POST(
         },
         visualDraft,
         confirmedVisual: undefined,
+        confirmedVisualOptionId: undefined,
         error: undefined
       };
     });

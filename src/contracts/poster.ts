@@ -280,6 +280,15 @@ export const regenerateAssetSchema = z.object({
   idempotencyKey: z.string().uuid()
 });
 
+export const selectVisualOptionSchema = z.object({
+  optionId: z.string().uuid()
+});
+
+export const confirmVisualOptionSchema = z.object({
+  optionId: z.string().uuid(),
+  idempotencyKey: z.string().uuid()
+});
+
 export type OutputFormat = z.infer<typeof outputFormatSchema>;
 export type EmployeeActivityInput = z.infer<typeof employeeActivityInputSchema>;
 export type CampaignBrief = z.infer<typeof campaignBriefSchema>;

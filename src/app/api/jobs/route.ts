@@ -151,6 +151,7 @@ export async function POST(request: Request) {
           }
         : undefined,
       visualDraft: baseVisualDraft,
+      visualOptions: [],
       artifacts: [],
       versions: [],
       createdAt: now,
