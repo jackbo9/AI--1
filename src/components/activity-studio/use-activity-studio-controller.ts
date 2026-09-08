@@ -446,7 +446,9 @@ export function useActivityStudioController(fixtureMode: boolean) {
     error,
     restoring,
     pendingAction,
-    previewCopy: createPreviewCopy(job, copyReview),
+    // A generated suggestion is not applied until the user explicitly
+    // replaces both fields. Keep the form and portrait preview in sync.
+    previewCopy: stage === 1 ? undefined : createPreviewCopy(job, copyReview),
     statusLabel: getStatusLabel(job),
     updateForm,
     updateSession,
