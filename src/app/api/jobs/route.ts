@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         );
   }
 
-  const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input);
+  const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input, parsed.data.renderTargets);
   if (
     parsed.data.skipCopy &&
     (!parsed.data.input.slogan.trim() || !parsed.data.input.subtitle.trim())

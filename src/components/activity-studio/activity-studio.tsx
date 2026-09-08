@@ -26,6 +26,8 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
     previewCopy,
     statusLabel,
     updateForm,
+    toggleRenderTarget,
+    selectRenderTarget,
     updateSession,
     updateQrUrl,
     changeQrMode,
@@ -46,6 +48,8 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
     onStage={setStage}
     preview={<LivePreview
       form={form}
+      activeRenderTarget={form.activeRenderTarget}
+      onRenderTarget={selectRenderTarget}
       copy={previewCopy}
       hasQr={qrMode === "add" && (Boolean(form.qrUrl) || Boolean(form.qrAssetId))}
       job={job}
@@ -56,9 +60,9 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
   >
     <div className="ead-activity-content">
       <div className="ead-title-row"><div><em>员工活动</em><h1>制作一套活动海报</h1><p>一份内容，先确认文案，再生成主视觉</p></div><small>{fixtureMode ? "Fixture 交互演练 · 不调用真实模型" : `${identity.provider === "feishu" ? "飞书账号" : "本地演示"} · 状态随任务恢复`}</small></div>
-      {restoring ? <LoadingCard title="正在恢复任务" detail="正在读取本地预览状态…" /> : stage === 1 && <StepOne form={form} qrMode={qrMode} qrUploadPending={qrUploadPending} aiReady={job?.status === "READY_FOR_COPY_REVIEW"} aiCandidate={job?.status === "READY_FOR_COPY_REVIEW" ? { slogan: job.copyDraft?.document.slogan ?? "", subtitle: job.copyDraft?.document.subtitle ?? "" } : undefined} onField={updateForm} onQrUrl={updateQrUrl} onSession={updateSession} onQrMode={changeQrMode} onQrUpload={uploadQr} onClearQrAsset={clearQrAsset} onAssist={assistTitles} onSubmit={submit} pending={pendingAction === "submit"} />}
+      {restoring ? <LoadingCard title="正在恢复任务" detail="正在读取本地预览状态…" /> : stage === 1 && <StepOne form={form} qrMode={qrMode} qrUploadPending={qrUploadPending} aiReady={job?.status === "READY_FOR_COPY_REVIEW"} onToggleRenderTarget={toggleRenderTarget} onField={updateForm} onQrUrl={updateQrUrl} onSession={updateSession} onQrMode={changeQrMode} onQrUpload={uploadQr} onClearQrAsset={clearQrAsset} onAssist={assistTitles} onSubmit={submit} pending={pendingAction === "submit"} />}
       {!restoring && stage === 3 && <StepThree job={job} visualIdea={visualIdea} visualDescription={visualDescription} onIdea={setVisualIdea} onDescription={changeVisualDescription} onRefine={refineVisual} onBack={() => setStage(1)} onConfirm={confirmVisual} pendingRefine={pendingAction === "refine"} pendingConfirm={pendingAction === "visual"} />}
-      {!restoring && stage === 4 && <StepFour job={job} onReplace={replaceVisual} onRestart={startNewPoster} pending={pendingAction === "replace"} fixtureMode={fixtureMode} />}
+      {!restoring && stage === 4 && <StepFour job={job} form={form} onReplace={replaceVisual} onRestart={startNewPoster} pending={pendingAction === "replace"} fixtureMode={fixtureMode} />}
       {(error || job?.error) && <p className="ead-error">{error ?? `${job?.error?.message}（${job?.error?.code}）`}</p>}
     </div>
   </StudioShell>;

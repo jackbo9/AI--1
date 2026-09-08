@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- previews are deterministic server-rendered PNGs. */
 import { useEffect, useState } from "react";
+import type { RenderTargetId } from "@/contracts/brand";
 import styles from "./t01-output-gallery.module.css";
 
 const formats = [
@@ -17,11 +18,10 @@ type Output = {
   validation: { passed: boolean; exportAllowed?: boolean; messages: string[] };
 };
 
-export function T01OutputGallery({ jobId }: { jobId: string }) {
+export function T01OutputGallery({ jobId, renderTargets }: { jobId: string; renderTargets: RenderTargetId[] }) {
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [family, setFamily] = useState<string>();
   const [selected, setSelected] = useState<Format>("portrait_1080x1920");
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   useEffect(() => {
@@ -43,35 +43,25 @@ export function T01OutputGallery({ jobId }: { jobId: string }) {
     void refresh();
     return () => { disposed = true; controller.abort(); clearTimeout(timer); };
   }, [jobId, reload]);
-  const current = [...outputs].reverse().find(output => output.format === selected && (!family || output.visualFamilyId === family));
-  async function generate() {
-    if (pending || selected === "portrait_1080x1920") return;
-    setPending(true); setError("");
-    try {
-      const response = await fetch(`/api/jobs/${jobId}/formats`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format: selected }) });
-      const payload = await readJson<{ error?: { message?: string } }>(response);
-      if (!response.ok) throw new Error(payload.error?.message ?? "该尺寸生成失败");
-      setReload(value => value + 1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "该尺寸生成失败"); }
-    finally { setPending(false); }
-  }
+  const visibleFormats = formats.filter(([format]) => renderTargets.includes(format));
+  const safeSelected = renderTargets.includes(selected) ? selected : renderTargets[0] ?? "portrait_1080x1920";
+  const current = [...outputs].reverse().find(output => output.format === safeSelected && (!family || output.visualFamilyId === family));
   return <section className={styles.gallery} aria-label="T01 四尺寸输出">
-    <h3>同一活动，四种物料</h3>
+    <h3>本次选择的物料</h3>
     <p>复用已确认的文案和本次主视觉。生成其他尺寸不会再次调用图片模型；横向裁切可能改变主体呈现。</p>
     <div className={styles.tabs} role="group" aria-label="选择物料尺寸">
-      {formats.map(([format, name, size]) => <button type="button" key={format} aria-pressed={selected === format} onClick={() => setSelected(format)}><strong>{name}</strong><small>{size}</small></button>)}
+      {visibleFormats.map(([format, name, size]) => <button type="button" key={format} aria-pressed={safeSelected === format} onClick={() => setSelected(format)}><strong>{name}</strong><small>{size}</small></button>)}
     </div>
-    <p className={styles.hint}>{selected === "longform_1080xAuto" ? "长图展示详细规则、报名截止和联系人；空信息不占位，页面随内容增高。奖品暂无独立槽位。" : "此规格只展示模板支持的核心信息；未展示字段仍保留在活动内容中。"}</p>
+    <p className={styles.hint}>{safeSelected === "longform_1080xAuto" ? "长图展示详细规则、报名截止和联系人；空信息不占位，页面随内容增高。奖品暂无独立槽位。" : "此规格只展示模板支持的核心信息；未展示字段仍保留在活动内容中。"}</p>
     {error && <p role="alert" className={styles.error}>{error}<button type="button" onClick={() => setReload(value => value + 1)}>重新读取</button></p>}
     {current?.status === "RENDERING" && <p role="status">正在排版和检查该尺寸…</p>}
     {current?.status === "FAILED" && <p role="alert" className={styles.error}>{current.error?.message ?? "该尺寸未生成成功"}。其他已完成尺寸仍可下载。</p>}
     {current?.previewUrl && <>
-      <div className={styles.preview}><img src={current.previewUrl} alt={`${formats.find(item => item[0] === selected)?.[1]}海报预览`} /></div>
+      <div className={styles.preview}><img src={current.previewUrl} alt={`${formats.find(item => item[0] === safeSelected)?.[1]}海报预览`} /></div>
       <ul className={styles.messages}>{current.validation.messages.map((message, index) => <li key={index}>{message}</li>)}</ul>
-      <a className={styles.download} href={current.previewUrl} download={`T01-${selected}.png`}>{current.validation.passed ? "下载 PNG" : "下载试用稿"} · {current.width} × {current.height}</a>
+      <a className={styles.download} href={current.previewUrl} download={`T01-${safeSelected}.png`}>{current.validation.passed ? "下载 PNG" : "下载试用稿"} · {current.width} × {current.height}</a>
     </>}
-    {selected !== "portrait_1080x1920" && !current?.previewUrl && current?.status !== "RENDERING" && <button type="button" className={styles.generate} disabled={pending} onClick={() => void generate()}>{pending ? "正在提交…" : current?.status === "FAILED" ? "重试此尺寸" : "生成此尺寸"}</button>}
-    {selected === "portrait_1080x1920" && !current && <p>竖版结果请查看右侧预览。</p>}
+    {!current?.previewUrl && current?.status !== "RENDERING" && <p>{safeSelected === "portrait_1080x1920" ? "竖版结果正在准备。" : "该尺寸正在等待排版。"}</p>}
   </section>;
 }
 

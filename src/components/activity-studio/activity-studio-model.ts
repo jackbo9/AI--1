@@ -8,6 +8,8 @@ import type {
 } from "./types";
 
 export const initialForm: FormState = {
+  renderTargets: ["portrait_1080x1920"],
+  activeRenderTarget: "portrait_1080x1920",
   activityName: "羽球挑战赛",
   slogan: "一起上场，热爱不设限",
   subtitle: "零基础也能参加，现场自由组队",
@@ -82,8 +84,15 @@ export function getStageForJob(job: ActivityJob): Stage | undefined {
 export function hydrateForm(current: FormState, job: ActivityJob): FormState {
   const document = job.copyDraft?.document;
   if (!document) return current;
+  const renderTargets = job.campaignBrief?.renderTargets?.length
+    ? job.campaignBrief.renderTargets
+    : current.renderTargets;
   return {
     ...current,
+    renderTargets,
+    activeRenderTarget: renderTargets.includes(current.activeRenderTarget)
+      ? current.activeRenderTarget
+      : renderTargets[0]!,
     activityName: document.title,
     slogan: document.slogan,
     subtitle: document.subtitle,
@@ -127,9 +136,13 @@ export function getStatusLabel(job?: ActivityJob) {
 
 export function validateForm(form: FormState, requireTitleCompanions = true) {
   if (!form.activityName.trim()) return "请填写活动主题";
-  if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
-  if (!form.audience.trim()) return "请填写参与对象";
-  if (!form.rules.trim()) return "请填写赛事规则";
+  if (!form.renderTargets.length) return "请至少选择一款 T01 模板";
+  const needsActivityFacts = form.renderTargets.some((format) => format !== "banner_2227x950");
+  if (needsActivityFacts) {
+    if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
+    if (!form.audience.trim()) return "请填写参与对象";
+    if (!form.rules.trim()) return "请填写赛事规则";
+  }
   if (requireTitleCompanions && !form.slogan.trim()) return "请填写宣言标题，或使用 AI 辅助生成";
   if (requireTitleCompanions && !form.subtitle.trim()) return "请填写副标题，或使用 AI 辅助生成";
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {

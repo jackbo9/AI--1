@@ -2,10 +2,10 @@
 
 import { T01OutputGallery } from "@/components/t01-output-gallery";
 import { LoadingCard } from "../fields";
-import type { ActivityJob } from "../types";
+import type { ActivityJob, FormState } from "../types";
 
-export function StepFour({ job, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
-  return <><StepFourQuality job={job} onReplace={onReplace} onRestart={onRestart} pending={pending} fixtureMode={fixtureMode} />{!fixtureMode && job?.id && job.previewUrl && <T01OutputGallery key={job.id} jobId={job.id} />}</>;
+export function StepFour({ job, form, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; form: FormState; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
+  return <><StepFourQuality job={job} onReplace={onReplace} onRestart={onRestart} pending={pending} fixtureMode={fixtureMode} />{!fixtureMode && job?.id && job.previewUrl && <T01OutputGallery key={job.id} jobId={job.id} renderTargets={form.renderTargets} />}</>;
 }
 
 function StepFourQuality({ job, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {

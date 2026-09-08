@@ -41,6 +41,7 @@ import type {
   SessionState,
   Stage
 } from "./types";
+import type { RenderTargetId } from "@/contracts/brand";
 
 const T01_DRAFT_STORAGE_KEY = "activity-studio-t01-copy-draft-v1";
 
@@ -161,6 +162,27 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function toggleRenderTarget(target: RenderTargetId) {
+    setForm((current) => {
+      const isSelected = current.renderTargets.includes(target);
+      const selected = isSelected
+        ? current.renderTargets.filter((item) => item !== target)
+        : [...current.renderTargets, target];
+      if (!selected.length) return current;
+      return {
+        ...current,
+        renderTargets: selected,
+        activeRenderTarget: isSelected
+          ? (selected.includes(current.activeRenderTarget) ? current.activeRenderTarget : selected[0]!)
+          : target
+      };
+    });
+  }
+
+  function selectRenderTarget(target: RenderTargetId) {
+    if (form.renderTargets.includes(target)) updateForm("activeRenderTarget", target);
+  }
+
   function updateSession(key: keyof SessionState, value: string) {
     setForm((current) => ({
       ...current,
@@ -252,7 +274,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
         setJob({ ...fixtureJob, status: "READY_FOR_VISUAL_INPUT", currentStep: "文案已确认，等待输入主视觉想法" });
         return;
       }
-      const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid(), true);
+      const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid(), true, form.renderTargets);
       if (!ok || !payload.jobId) return setError(payload.error?.message ?? "提交需求失败");
       setJobId(payload.jobId);
       window.history.replaceState(null, "", `?job=${payload.jobId}`);
@@ -292,7 +314,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       }
       const { ok, payload } = await requestJobCreation(
         normalizeForm({ ...form, slogan: "", subtitle: "" }),
-        createClientUuid()
+        createClientUuid(), false, form.renderTargets
       );
       if (!ok || !payload.jobId) return setError(payload.error?.message ?? "AI 辅助生成失败");
       setJobId(payload.jobId);
@@ -451,6 +473,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
     previewCopy: stage === 1 ? undefined : createPreviewCopy(job, copyReview),
     statusLabel: getStatusLabel(job),
     updateForm,
+    toggleRenderTarget,
+    selectRenderTarget,
     updateSession,
     updateQrUrl,
     changeQrMode,

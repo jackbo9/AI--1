@@ -4,6 +4,7 @@ import {
   type EmployeeActivityInput,
   type PosterDocument
 } from "@/contracts/poster";
+import type { RenderTargetId } from "@/contracts/brand";
 
 export const UI_FIXTURE_JOB_ID = "ui-fixture-local";
 export const UI_FIXTURE_STORAGE_KEY = "ninebot-ui-fixture-job-v2";
@@ -14,6 +15,7 @@ export type ActivityStudioFixtureJob = {
   currentStep: string;
   error?: { code: string; message: string };
   previewUrl?: string;
+  campaignBrief?: { renderTargets: RenderTargetId[] };
   copyDraft?: {
     document: PosterDocument;
     provider: string;

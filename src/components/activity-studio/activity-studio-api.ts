@@ -1,4 +1,5 @@
 import type { EmployeeActivityInput } from "@/contracts/poster";
+import type { RenderTargetId } from "@/contracts/brand";
 import type { ActivityJob } from "./types";
 
 type ErrorPayload = { error?: { message?: string } };
@@ -36,11 +37,12 @@ export async function fetchActivityJob(id: string): Promise<ApiResult<ActivityJo
   return { ok: true, payload: await readJson<ActivityJob>(response) };
 }
 
-export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string, skipCopy = false) {
+export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string, skipCopy = false, renderTargets?: RenderTargetId[]) {
   return postJson<{ jobId?: string; error?: { message: string } }>("/api/jobs", {
     input,
     idempotencyKey,
-    skipCopy
+    skipCopy,
+    renderTargets
   });
 }
 

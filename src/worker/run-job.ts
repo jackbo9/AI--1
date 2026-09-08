@@ -26,6 +26,7 @@ import { findJob, updateJob } from "@/server/job-store";
 import { activityTemplateFamilyManifest } from "@/templates/activity-template-family";
 import { serverEnv } from "@/lib/env";
 import { readOwnedQrAssetDataUri } from "@/server/qr-asset-store";
+import { claimFormat, renderClaimedFormat } from "@/server/t01-format-service";
 
 export async function runCopyStage(jobId: string) {
   try {
@@ -281,6 +282,13 @@ export async function runVisualStage(
         }
       ]
     }));
+    const selectedExtraFormats = job.campaignBrief.renderTargets.filter(
+      (target): target is "landscape_1920x1080" | "banner_2227x950" | "longform_1080xAuto" => target !== "portrait_1080x1920"
+    );
+    for (const format of selectedExtraFormats) {
+      const claim = await claimFormat(jobId, job.userId, format);
+      if (claim.claimed) void renderClaimedFormat(jobId, claim.artifact.id, format, claim.sourceDocument);
+    }
   } catch (error) {
     await failJob(jobId, error);
   }

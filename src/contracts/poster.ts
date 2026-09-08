@@ -20,10 +20,12 @@ export function textCharacterCount(value: string) {
 
 export const activitySessionSchema = z.object({
   label: z.string().trim().min(1, "请填写场次名称").max(24),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请使用 YYYY-MM-DD 格式"),
+  // Banner can stand alone with only its title. The form applies the stricter
+  // date/location requirement whenever a fact-bearing template is selected.
+  date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请使用 YYYY-MM-DD 格式"), z.literal("")]),
   // T01 V3 only collects a date. Keep an optional legacy time for existing jobs.
   time: z.string().trim().max(40).default(""),
-  location: z.string().trim().min(1, "请填写活动地点").max(80),
+  location: z.string().trim().max(80),
   details: z.array(z.string().trim().min(1).max(42)).max(3).default([])
 });
 
@@ -65,7 +67,6 @@ const employeeActivityFieldsSchema = z.object({
     audience: z
       .string()
       .trim()
-      .min(1, "请填写参与对象")
       .max(40, "参与对象请控制在 40 字以内"),
     highlights: z.array(z.string().trim().min(1).max(22)).max(4).default([]),
     participationSteps: z.array(z.string().trim().min(1).max(52)).max(4).default([]),
@@ -123,7 +124,8 @@ export const campaignBriefSchema = employeeActivityFieldsSchema
     brandSpecVersion: brandSpecVersionSchema,
     renderTargets: z
       .array(renderTargetIdSchema)
-      .length(4)
+      .min(1)
+      .max(4)
       .default([...defaultRenderTargetIds])
   })
   .superRefine(validateQrRequirement);
@@ -140,8 +142,8 @@ export const posterDocumentSchema = z.object({
   slogan: z.string().max(40).default(""),
   subtitle: z.string().max(150),
   summary: z.string().max(150).default(""),
-  sessions: z.array(activitySessionSchema).min(1).max(2),
-  audience: z.string().min(1).max(40),
+  sessions: z.array(activitySessionSchema).min(0).max(2),
+  audience: z.string().max(40),
   highlights: z.array(z.string().min(1).max(22)).max(4).default([]),
   participationSteps: z.array(z.string().min(1).max(52)).max(4).default([]),
   notice: z.string().max(160).default(""),
@@ -246,7 +248,8 @@ export const createJobSchema = z.object({
   idempotencyKey: z.string().uuid(),
   // Manual confirmation deliberately bypasses copy generation. This is a
   // per-request choice, never a migration of historical tasks.
-  skipCopy: z.boolean().default(false)
+  skipCopy: z.boolean().default(false),
+  renderTargets: z.array(renderTargetIdSchema).min(1).max(4).default([...defaultRenderTargetIds])
 });
 
 export const confirmCopySchema = z.object({
@@ -295,7 +298,8 @@ export type VisualPromptInput = Pick<
   Partial<Omit<EmployeeActivityInput, "outputFormat" | "category" | "themeKeywords" | "visualIntent">>;
 
 export function campaignBriefFromLegacyInput(
-  input: EmployeeActivityInput
+  input: EmployeeActivityInput,
+  renderTargets: readonly z.infer<typeof renderTargetIdSchema>[] = defaultRenderTargetIds
 ): CampaignBrief {
   const facts = employeeActivityFieldsSchema.parse(input);
   return campaignBriefSchema.parse({
@@ -304,7 +308,7 @@ export function campaignBriefFromLegacyInput(
     scene: "employee_activity",
     locale: "zh-CN",
     brandSpecVersion: 1,
-    renderTargets: [...defaultRenderTargetIds]
+    renderTargets: [...renderTargets]
   });
 }
 
