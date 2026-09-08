@@ -3,6 +3,8 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
+  createFixtureBaseVisualJob,
+  createFixtureBaseVisualJobFromCopy,
   createFixtureCopyJob,
   createFixtureReadyJob,
   createFixtureVisualDraftJob,
@@ -51,7 +53,6 @@ export function useActivityStudioController(fixtureMode: boolean) {
   const [jobId, setJobId] = useState<string>();
   const [job, setJob] = useState<ActivityJob>();
   const [copyReview, setCopyReview] = useState<CopyReview>();
-  const [visualIdea, setVisualIdea] = useState("");
   const [visualDescription, setVisualDescription] = useState("");
   const [qrMode, setQrMode] = useState<QrMode>("none");
   const [qrUploadPending, setQrUploadPending] = useState(false);
@@ -60,6 +61,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
   const [pendingAction, setPendingAction] = useState<PendingAction>();
   const refreshingRef = useRef(false);
   const visualDescriptionRef = useRef("");
+  const visualDraftCreatedAtRef = useRef("");
   const working = isJobWorking(job);
 
   useEffect(() => {
@@ -134,8 +136,11 @@ export function useActivityStudioController(fixtureMode: boolean) {
     } else if (
       ["READY_FOR_VISUAL_INPUT", "REFINING_VISUAL", "READY_FOR_VISUAL_REVIEW"].includes(
         job.status
-      ) && job.visualDraft && !visualDescriptionRef.current
+      ) &&
+      job.visualDraft &&
+      visualDraftCreatedAtRef.current !== job.visualDraft.createdAt
     ) {
+      visualDraftCreatedAtRef.current = job.visualDraft.createdAt;
       visualDescriptionRef.current = job.visualDraft.description;
       setVisualDescription(job.visualDraft.description);
     }
@@ -164,10 +169,17 @@ export function useActivityStudioController(fixtureMode: boolean) {
 
   function hydrateJob(loaded: ActivityJob) {
     setForm((current) => hydrateForm(current, loaded));
-    if (loaded.visualInput) setVisualIdea(loaded.visualInput.originalIntent);
-    if (loaded.visualDraft) {
+    if (loaded.confirmedVisual) {
+      visualDraftCreatedAtRef.current = loaded.confirmedVisual.sourceDraftCreatedAt;
+      visualDescriptionRef.current = loaded.confirmedVisual.description;
+      setVisualDescription(loaded.confirmedVisual.description);
+    } else if (loaded.visualDraft) {
+      visualDraftCreatedAtRef.current = loaded.visualDraft.createdAt;
       visualDescriptionRef.current = loaded.visualDraft.description;
       setVisualDescription(loaded.visualDraft.description);
+    } else if (loaded.visualInput) {
+      visualDescriptionRef.current = loaded.visualInput.originalIntent;
+      setVisualDescription(loaded.visualInput.originalIntent);
     }
   }
 
@@ -277,21 +289,22 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setJob(undefined);
     setCopyReview(undefined);
     visualDescriptionRef.current = "";
+    visualDraftCreatedAtRef.current = "";
     setVisualDescription("");
     try {
       if (fixtureMode) {
         const input = normalizeForm(form);
         setJobId(UI_FIXTURE_JOB_ID);
         window.history.replaceState(null, "", `?fixture=1&job=${UI_FIXTURE_JOB_ID}`);
-        const fixtureJob = createFixtureCopyJob(input);
-        setJob({ ...fixtureJob, status: "READY_FOR_VISUAL_INPUT", currentStep: "文案已确认，等待输入主视觉想法" });
+        const fixtureJob = createFixtureBaseVisualJob(input);
+        setJob(fixtureJob);
         return;
       }
       const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid(), true, form.renderTargets);
       if (!ok || !payload.jobId) return setError(payload.error?.message ?? "提交需求失败");
       setJobId(payload.jobId);
       window.history.replaceState(null, "", `?job=${payload.jobId}`);
-      setJob({ id: payload.jobId, status: "READY_FOR_VISUAL_INPUT", currentStep: "文案已确认，等待输入主视觉想法", versions: [] });
+      setJob({ id: payload.jobId, status: "READY_FOR_VISUAL_REVIEW", currentStep: "基础视觉描述已准备，等待确认", versions: [] });
       await refreshJob(payload.jobId);
     } finally {
       setPendingAction(undefined);
@@ -346,10 +359,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
     try {
       if (fixtureMode) {
         await pauseFixture();
-        setJob({
+        setJob(createFixtureBaseVisualJobFromCopy({
           ...job,
-          status: "READY_FOR_VISUAL_INPUT",
-          currentStep: "等待输入画面想法",
           copyDraft: {
             ...job.copyDraft,
             document: {
@@ -361,7 +372,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
               prize: copyReview.prize
             }
           }
-        });
+        }));
         return;
       }
       const { ok, payload } = await requestCopyConfirmation(jobId, {
@@ -383,18 +394,18 @@ export function useActivityStudioController(fixtureMode: boolean) {
 
   async function refineVisual() {
     if (job?.status === "REFINING_VISUAL") return;
-    if (!jobId || visualIdea.trim().length < 10) return setError("请至少描述 10 个字的画面想法");
-    if (visualIdea.trim().length > 420) return setError("画面想法最多 420 字，请保留创意并精简后重试");
+    if (!jobId || visualDescription.trim().length < 10) return setError("请至少保留 10 个字的视觉描述");
+    if (visualDescription.trim().length > 420) return setError("视觉描述最多 420 字，请保留创意并精简后重试");
     setError(undefined);
     setPendingAction("refine");
     try {
       if (fixtureMode) {
         setJob((current) => current ? { ...current, status: "REFINING_VISUAL", currentStep: "Fixture 正在优化画面描述" } : current);
         await pauseFixture();
-        setJob((current) => current ? createFixtureVisualDraftJob(current, visualIdea.trim()) : current);
+        setJob((current) => current ? createFixtureVisualDraftJob(current, visualDescription.trim()) : current);
         return;
       }
-      const { ok, payload } = await requestVisualRefinement(jobId, visualIdea.trim(), createClientUuid());
+      const { ok, payload } = await requestVisualRefinement(jobId, visualDescription.trim(), createClientUuid());
       if (!ok) setError(payload.error?.message ?? "优化画面描述失败");
       else await refreshJob(jobId);
     } finally {
@@ -403,7 +414,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
   }
 
   async function confirmVisual() {
-    if (!jobId || !job?.visualDraft || visualDescription.trim().length < 10) return setError("请先完成画面描述优化并确认内容");
+    if (!jobId || !job?.visualDraft || visualDescription.trim().length < 10) return setError("请先核对并确认视觉描述");
     if (visualDescription.trim().length > 420) return setError("画面描述最多 420 字，请保留创意并精简后重试");
     setError(undefined);
     setPendingAction("visual");
@@ -413,11 +424,19 @@ export function useActivityStudioController(fixtureMode: boolean) {
         await pauseFixture();
         setJob((current) => current ? { ...current, status: "RENDERING", currentStep: "Fixture 正在排版" } : current);
         await pauseFixture();
-        setJob((current) => current ? createFixtureReadyJob(current) : current);
+        setJob((current) => current?.visualDraft ? createFixtureReadyJob({
+          ...current,
+          confirmedVisual: {
+            description: visualDescription.trim(),
+            sourceDraftCreatedAt: current.visualDraft.createdAt,
+            sourceCopyCreatedAt: current.visualDraft.sourceCopyCreatedAt,
+            createdAt: new Date().toISOString()
+          }
+        }) : current);
         return;
       }
       const { ok, payload } = await requestVisualConfirmation(jobId, job.visualDraft.createdAt, visualDescription.trim(), createClientUuid());
-      if (!ok) setError(payload.error?.message ?? "确认主视觉失败");
+      if (!ok) setError(payload.error?.message ?? "确认视觉描述失败");
       else await refreshJob(jobId);
     } finally {
       setPendingAction(undefined);
@@ -431,8 +450,32 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (fixtureMode) {
         await pauseFixture();
         visualDescriptionRef.current = "";
+        visualDraftCreatedAtRef.current = "";
         setVisualDescription("");
-        setJob((current) => current ? { ...current, status: "READY_FOR_VISUAL_INPUT", currentStep: "等待输入新的画面想法", visualDraft: undefined } : current);
+        setJob((current) => {
+          if (!current?.visualDraft) return current;
+          const createdAt = new Date().toISOString();
+          const description =
+            current.confirmedVisual?.description ??
+            current.visualDraft.description;
+          return {
+            ...current,
+            status: "READY_FOR_VISUAL_REVIEW",
+            currentStep: "请重新核对视觉描述",
+            visualInput: {
+              originalIntent: description,
+              sourceCopyCreatedAt: current.visualDraft.sourceCopyCreatedAt,
+              createdAt
+            },
+            visualDraft: {
+              ...current.visualDraft,
+              description,
+              provider: "saved-visual-description",
+              createdAt
+            },
+            confirmedVisual: undefined
+          };
+        });
         setStage(3);
         return;
       }
@@ -440,6 +483,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (!ok) setError(payload.error?.message ?? "返回视觉编辑失败");
       else {
         visualDescriptionRef.current = "";
+        visualDraftCreatedAtRef.current = "";
         setVisualDescription("");
         setStage(3);
         await refreshJob(jobId);
@@ -456,8 +500,8 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setJobId(undefined);
     setJob(undefined);
     setCopyReview(undefined);
-    setVisualIdea("");
     visualDescriptionRef.current = "";
+    visualDraftCreatedAtRef.current = "";
     setVisualDescription("");
     setQrMode("none");
     setQrUploadPending(false);
@@ -473,8 +517,6 @@ export function useActivityStudioController(fixtureMode: boolean) {
     job,
     copyReview,
     setCopyReview,
-    visualIdea,
-    setVisualIdea,
     visualDescription,
     qrMode,
     qrUploadPending,

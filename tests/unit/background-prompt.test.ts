@@ -4,9 +4,10 @@ import { seedreamPrompt } from "@/providers/illustration-provider";
 import { editorialComposition } from "@/providers/visual-direction";
 
 describe("background-only image prompt", () => {
-  it("uses the complete drawable upper area without retaining the old focal restriction", () => {
-    expect(editorialComposition).toContain("完整画面都可承载场景与主体");
-    expect(editorialComposition).toContain("不保留旧版左上留白或中右焦点限制");
+  it("reserves the T01 brand and title coverage area", () => {
+    expect(editorialComposition).toContain("上方和左上覆盖区域");
+    expect(editorialComposition).toContain("连续、低细节、无遮挡");
+    expect(editorialComposition).toContain("核心主体位于中右或中下部");
     expect(editorialComposition).not.toMatch(/X=68|0–28|二维码|Logo|页脚/);
   });
   it("keeps confirmed creative text intact and excludes obsolete field defaults", () => {
@@ -41,7 +42,7 @@ describe("background-only image prompt", () => {
   });
   it("describes empty regions without naming downstream poster elements", () => {
     expect(t01CompositionContract).not.toMatch(/二维码|扫码|QR|Logo|标题|页脚|报名/i);
-    expect(t01CompositionContract).toContain("完整的可绘制区域");
+    expect(t01CompositionContract).toContain("上方和左上覆盖区域");
   });
   it("adds mandatory exclusions to the existing saved brief contract", () => {
     const prompt = seedreamPrompt({ subject: "企业同事", action: "共同参与活动", setting: "开阔城市街道", composition: "同事在画面中部自然互动", palette: "黑白灰和黄色", style: "纪实摄影", mood: "活力", negative: "不要文字、字母、数字、Logo、二维码、水印、签名" });

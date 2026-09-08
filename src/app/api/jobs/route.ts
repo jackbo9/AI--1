@@ -16,6 +16,7 @@ import {
   QrAssetError,
   readOwnedQrAssetDataUri
 } from "@/server/qr-asset-store";
+import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   const identity = await requireApiIdentity();
@@ -118,6 +119,9 @@ export async function POST(request: Request) {
     await preflightEmployeeActivity(manualDocument, { qrDataUri });
 
     const now = new Date().toISOString();
+    const baseVisualDraft = parsed.data.skipCopy
+      ? createT01BaseVisualDraft(manualDocument, now, now)
+      : undefined;
     const candidate = {
       id: crypto.randomUUID(),
       traceId: crypto.randomUUID(),
@@ -126,8 +130,8 @@ export async function POST(request: Request) {
       userId: identity.userId,
       campaignBrief,
       input: parsed.data.input,
-      status: parsed.data.skipCopy ? "READY_FOR_VISUAL_INPUT" as const : "QUEUED" as const,
-      currentStep: parsed.data.skipCopy ? "文案已确认，等待输入主视觉想法" : "已进入文案生成队列",
+      status: parsed.data.skipCopy ? "READY_FOR_VISUAL_REVIEW" as const : "QUEUED" as const,
+      currentStep: parsed.data.skipCopy ? "基础视觉描述已准备，等待确认" : "已进入文案生成队列",
       retryCount: 0,
       copyDraft: parsed.data.skipCopy ? {
         document: manualDocument,
@@ -139,6 +143,14 @@ export async function POST(request: Request) {
       confirmedDocument: parsed.data.skipCopy
         ? confirmedCampaignDocumentFromPoster(manualDocument, crypto.randomUUID())
         : undefined,
+      visualInput: baseVisualDraft
+        ? {
+            originalIntent: baseVisualDraft.description,
+            sourceCopyCreatedAt: now,
+            createdAt: now
+          }
+        : undefined,
+      visualDraft: baseVisualDraft,
       artifacts: [],
       versions: [],
       createdAt: now,

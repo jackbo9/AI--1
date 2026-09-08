@@ -44,7 +44,7 @@ export async function POST(
     return NextResponse.json({ jobId, status: job.status, reused: true }, { status: 202 });
   }
   if (job.status !== "READY_FOR_VISUAL_REVIEW" || !job.visualDraft || !job.confirmedDocument) {
-    return NextResponse.json({ error: { code: "VISUAL_NOT_READY", message: "当前任务尚不能确认主视觉" } }, { status: 409 });
+    return NextResponse.json({ error: { code: "VISUAL_NOT_READY", message: "当前任务尚不能确认视觉描述" } }, { status: 409 });
   }
   if (
     job.visualDraft.createdAt !== parsed.data.sourceDraftCreatedAt ||
@@ -62,10 +62,11 @@ export async function POST(
         ...item,
         actionIdempotencyKeys: [...(item.actionIdempotencyKeys ?? []), parsed.data.idempotencyKey],
         status: "GENERATING_ASSET",
-        currentStep: "已确认主视觉，准备生成图片",
+        currentStep: "视觉描述已确认，准备生成图片",
         confirmedVisual: {
           description: parsed.data.description,
           sourceDraftCreatedAt: parsed.data.sourceDraftCreatedAt,
+          sourceCopyCreatedAt: item.copyDraft?.createdAt,
           createdAt: new Date().toISOString()
         },
         error: undefined
@@ -76,7 +77,7 @@ export async function POST(
       return NextResponse.json({ error: { code: "STALE_VISUAL_DRAFT", message: error.message } }, { status: 409 });
     }
     if (error instanceof JobActionError) {
-      return NextResponse.json({ error: { code: "VISUAL_NOT_READY", message: "当前任务尚不能确认主视觉" } }, { status: 409 });
+      return NextResponse.json({ error: { code: "VISUAL_NOT_READY", message: "当前任务尚不能确认视觉描述" } }, { status: 409 });
     }
     throw error;
   }

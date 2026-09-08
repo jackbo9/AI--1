@@ -5,6 +5,7 @@ import {
   type PosterDocument
 } from "@/contracts/poster";
 import type { RenderTargetId } from "@/contracts/brand";
+import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
 
 export const UI_FIXTURE_JOB_ID = "ui-fixture-local";
 export const UI_FIXTURE_STORAGE_KEY = "ninebot-ui-fixture-job-v2";
@@ -34,6 +35,12 @@ export type ActivityStudioFixtureJob = {
     sourceCopyCreatedAt: string;
     createdAt: string;
     fallback: boolean;
+  };
+  confirmedVisual?: {
+    description: string;
+    sourceDraftCreatedAt: string;
+    sourceCopyCreatedAt?: string;
+    createdAt: string;
   };
   versions: Array<{
     assetMode: string;
@@ -93,6 +100,70 @@ export function createFixtureVisualDraftJob(
       createdAt,
       fallback: false
     }
+  };
+}
+
+export function createFixtureBaseVisualJob(
+  input: EmployeeActivityInput,
+  createdAt = new Date().toISOString()
+): ActivityStudioFixtureJob {
+  const copyJob = createFixtureCopyJob(input, createdAt);
+  const document = copyJob.copyDraft!.document;
+  const visualDraft = createT01BaseVisualDraft(
+    document,
+    createdAt,
+    createdAt
+  );
+  return {
+    ...copyJob,
+    status: "READY_FOR_VISUAL_REVIEW",
+    currentStep: "Fixture 基础视觉描述已准备",
+    visualInput: {
+      originalIntent: visualDraft.description,
+      sourceCopyCreatedAt: createdAt,
+      createdAt
+    },
+    visualDraft: {
+      description: visualDraft.description,
+      provider: visualDraft.provider,
+      promptVersion: visualDraft.promptVersion,
+      sourceCopyCreatedAt: createdAt,
+      createdAt,
+      fallback: false
+    }
+  };
+}
+
+export function createFixtureBaseVisualJobFromCopy(
+  job: ActivityStudioFixtureJob,
+  createdAt = new Date().toISOString()
+): ActivityStudioFixtureJob {
+  if (!job.copyDraft) throw new Error("Fixture 文案不存在");
+  const copyDraft = { ...job.copyDraft, createdAt };
+  const visualDraft = createT01BaseVisualDraft(
+    copyDraft.document,
+    createdAt,
+    createdAt
+  );
+  return {
+    ...job,
+    status: "READY_FOR_VISUAL_REVIEW",
+    currentStep: "Fixture 基础视觉描述已准备",
+    copyDraft,
+    visualInput: {
+      originalIntent: visualDraft.description,
+      sourceCopyCreatedAt: createdAt,
+      createdAt
+    },
+    visualDraft: {
+      description: visualDraft.description,
+      provider: visualDraft.provider,
+      promptVersion: visualDraft.promptVersion,
+      sourceCopyCreatedAt: createdAt,
+      createdAt,
+      fallback: false
+    },
+    confirmedVisual: undefined
   };
 }
 

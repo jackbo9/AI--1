@@ -103,6 +103,7 @@ export type VisualDraft = {
 export type ConfirmedVisual = {
   description: string;
   sourceDraftCreatedAt: string;
+  sourceCopyCreatedAt?: string;
   createdAt: string;
 };
 

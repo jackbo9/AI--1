@@ -111,15 +111,31 @@ export async function runVisualRefinement(jobId: string, visualIntent: string) {
       }
     }));
   } catch (error) {
-    await updateJob(jobId, (item) => ({
-      ...item,
-      status: "READY_FOR_VISUAL_INPUT",
-      currentStep: "画面描述优化失败，可重试",
-      error: {
-        code: error instanceof ProviderError ? error.code : "VISUAL_REFINEMENT_FAILED",
-        message: error instanceof Error ? error.message : "画面描述优化失败，请重试"
-      }
-    }));
+    await updateJob(jobId, (item) => {
+      const createdAt = new Date().toISOString();
+      const visualDraft = item.visualDraft
+        ? {
+            ...item.visualDraft,
+            description:
+              item.visualInput?.originalIntent ?? item.visualDraft.description,
+            provider: "saved-user-description",
+            sourceCopyCreatedAt:
+              item.copyDraft?.createdAt ?? item.visualDraft.sourceCopyCreatedAt,
+            createdAt,
+            fallback: true
+          }
+        : undefined;
+      return {
+        ...item,
+        status: visualDraft ? "READY_FOR_VISUAL_REVIEW" : "READY_FOR_VISUAL_INPUT",
+        currentStep: "画面描述优化失败，已保留当前文字",
+        visualDraft,
+        error: {
+          code: error instanceof ProviderError ? error.code : "VISUAL_REFINEMENT_FAILED",
+          message: error instanceof Error ? error.message : "画面描述优化失败，请重试"
+        }
+      };
+    });
   }
 }
 

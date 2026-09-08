@@ -95,7 +95,7 @@ it("confirms manually entered copy without starting the copy model", async () =>
   }));
 
   expect(response.status).toBe(202);
-  await expect(response.json()).resolves.toMatchObject({ status: "READY_FOR_VISUAL_INPUT" });
+  await expect(response.json()).resolves.toMatchObject({ status: "READY_FOR_VISUAL_REVIEW" });
   const candidate = vi.mocked(createJob).mock.calls[0]?.[0];
   expect(candidate?.copyDraft?.document).toMatchObject({
     title: "羽毛球赛",
@@ -103,5 +103,9 @@ it("confirms manually entered copy without starting the copy model", async () =>
     subtitle: "现场自由组队"
   });
   expect(candidate?.confirmedDocument).toBeDefined();
+  expect(candidate?.visualDraft?.description).toContain("主体：");
+  expect(candidate?.visualDraft?.description).toContain("风格：");
+  expect(candidate?.visualDraft?.description).toContain("色彩：");
+  expect(candidate?.visualDraft?.description).toContain("顶部品牌标识与标题区域");
   expect(runCopyStage).not.toHaveBeenCalled();
 });

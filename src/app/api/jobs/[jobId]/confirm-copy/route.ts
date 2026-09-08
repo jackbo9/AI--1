@@ -19,6 +19,12 @@ import {
   QrAssetError,
   readOwnedQrAssetDataUri
 } from "@/server/qr-asset-store";
+import type { CampaignGenerationJob } from "@/contracts/job";
+import type {
+  ConfirmedCampaignDocument,
+  PosterDocument
+} from "@/contracts/poster";
+import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
 
 export const runtime = "nodejs";
 
@@ -147,18 +153,18 @@ async function confirmCopy(
   }
 
   try {
-    await claimJobAction(jobId, parsed.data.idempotencyKey, ["READY_FOR_COPY_REVIEW"], (item) => ({
-      ...item,
-      actionIdempotencyKeys: [
-        ...(item.actionIdempotencyKeys ?? []),
-        parsed.data.idempotencyKey
-      ],
-      status: "READY_FOR_VISUAL_INPUT",
-      currentStep: "等待输入主视觉想法",
-      copyDraft: { ...item.copyDraft!, document },
-      confirmedDocument,
-      error: undefined
-    }));
+    await claimJobAction(
+      jobId,
+      parsed.data.idempotencyKey,
+      ["READY_FOR_COPY_REVIEW"],
+      (item) =>
+        createConfirmedCopyJob(
+          item,
+          document,
+          confirmedDocument,
+          parsed.data.idempotencyKey
+        )
+    );
   } catch (error) {
     if (error instanceof JobActionError) {
       return NextResponse.json({ error: { code: "COPY_NOT_READY", message: "当前文案已处理，请刷新任务后继续" } }, { status: 409 });
@@ -166,7 +172,39 @@ async function confirmCopy(
     throw error;
   }
   return NextResponse.json(
-    { jobId, status: "READY_FOR_VISUAL_INPUT" },
+    { jobId, status: "READY_FOR_VISUAL_REVIEW" },
     { status: 202 }
   );
+}
+
+function createConfirmedCopyJob(
+  item: CampaignGenerationJob,
+  document: PosterDocument,
+  confirmedDocument: ConfirmedCampaignDocument,
+  idempotencyKey: string
+) {
+  if (!item.copyDraft) throw new Error("文案草稿不存在");
+  const createdAt = new Date().toISOString();
+  const copyDraft = { ...item.copyDraft, document, createdAt };
+  const visualDraft = createT01BaseVisualDraft(document, createdAt, createdAt);
+  return {
+    ...item,
+    actionIdempotencyKeys: [
+      ...(item.actionIdempotencyKeys ?? []),
+      idempotencyKey
+    ],
+    status: "READY_FOR_VISUAL_REVIEW" as const,
+    currentStep: "基础视觉描述已准备，等待确认",
+    copyDraft,
+    confirmedDocument,
+    visualInput: {
+      originalIntent: visualDraft.description,
+      sourceCopyCreatedAt: createdAt,
+      createdAt
+    },
+    visualDraft,
+    confirmedVisual: undefined,
+    visualMaster: undefined,
+    error: undefined
+  };
 }

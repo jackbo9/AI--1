@@ -12,7 +12,7 @@ const promptVersion = `illustration-brief-v6-${serverEnv.VISUAL_STYLE_MODE ?? "e
 export const backgroundNegative = "不要文字、字母、数字、Logo、二维码、条码、水印、签名；不要绘制任何扫码图案、黑白编码方格或占位码。只生成场景背景与活动主体。" as const;
 const negative = "不要文字、字母、数字、Logo、二维码、水印、签名" as const;
 export const t01CompositionContract =
-  "原生竖版 9:16，不要方图裁切。主视觉可覆盖画面上方完整的可绘制区域，不保留专用空白带。人物和主要道具可自然分布在画面中上部及中部，但关键主体不贴边；背景连续、可裁切，不绘制遮罩、卡片、方框或独立色块。";
+  "原生竖版 9:16，不要方图裁切。核心主体位于中右或中下部；上方和左上覆盖区域保持连续、低细节、无遮挡，不放关键人物或器材。背景连续可裁切，不绘制文字、遮罩、卡片、方框或独立色块。";
 export const t01VisualStyleContract =
   "高端企业活动纪实摄影，真实成年员工、自然姿态、自然光与编辑摄影质感；画面克制、干净、低饱和，使用黑白灰基底与少量行政黄点缀。不是插画、卡通、动漫、手绘、扁平矢量、3D 渲染或玩具质感。";
 const compilerInstruction =

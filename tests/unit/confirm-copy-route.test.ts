@@ -20,7 +20,7 @@ beforeEach(() => {
 it("confirms the short subtitle and retains the longer supplement separately", async () => {
   const response = await POST(request(), { params: Promise.resolve({ jobId: "test" }) });
   expect(response.status).toBe(202);
-  expect(await response.json()).toMatchObject({ status: "READY_FOR_VISUAL_INPUT" });
+  expect(await response.json()).toMatchObject({ status: "READY_FOR_VISUAL_REVIEW" });
   expect(preflightEmployeeActivity).toHaveBeenCalledWith(expect.objectContaining({ subtitle: "一起参加", summary: "活动说明".repeat(20), deadline: "9月16日" }), { qrDataUri: undefined });
   expect(claimJobAction).toHaveBeenCalledOnce();
 });

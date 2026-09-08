@@ -55,7 +55,6 @@ export async function POST(
         sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
         createdAt: new Date().toISOString()
       },
-      visualDraft: undefined,
       error: undefined
     }));
   } catch (error) {
