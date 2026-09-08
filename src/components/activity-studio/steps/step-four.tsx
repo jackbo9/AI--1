@@ -1,15 +1,84 @@
 "use client";
 
-import { T01OutputGallery } from "@/components/t01-output-gallery";
+/* eslint-disable @next/next/no-img-element */
+import { useState } from "react";
 import { LoadingCard } from "../fields";
-import type { ActivityJob, FormState } from "../types";
+import type { ActivityJob } from "../types";
 
-export function StepFour({ job, form, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; form: FormState; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
-  return <><StepFourQuality job={job} onReplace={onReplace} onRestart={onRestart} pending={pending} fixtureMode={fixtureMode} />{!fixtureMode && job?.id && job.previewUrl && <T01OutputGallery key={job.id} jobId={job.id} renderTargets={form.renderTargets} />}</>;
+export function StepFour({ job, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
+  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
+  if (!job?.previewUrl) {
+    return <LoadingCard title="正在排版导出" detail={job?.currentStep ?? "请稍候…"} />;
+  }
+  const validation = job.versions.at(-1)?.validation;
+  const downloadAllowed =
+    fixtureMode || validation?.exportAllowed !== false;
+  return (
+    <div className="ead-final-stage">
+      <section className="ead-final-viewer">
+        <header className="ead-final-viewer-head">
+          <div>
+            <b>最终竖版海报</b>
+            <small>1080 × 1920 PNG</small>
+          </div>
+          <div className="ead-final-view-controls" role="group" aria-label="预览缩放">
+            <button
+              type="button"
+              className={viewMode === "fit" ? "is-selected" : ""}
+              onClick={() => setViewMode("fit")}
+            >
+              适合屏幕
+            </button>
+            <button
+              type="button"
+              className={viewMode === "zoom" ? "is-selected" : ""}
+              onClick={() => setViewMode("zoom")}
+            >
+              放大查看
+            </button>
+          </div>
+        </header>
+        <div className={`ead-final-canvas is-${viewMode}`}>
+          <img src={job.previewUrl} alt="最终生成的 T01 竖版员工活动海报" />
+        </div>
+      </section>
+      <aside className="ead-final-sidebar">
+        <StepFourQuality
+          job={job}
+          onReplace={onReplace}
+          onRestart={onRestart}
+          pending={pending}
+          fixtureMode={fixtureMode}
+        />
+        <section className="ead-final-download">
+          {downloadAllowed ? (
+            <a
+              href={job.previewUrl}
+              download={
+                fixtureMode
+                  ? "employee-activity-fixture.svg"
+                  : "employee-activity-t01.png"
+              }
+            >
+              {fixtureMode
+                ? "下载演练稿"
+                : validation?.passed
+                  ? "下载 PNG"
+                  : "下载风险结果"}
+            </a>
+          ) : (
+            <span aria-disabled="true">下载不可用</span>
+          )}
+          <small>
+            页面预览缩放不会改变下载尺寸，文件始终为 1080 × 1920。
+          </small>
+        </section>
+      </aside>
+    </div>
+  );
 }
 
-function StepFourQuality({ job, onReplace, onRestart, pending, fixtureMode }: { job?: ActivityJob; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
-  if (!job?.previewUrl) return <LoadingCard title="正在排版导出" detail={job?.currentStep ?? "请稍候…"} />;
+function StepFourQuality({ job, onReplace, onRestart, pending, fixtureMode }: { job: ActivityJob; onReplace: () => void; onRestart: () => void; pending: boolean; fixtureMode: boolean }) {
   const validation = job.versions.at(-1)?.validation;
   const checks = [["字体与双 Logo 资产", validation?.checks?.fontAndLogos], ["标题与正文没有溢出", validation?.checks?.capacity], ["图文对比度", validation?.readability?.passed], ["输出尺寸 1080 × 1920", validation?.checks?.outputSize]] as const;
   const trialWarning = validation && !validation.passed && validation.exportAllowed;

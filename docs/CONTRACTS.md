@@ -1,5 +1,6 @@
 # 领域、API 与生成契约
 
+2026-09-08 T01 最终查看补充：竖版结果页展示与下载必须引用同一 `previewUrl`／正式 Artifact，不得为适屏或放大另外生成图片。适屏、放大仅是客户端显示状态；下载文件继续保持 1080×1920。质量检查或 `exportAllowed` 阻止下载时，关键操作区域仍需保持可见并显示不可下载状态。
 2026-09-08 T01 主视觉方案补充：`GenerationJob.visualOptions` 是追加式方案列表；每项必须保存图片、确认生成描述、来源文案版本与完整来源 `PosterDocument`、Prompt／Brief、图片 Provider 和模型。`selectedVisualOptionId` 表示当前选择，刷新后保持；`confirmedVisualOptionId` 只在用户明确确认并完成排版后写入。`confirm-visual` 只确认描述并新增图片方案，完成后返回视觉阶段，不自动排版。`POST visual-options/select` 只切换选择；客户端使用选中方案响应中的 `previewUrl` 与 `sourceDocument` 进行轻量 T01 竖版预览，并在图片加载后本地计算标题区黑／白处理，不新增持久化字段，也不把这一近似结果视为发布校验。`POST visual-options/confirm` 才开始使用选中图片正式排版。生成失败不得删除已有方案，同一幂等键不得重复调用图片模型。
 2026-09-08 体育赛事 Prompt 补充：T01 基础描述必须根据已确认标题／规则识别赛事类型，并提供 1–3 个核心器材符号、自动主色、真实体育摄影语言和统一母版构图。默认禁止人物、人体、手脚、面部、合影与团建摆拍；最终图片 Prompt 必须再次追加该禁止项，不能只依赖可编辑描述。固定构图为 `LEFT TOP = TITLE SAFE AREA`、`CENTER-RIGHT = MAIN VISUAL`（X 68%–78%、Y 48%–58%）和 `SURROUNDING AREA = EXTENDABLE BACKGROUND`。前端流程编号固定为 1 文案、2 主视觉、3 查看与下载。
 2026-09-08 T01 视觉描述补充：确认文案后必须立即创建非空 `VisualDraft`，其 `sourceCopyCreatedAt` 等于当前文案版本；描述至少包含主体、风格、色彩和 T01 顶部品牌／标题安全区。用户可直接编辑或调用 `refine-visual` 基于当前文本优化，优化失败不得丢失已编辑文字。`confirm-visual` 当前语义为“确认视觉描述并开始生成”，保存的 `ConfirmedVisual` 同时记录来源草稿与来源文案版本；它不代表用户已经确认生成出的主视觉。文案版本变化或重新进入视觉编辑时必须清除旧的确认状态。多方案追加、选择及显式确认主视觉按本页第三轮契约执行。
