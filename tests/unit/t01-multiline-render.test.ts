@@ -139,6 +139,26 @@ describe("T01 multiline portrait layout", () => {
     }
   }, 20_000);
 
+  it("keeps the fixed eyebrow slot and title origin when companions are temporarily empty", async () => {
+    const { browser, page } = await renderDocument(buildDocument("赛事主题", "", { slogan: "" }));
+    try {
+      const geometry = await page.evaluate(() => {
+        const eyebrow = document.querySelector<HTMLElement>("[data-poster-slogan]")!;
+        const title = document.querySelector<HTMLElement>("[data-poster-title]")!;
+        return {
+          eyebrowTop: eyebrow.getBoundingClientRect().top,
+          titleTop: title.getBoundingClientRect().top,
+          eyebrowText: eyebrow.textContent
+        };
+      });
+      expect(geometry.eyebrowTop).toBeCloseTo(222, 0);
+      expect(geometry.titleTop).toBeCloseTo(292, 0);
+      expect(geometry.eyebrowText?.trim()).toBe("");
+    } finally {
+      await browser.close();
+    }
+  }, 20_000);
+
   it("keeps the split facts in one flow and protects the QR column", async () => {
     const posterDocument = buildDocument("双城同行日", "一起出发，认识不同团队的新伙伴", {
       sessions: [

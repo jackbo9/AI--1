@@ -11,7 +11,7 @@ import { ProviderError, requestJson } from "./provider-error";
 
 const copyPromptVersion = "employee-activity-copy-v1-9";
 const systemPrompt =
-  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、slogan、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。title、outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。slogan 与 subtitle 是可选 T01 竖版标题文案，必须一句自然中文、不换行、最多 40 字；输入已有值时逐字保留。不能创造活动事实；不能输出 HTML、CSS、Logo 或二维码。';
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、slogan、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。title、outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。slogan 与 subtitle 是必填 T01 竖版标题文案：slogan 必须是“九号员工活动名称 / ENGLISH”单行格式（如“九号员工网球公开赛 / TENNIS”）；subtitle 必须是一句自然中文。输入已有值时逐字保留。不能创造活动事实；不能输出 HTML、CSS、Logo 或二维码。';
 
 const deepSeekResponseSchema = z.object({
   choices: z
@@ -74,7 +74,7 @@ export async function generateCopy(
                     task: "保留锁定标题；只在输入为空时生成宣言标题与副标题，并返回完整 PosterDocumentV1_7。",
                     constraints: {
                       title: "逐字保留 input.activityName，不改写、不扩写",
-                      slogan: "输入不为空时逐字保留；为空时生成一句短宣言标题",
+                      slogan: "输入不为空时逐字保留；为空时必须生成“九号员工活动名称 / ENGLISH”格式，例如“九号员工网球公开赛 / TENNIS”；单行，最多 40 字",
                       subtitle: `T01 竖版实际展示字段；宽度 952px、高度自适应，建议 25 个字以内；一句中文，不换行，最多 ${t01PortraitSubtitleMaxCharacters} 个字（含标点）；信息不足时返回空字符串，不要用长段落填充`,
                       summaryMaxLength: 150,
                       highlights: "保留输入；为空时返回空数组",
@@ -227,6 +227,12 @@ function assertImmutable(
 }
 
 function assertT01CopyCapacity(document: PosterDocument) {
+  if (!document.slogan.trim() || !document.subtitle.trim()) {
+    throw new ProviderError(
+      "LLM_INVALID_OUTPUT",
+      "文案服务未生成完整的宣言标题和副标题，请重试"
+    );
+  }
   if (
     textCharacterCount(document.subtitle) > t01PortraitSubtitleMaxCharacters
   ) {

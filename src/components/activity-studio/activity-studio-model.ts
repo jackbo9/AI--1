@@ -125,11 +125,13 @@ export function getStatusLabel(job?: ActivityJob) {
   return job.currentStep;
 }
 
-export function validateForm(form: FormState) {
+export function validateForm(form: FormState, requireTitleCompanions = true) {
   if (!form.activityName.trim()) return "请填写活动主题";
   if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
   if (!form.audience.trim()) return "请填写参与对象";
   if (!form.rules.trim()) return "请填写赛事规则";
+  if (requireTitleCompanions && !form.slogan.trim()) return "请填写宣言标题，或使用 AI 辅助生成";
+  if (requireTitleCompanions && !form.subtitle.trim()) return "请填写副标题，或使用 AI 辅助生成";
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }

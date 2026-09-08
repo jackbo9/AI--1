@@ -263,6 +263,9 @@ async function assertLayoutCapacity(page: Page) {
       titleSubtitleGap,
       infoBottom
     }) => {
+    const eyebrow = window.document.querySelector<HTMLElement>(
+      "[data-poster-slogan]"
+    );
     const title = window.document.querySelector<HTMLElement>(
       "[data-poster-title]"
     );
@@ -299,6 +302,10 @@ async function assertLayoutCapacity(page: Page) {
       left.top < right.bottom &&
       left.bottom > right.top;
     return {
+      eyebrowOverflow:
+        !eyebrow ||
+        eyebrow.scrollWidth > eyebrow.clientWidth + 2 ||
+        eyebrow.getBoundingClientRect().bottom > titleTop,
       titleOverflow: !title || title.scrollWidth > title.clientWidth + 2,
       subtitleOverflow:
         Boolean(subtitle) &&
@@ -330,6 +337,12 @@ async function assertLayoutCapacity(page: Page) {
       infoBottom: t01PortraitLayout.infoBottom
     }
   );
+  if (layout.eyebrowOverflow) {
+    throw new PosterRenderError(
+      "content.capacity",
+      "宣言标题超过 T01 固定首行槽位，未生成海报。"
+    );
+  }
   if (layout.titleOverflow) {
     throw new PosterRenderError(
       "brand.title.max_lines",
@@ -856,8 +869,8 @@ export function employeeActivityPosterMarkup(
     '<section class="hero-content" data-readability-region="hero">',
     brandHeaderMarkup(assets, "primary"),
     '<i class="hero-divider" aria-hidden="true"></i>',
-    document.slogan ? '<p class="hero-eyebrow" data-poster-slogan>' + escape(document.slogan) + "</p>" : "",
-    '<section class="title-region" style="top:' + (document.slogan ? "292" : "222") + 'px"><h1 class="title" data-poster-title>',
+    '<p class="hero-eyebrow" data-poster-slogan>' + escape(document.slogan || " ") + "</p>",
+    '<section class="title-region"><h1 class="title" data-poster-title>',
     escape(document.title),
     "</h1>",
     document.subtitle

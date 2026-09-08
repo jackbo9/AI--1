@@ -11,7 +11,7 @@ vi.mock("@/templates/employee-activity", () => ({ preflightEmployeeActivity: vi.
 vi.mock("@/server/qr-asset-store", () => ({ readOwnedQrAssetDataUri: vi.fn(), QrAssetError: class extends Error {} }));
 
 const input = employeeActivityInputSchema.parse({ ...normal, includeQr: false, qrPayload: "", qrAssetId: "", deadline: "9月16日" });
-const document = posterDocumentSchema.parse({ ...input, schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", title: input.activityName, subtitle: "一起参加", summary: "说明", immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true } });
+const document = posterDocumentSchema.parse({ ...input, schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", title: input.activityName, slogan: "九号员工羽毛球赛 / BADMINTON", subtitle: "一起参加", summary: "说明", immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true } });
 const request = () => new Request("http://localhost/api/jobs/test/confirm-copy", { method: "POST", body: JSON.stringify({ idempotencyKey: "ab52c7a3-420c-4eee-9a41-5dce13f3a835", content: { ...document, summary: "活动说明".repeat(20), deadline: undefined } }) });
 beforeEach(() => {
   vi.resetAllMocks();
@@ -33,4 +33,16 @@ it("returns a JSON error without committing when the renderer fails unexpectedly
     expect(await response.json()).toEqual({ error: { code: "COPY_CONFIRM_FAILED", message: "文案确认暂未完成，已保留输入，请重试" } });
     expect(claimJobAction).not.toHaveBeenCalled();
   } finally { log.mockRestore(); }
+});
+it("does not confirm a T01 document with an empty title companion", async () => {
+  const response = await POST(new Request("http://localhost/api/jobs/test/confirm-copy", {
+    method: "POST",
+    body: JSON.stringify({
+      idempotencyKey: "a8cbf73c-d6e2-4d4e-a50d-15bea9f929a7",
+      content: { ...document, slogan: "" }
+    })
+  }), { params: Promise.resolve({ jobId: "test" }) });
+  expect(response.status).toBe(422);
+  await expect(response.json()).resolves.toMatchObject({ error: { code: "COPY_FIELDS_REQUIRED" } });
+  expect(claimJobAction).not.toHaveBeenCalled();
 });
