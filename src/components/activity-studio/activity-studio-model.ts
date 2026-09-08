@@ -38,8 +38,8 @@ export const scenes = [
 
 export const stages: Array<[Stage, string]> = [
   [1, "填写与确认文案"],
-  [3, "生成主视觉"],
-  [4, "排版导出"]
+  [2, "生成主视觉"],
+  [3, "查看与下载"]
 ];
 
 export const workingStatuses = [
@@ -75,9 +75,9 @@ export function getStageForJob(job: ActivityJob): Stage | undefined {
       job.status
     )
   ) {
-    return 3;
+    return 2;
   }
-  if (job.status === "READY_FOR_REVIEW") return 4;
+  if (job.status === "READY_FOR_REVIEW") return 3;
   return undefined;
 }
 

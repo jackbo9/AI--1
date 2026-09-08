@@ -103,9 +103,11 @@ it("confirms manually entered copy without starting the copy model", async () =>
     subtitle: "现场自由组队"
   });
   expect(candidate?.confirmedDocument).toBeDefined();
-  expect(candidate?.visualDraft?.description).toContain("主体：");
+  expect(candidate?.visualDraft?.description).toContain("赛事类型：羽毛球");
+  expect(candidate?.visualDraft?.description).toContain("主体与瞬间：");
   expect(candidate?.visualDraft?.description).toContain("风格：");
   expect(candidate?.visualDraft?.description).toContain("色彩：");
-  expect(candidate?.visualDraft?.description).toContain("顶部品牌标识与标题区域");
+  expect(candidate?.visualDraft?.description).toContain("LEFT TOP = TITLE SAFE AREA");
+  expect(candidate?.visualDraft?.description).toContain("默认不生成人物");
   expect(runCopyStage).not.toHaveBeenCalled();
 });

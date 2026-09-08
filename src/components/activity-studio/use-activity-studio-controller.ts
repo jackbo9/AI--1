@@ -476,7 +476,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
             confirmedVisual: undefined
           };
         });
-        setStage(3);
+        setStage(2);
         return;
       }
       const { ok, payload } = await requestVisualReplacement(jobId, createClientUuid());
@@ -485,7 +485,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
         visualDescriptionRef.current = "";
         visualDraftCreatedAtRef.current = "";
         setVisualDescription("");
-        setStage(3);
+        setStage(2);
         await refreshJob(jobId);
       }
     } finally {

@@ -40,13 +40,15 @@ const document = posterDocumentSchema.parse({
 describe("T01 base visual description", () => {
   it("starts from confirmed copy with subject, style, color and safe composition", () => {
     const description = createT01BaseVisualDescription(document);
-    expect(description).toContain("羽球挑战赛");
-    expect(description).toContain("主体：");
+    expect(description).toContain("赛事类型：羽毛球");
+    expect(description).toContain("主体与瞬间：");
     expect(description).toContain("风格：");
     expect(description).toContain("色彩：");
     expect(description).toContain("构图：");
-    expect(description).toContain("顶部品牌标识与标题区域");
-    expect(description).toContain("中右或中下部");
+    expect(description).toContain("LEFT TOP = TITLE SAFE AREA");
+    expect(description).toContain("CENTER-RIGHT = MAIN VISUAL");
+    expect(description).toContain("X 68%–78%");
+    expect(description).toContain("默认不生成人物或人体");
     expect(description.length).toBeLessThanOrEqual(420);
     expect(description).not.toContain(input.sessions[0].date);
     expect(description).not.toContain(input.sessions[0].location);
@@ -60,6 +62,8 @@ describe("T01 base visual description", () => {
     );
     expect(draft.sourceCopyCreatedAt).toBe("2026-09-08T08:00:00.000Z");
     expect(draft.provider).toBe("t01-base-description");
+    expect(draft.promptVersion).toBe("t01-sports-base-visual-v2");
+    expect(draft.brief.subject).toContain("不出现人物");
     expect(draft.brief.negative).toContain("Logo");
   });
 });

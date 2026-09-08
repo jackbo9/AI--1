@@ -113,7 +113,7 @@ describe("employee activity v1.7 contract", () => {
     expect(brief.style).toContain("摄影");
   });
 
-  it("uses a labeled T01 photography prompt rather than a free-form cartoon brief", () => {
+  it("uses the locked sports campaign prompt and composition contract", () => {
     const prompt = seedreamPrompt({
       subject: "企业同事",
       action: "轻松互动",
@@ -126,8 +126,11 @@ describe("employee activity v1.7 contract", () => {
     });
 
     expect(prompt).toContain("【版式构图】");
-    expect(prompt).toContain("原生竖版 9:16");
-    expect(prompt).toContain("纪实摄影");
-    expect(prompt).toContain("不是插画、卡通");
+    expect(prompt).toContain("LEFT TOP = TITLE SAFE AREA");
+    expect(prompt).toContain("CENTER-RIGHT = MAIN VISUAL");
+    expect(prompt).toContain("X 68%–78%");
+    expect(prompt).toContain("Editorial Sports Photography");
+    expect(prompt).toContain("不要人物");
+    expect(prompt).toContain("不是AI概念图");
   });
 });

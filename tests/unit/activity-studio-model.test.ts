@@ -47,8 +47,8 @@ describe("activity studio model", () => {
 
   it("maps backend statuses to the same stages and labels", () => {
     expect(getStageForJob(job("READY_FOR_COPY_REVIEW"))).toBe(1);
-    expect(getStageForJob(job("READY_FOR_VISUAL_REVIEW"))).toBe(3);
-    expect(getStageForJob(job("READY_FOR_REVIEW"))).toBe(4);
+    expect(getStageForJob(job("READY_FOR_VISUAL_REVIEW"))).toBe(2);
+    expect(getStageForJob(job("READY_FOR_REVIEW"))).toBe(3);
     expect(getStageForJob(job("GENERATING_COPY"))).toBeUndefined();
 
     expect(getStatusLabel()).toBe("填写完成后开始生成");
