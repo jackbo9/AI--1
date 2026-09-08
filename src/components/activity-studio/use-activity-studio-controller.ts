@@ -42,6 +42,8 @@ import type {
   Stage
 } from "./types";
 
+const T01_DRAFT_STORAGE_KEY = "activity-studio-t01-copy-draft-v1";
+
 export function useActivityStudioController(fixtureMode: boolean) {
   const [form, setForm] = useState<FormState>(initialForm);
   const [stage, setStage] = useState<Stage>(1);
@@ -76,7 +78,13 @@ export function useActivityStudioController(fixtureMode: boolean) {
       }
       return;
     }
-    if (!storedJobId) return;
+    if (!storedJobId) {
+      const storedDraft = window.localStorage.getItem(T01_DRAFT_STORAGE_KEY);
+      if (storedDraft) {
+        try { setForm(JSON.parse(storedDraft) as FormState); } catch { window.localStorage.removeItem(T01_DRAFT_STORAGE_KEY); }
+      }
+      return;
+    }
     setRestoring(true);
     setJobId(storedJobId);
     void refreshJob(storedJobId).then((loaded) => {
@@ -84,6 +92,10 @@ export function useActivityStudioController(fixtureMode: boolean) {
       setRestoring(false);
     });
   }, [fixtureMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(T01_DRAFT_STORAGE_KEY, JSON.stringify(form));
+  }, [form]);
 
   useEffect(() => {
     if (!jobId || !working || fixtureMode) return;
@@ -236,16 +248,56 @@ export function useActivityStudioController(fixtureMode: boolean) {
         const input = normalizeForm(form);
         setJobId(UI_FIXTURE_JOB_ID);
         window.history.replaceState(null, "", `?fixture=1&job=${UI_FIXTURE_JOB_ID}`);
-        setJob({ id: UI_FIXTURE_JOB_ID, status: "GENERATING_COPY", currentStep: "Fixture 正在生成文案", versions: [] });
-        await pauseFixture();
-        setJob(createFixtureCopyJob(input));
+        const fixtureJob = createFixtureCopyJob(input);
+        setJob({ ...fixtureJob, status: "READY_FOR_VISUAL_INPUT", currentStep: "文案已确认，等待输入主视觉想法" });
         return;
       }
-      const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid());
+      const { ok, payload } = await requestJobCreation(normalizeForm(form), createClientUuid(), true);
       if (!ok || !payload.jobId) return setError(payload.error?.message ?? "提交需求失败");
       setJobId(payload.jobId);
       window.history.replaceState(null, "", `?job=${payload.jobId}`);
-      setJob({ id: payload.jobId, status: "QUEUED", currentStep: "已进入文案生成队列", versions: [] });
+      setJob({ id: payload.jobId, status: "READY_FOR_VISUAL_INPUT", currentStep: "文案已确认，等待输入主视觉想法", versions: [] });
+      await refreshJob(payload.jobId);
+    } finally {
+      setPendingAction(undefined);
+    }
+  }
+
+  async function assistTitles() {
+    if (job?.status === "READY_FOR_COPY_REVIEW" && job.copyDraft) {
+      setForm((current) => ({
+        ...current,
+        slogan: job.copyDraft!.document.slogan,
+        subtitle: job.copyDraft!.document.subtitle
+      }));
+      setCopyReview(undefined);
+      setJob(undefined);
+      setJobId(undefined);
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
+    const validationError = validateForm(form);
+    if (validationError) return setError(validationError);
+    setError(undefined);
+    setPendingAction("submit");
+    setCopyReview(undefined);
+    try {
+      if (fixtureMode) {
+        setJobId(UI_FIXTURE_JOB_ID);
+        window.history.replaceState(null, "", `?fixture=1&job=${UI_FIXTURE_JOB_ID}`);
+        setJob({ id: UI_FIXTURE_JOB_ID, status: "GENERATING_COPY", currentStep: "Fixture 正在生成小标题", versions: [] });
+        await pauseFixture();
+        setJob(createFixtureCopyJob(normalizeForm({ ...form, slogan: "", subtitle: "" })));
+        return;
+      }
+      const { ok, payload } = await requestJobCreation(
+        normalizeForm({ ...form, slogan: "", subtitle: "" }),
+        createClientUuid()
+      );
+      if (!ok || !payload.jobId) return setError(payload.error?.message ?? "AI 辅助生成失败");
+      setJobId(payload.jobId);
+      window.history.replaceState(null, "", `?job=${payload.jobId}`);
+      setJob({ id: payload.jobId, status: "QUEUED", currentStep: "正在生成两个小标题", versions: [] });
     } finally {
       setPendingAction(undefined);
     }
@@ -279,6 +331,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       }
       const { ok, payload } = await requestCopyConfirmation(jobId, {
         title: document.title,
+        slogan: document.slogan,
         subtitle: copyReview.subtitle,
         summary: copyReview.summary,
         highlights: document.highlights,
@@ -403,6 +456,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
     uploadQr,
     changeVisualDescription,
     submit,
+    assistTitles,
     confirmCopy,
     refineVisual,
     confirmVisual,

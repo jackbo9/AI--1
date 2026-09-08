@@ -1,9 +1,4 @@
-import {
-  t01PortraitTitleMaxCharacters,
-  textCharacterCount,
-  type EmployeeActivityInput,
-  type PosterDocument
-} from "@/contracts/poster";
+import { type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import type {
   ActivityJob,
@@ -14,17 +9,15 @@ import type {
 
 export const initialForm: FormState = {
   activityName: "羽球挑战赛",
+  slogan: "一起上场，热爱不设限",
+  subtitle: "零基础也能参加，现场自由组队",
   session: {
     date: "2026-09-18",
-    time: "18:30–20:30",
+    time: "",
     location: "九号园区体育馆"
   },
   audience: "全体员工",
-  supplement: "零基础也能参加，现场自由组队",
-  deadline: "9月16日 18:00",
-  contact: "行政服务台",
   rules: "小组循环赛\n三局两胜",
-  prize: "冠军运动礼包\n参与纪念礼",
   qrUrl: "",
   qrAssetId: "",
   qrAssetName: ""
@@ -42,8 +35,7 @@ export const scenes = [
 ] as const;
 
 export const stages: Array<[Stage, string]> = [
-  [1, "填写需求"],
-  [2, "确认文案"],
+  [1, "填写与确认文案"],
   [3, "生成主视觉"],
   [4, "排版导出"]
 ];
@@ -75,7 +67,7 @@ export function createCopyReview(job: ActivityJob): CopyReview | undefined {
 }
 
 export function getStageForJob(job: ActivityJob): Stage | undefined {
-  if (job.status === "READY_FOR_COPY_REVIEW") return 2;
+  if (job.status === "READY_FOR_COPY_REVIEW") return 1;
   if (
     ["READY_FOR_VISUAL_INPUT", "REFINING_VISUAL", "READY_FOR_VISUAL_REVIEW"].includes(
       job.status
@@ -93,19 +85,17 @@ export function hydrateForm(current: FormState, job: ActivityJob): FormState {
   return {
     ...current,
     activityName: document.title,
+    slogan: document.slogan,
+    subtitle: document.subtitle,
     session: document.sessions[0] ?? current.session,
     audience: document.audience,
-    supplement: document.subtitle || document.summary,
     rules: document.rules ?? "",
-    prize: document.prize ?? "",
     qrUrl: document.qrPayload,
     qrAssetId: document.qrAssetId,
     qrAssetPreviewUrl: document.qrAssetId
       ? `/api/uploads/qr/${document.qrAssetId}`
       : undefined,
     qrAssetName: document.qrAssetId ? "已上传二维码图片" : "",
-    contact: document.contact,
-    deadline: document.deadline ?? ""
   };
 }
 
@@ -137,11 +127,9 @@ export function getStatusLabel(job?: ActivityJob) {
 
 export function validateForm(form: FormState) {
   if (!form.activityName.trim()) return "请填写活动主题";
-  if (textCharacterCount(form.activityName) > t01PortraitTitleMaxCharacters) {
-    return `T01 竖版主题建议 14 字以内；超过 ${t01PortraitTitleMaxCharacters} 字会被拒绝，最终以实际排版边界为准`;
-  }
-  if (!form.session.date || !form.session.time.trim() || !form.session.location.trim()) return "请完整填写日期、时间和地点";
+  if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
   if (!form.audience.trim()) return "请填写参与对象";
+  if (!form.rules.trim()) return "请填写赛事规则";
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }
@@ -155,11 +143,13 @@ export function normalizeForm(form: FormState): EmployeeActivityInput {
     activityName: form.activityName.trim(),
     category: "team",
     themeKeywords: [],
-    description: form.supplement.trim(),
+    description: "",
+    slogan: form.slogan.trim(),
+    subtitle: form.subtitle.trim(),
     sessions: [form.session].map((session) => ({
       label: "活动安排",
       date: session.date,
-      time: session.time.trim(),
+      time: "",
       location: session.location.trim(),
       details: []
     })),
@@ -171,10 +161,10 @@ export function normalizeForm(form: FormState): EmployeeActivityInput {
     ctaLabel: "",
     qrPayload: form.qrUrl.trim(),
     qrAssetId: form.qrAssetId,
-    contact: form.contact.trim(),
+    contact: "",
     visualIntent: "",
-    deadline: form.deadline.trim(),
+    deadline: "",
     rules: form.rules.trim(),
-    prize: form.prize.trim()
+    prize: ""
   };
 }

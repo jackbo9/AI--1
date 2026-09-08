@@ -12,13 +12,11 @@ export type SessionState = {
 
 export type FormState = {
   activityName: string;
+  slogan: string;
+  subtitle: string;
   session: SessionState;
   audience: string;
-  supplement: string;
-  deadline: string;
-  contact: string;
   rules: string;
-  prize: string;
   qrUrl: string;
   qrAssetId: string;
   qrAssetPreviewUrl?: string;

@@ -19,6 +19,7 @@ const document = (() => {
     outputFormat: "portrait_1080x1920",
     category: item.category,
     title: item.title,
+    slogan: "",
     subtitle: item.subtitle,
     summary: item.summary,
     sessions: item.sessions,

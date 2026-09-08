@@ -115,6 +115,7 @@ async function confirmCopy(
     // `subtitle` is the T01 portrait slot and has its own capacity contract.
     // Keep `summary` as supplemental copy for legacy/read paths.
     subtitle: parsed.data.content.subtitle,
+    slogan: parsed.data.content.slogan,
     summary: parsed.data.content.summary
   });
   const confirmedDocument = confirmedCampaignDocumentFromPoster(

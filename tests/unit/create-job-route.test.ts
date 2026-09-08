@@ -55,7 +55,12 @@ it("starts copy generation once and reuses a repeated submission", async () => {
   expect(runCopyStage).toHaveBeenCalledTimes(1);
 });
 
-it("rejects a title beyond the T01 input capacity before copy generation", async () => {
+it("defers long-title capacity to the rendered T01 template", async () => {
+  vi.mocked(createJob).mockImplementation(async (job) => ({
+    ...job,
+    campaignBrief: job.campaignBrief ?? campaignBriefFromLegacyInput(job.input),
+    artifacts: job.artifacts ?? []
+  }));
   const request = new Request("http://localhost/api/jobs", {
     method: "POST",
     body: JSON.stringify({
@@ -69,14 +74,34 @@ it("rejects a title beyond the T01 input capacity before copy generation", async
 
   const response = await POST(request);
 
-  expect(response.status).toBe(422);
-  await expect(response.json()).resolves.toEqual({
-    error: {
-      code: "T01_TITLE_TOO_LONG",
-      message: "T01 竖版主题建议 14 字以内；超过 40 字会被拒绝，最终以实际排版边界为准"
-    }
+  expect(response.status).toBe(202);
+  expect(createJob).toHaveBeenCalledOnce();
+  expect(runCopyStage).toHaveBeenCalledOnce();
+});
+
+it("confirms manually entered copy without starting the copy model", async () => {
+  vi.mocked(createJob).mockImplementation(async (job) => ({
+    ...job,
+    campaignBrief: job.campaignBrief ?? campaignBriefFromLegacyInput(job.input),
+    artifacts: job.artifacts ?? []
+  }));
+  const response = await POST(new Request("http://localhost/api/jobs", {
+    method: "POST",
+    body: JSON.stringify({
+      input: { ...normal, activityName: "羽毛球赛", slogan: "一起上场", subtitle: "现场自由组队" },
+      idempotencyKey: "c262b214-3ff2-4cb6-9358-83088df0f9a5",
+      skipCopy: true
+    })
+  }));
+
+  expect(response.status).toBe(202);
+  await expect(response.json()).resolves.toMatchObject({ status: "READY_FOR_VISUAL_INPUT" });
+  const candidate = vi.mocked(createJob).mock.calls[0]?.[0];
+  expect(candidate?.copyDraft?.document).toMatchObject({
+    title: "羽毛球赛",
+    slogan: "一起上场",
+    subtitle: "现场自由组队"
   });
-  expect(findByKey).not.toHaveBeenCalled();
-  expect(createJob).not.toHaveBeenCalled();
+  expect(candidate?.confirmedDocument).toBeDefined();
   expect(runCopyStage).not.toHaveBeenCalled();
 });

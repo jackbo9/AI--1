@@ -10,7 +10,7 @@ export function LivePreview({ form, copy, hasQr, job, stage, statusLabel, fixtur
   const version = job?.versions.at(-1);
   const document = useMemo<PosterDocument>(() => copy ?? {
     schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", outputFormat: "portrait_1080x1920", category: "team",
-    title: form.activityName || "活动主题", subtitle: form.supplement, summary: "", sessions: [{ label: "活动安排", date: form.session.date || "2026-01-01", time: form.session.time || "待定", location: form.session.location || "待定", details: [] }], audience: form.audience || "参与对象", highlights: [], participationSteps: normalizeLines(splitDraftLines(form.rules)), notice: "", includeQr: hasQr, ctaLabel: "扫码报名", qrPayload: form.qrUrl, qrAssetId: form.qrAssetId, contact: "", immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
+    title: form.activityName || "活动主题", slogan: form.slogan, subtitle: form.subtitle, summary: "", sessions: [{ label: "活动安排", date: form.session.date || "2026-01-01", time: "", location: form.session.location || "待定", details: [] }], audience: form.audience || "参与对象", highlights: [], participationSteps: normalizeLines(splitDraftLines(form.rules)), notice: "", includeQr: hasQr, ctaLabel: "扫码报名", qrPayload: form.qrUrl, qrAssetId: form.qrAssetId, contact: "", immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
   }, [copy, form, hasQr]);
   const [html, setHtml] = useState("");
   useEffect(() => {

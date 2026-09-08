@@ -27,6 +27,7 @@ const probeDocument: PosterDocument = {
   outputFormat: "portrait_1080x1920",
   category: "team",
   title: "秋日同行日",
+  slogan: "一起动手，玩出新意",
   subtitle: "和同事一起，在自然光下完成轻松的手作互动。",
   summary: "一场为同事准备的轻松秋日相聚。",
   sessions: [

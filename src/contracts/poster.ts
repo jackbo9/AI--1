@@ -21,7 +21,8 @@ export function textCharacterCount(value: string) {
 export const activitySessionSchema = z.object({
   label: z.string().trim().min(1, "请填写场次名称").max(24),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请使用 YYYY-MM-DD 格式"),
-  time: z.string().trim().min(1, "请填写活动时间").max(40),
+  // T01 V3 only collects a date. Keep an optional legacy time for existing jobs.
+  time: z.string().trim().max(40).default(""),
   location: z.string().trim().min(1, "请填写活动地点").max(80),
   details: z.array(z.string().trim().min(1).max(42)).max(3).default([])
 });
@@ -52,12 +53,14 @@ const employeeActivityFieldsSchema = z.object({
       .string()
       .trim()
       .min(1, "请填写活动名称")
-      .max(48, "活动名称请控制在 48 字以内"),
+      .max(150, "活动名称请控制在 150 字以内"),
     category: activityCategorySchema.default("team"),
     themeKeywords: z.array(z.string().trim().min(1).max(24)).max(6).default([]),
     // The trial UI treats these as optional narrative fields. Keep the names
     // for legacy jobs and let the copy projection omit empty slots.
     description: z.string().trim().max(240).default(""),
+    slogan: z.string().trim().max(40).default(""),
+    subtitle: z.string().trim().max(t01PortraitSubtitleMaxCharacters).default(""),
     sessions: z.array(activitySessionSchema).min(1).max(2),
     audience: z
       .string()
@@ -131,7 +134,10 @@ export const posterDocumentSchema = z.object({
   locale: z.literal("zh-CN"),
   outputFormat: outputFormatSchema,
   category: activityCategorySchema,
-  title: z.string().min(1).max(40),
+  // Text capacity is enforced against the rendered 952px slot, rather than
+  // a character-count cutoff that can reject a perfectly valid short glyph run.
+  title: z.string().min(1).max(150),
+  slogan: z.string().max(40).default(""),
   subtitle: z.string().max(150),
   summary: z.string().max(150).default(""),
   sessions: z.array(activitySessionSchema).min(1).max(2),
@@ -175,6 +181,7 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
 
 export const editablePosterContentSchema = z.object({
   title: z.string().trim().min(1).max(40),
+  slogan: z.string().trim().max(40).default(""),
   subtitle: z
     .string()
     .trim()
@@ -236,7 +243,10 @@ export const generationStatusSchema = z.enum([
 
 export const createJobSchema = z.object({
   input: employeeActivityInputSchema,
-  idempotencyKey: z.string().uuid()
+  idempotencyKey: z.string().uuid(),
+  // Manual confirmation deliberately bypasses copy generation. This is a
+  // per-request choice, never a migration of historical tasks.
+  skipCopy: z.boolean().default(false)
 });
 
 export const confirmCopySchema = z.object({

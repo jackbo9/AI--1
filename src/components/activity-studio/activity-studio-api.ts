@@ -36,10 +36,11 @@ export async function fetchActivityJob(id: string): Promise<ApiResult<ActivityJo
   return { ok: true, payload: await readJson<ActivityJob>(response) };
 }
 
-export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string) {
+export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string, skipCopy = false) {
   return postJson<{ jobId?: string; error?: { message: string } }>("/api/jobs", {
     input,
-    idempotencyKey
+    idempotencyKey,
+    skipCopy
   });
 }
 
@@ -47,6 +48,7 @@ export function requestCopyConfirmation(
   jobId: string,
   content: {
     title: string;
+    slogan: string;
     subtitle: string;
     summary: string;
     highlights: string[];

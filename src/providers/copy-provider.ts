@@ -11,7 +11,7 @@ import { ProviderError, requestJson } from "./provider-error";
 
 const copyPromptVersion = "employee-activity-copy-v1-9";
 const systemPrompt =
-  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。title、outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。subtitle 是 T01 竖版海报实际展示的副标题：必须是一句自然、简洁的中文，不换行，不超过 40 个字（含标点），不得复述日期、时间、地点、联系人或报名方式。summary 仅保留补充信息，不替代 subtitle。immutableSource 必须把 outputFormat、sessions、audience、contact、includeQr、ctaLabel、qrPayload、qrAssetId、notice 全部设为 true。不能创造奖品、合作方、场地或规则；不能输出 HTML、CSS、Logo 或二维码。';
+  '你是企业行政活动文案助手。只输出一个 JSON 对象，不能输出 Markdown。必须完整返回这些字段：schemaVersion、scene、locale、outputFormat、category、title、slogan、subtitle、summary、sessions、audience、highlights、participationSteps、notice、includeQr、ctaLabel、qrPayload、qrAssetId、contact、immutableSource。schemaVersion 必须是 "1.7"，scene 必须是 "employee_activity"，locale 必须是 "zh-CN"。title、outputFormat、category、sessions、audience、notice、contact、includeQr、ctaLabel、qrPayload、qrAssetId 必须逐字保留输入内容。slogan 与 subtitle 是可选 T01 竖版标题文案，必须一句自然中文、不换行、最多 40 字；输入已有值时逐字保留。不能创造活动事实；不能输出 HTML、CSS、Logo 或二维码。';
 
 const deepSeekResponseSchema = z.object({
   choices: z
@@ -71,9 +71,10 @@ export async function generateCopy(
                 {
                   role: "user",
                   content: JSON.stringify({
-                    task: "保留锁定标题；基于补充说明生成可直接排入 T01 竖版的短副标题，并返回完整 PosterDocumentV1_7。",
+                    task: "保留锁定标题；只在输入为空时生成宣言标题与副标题，并返回完整 PosterDocumentV1_7。",
                     constraints: {
                       title: "逐字保留 input.activityName，不改写、不扩写",
+                      slogan: "输入不为空时逐字保留；为空时生成一句短宣言标题",
                       subtitle: `T01 竖版实际展示字段；宽度 952px、高度自适应，建议 25 个字以内；一句中文，不换行，最多 ${t01PortraitSubtitleMaxCharacters} 个字（含标点）；信息不足时返回空字符串，不要用长段落填充`,
                       summaryMaxLength: 150,
                       highlights: "保留输入；为空时返回空数组",
@@ -105,11 +106,14 @@ export async function generateCopy(
         )
       );
 
+      const generated = JSON.parse(payload.choices[0].message.content) as Record<string, unknown>;
       const document = posterDocumentSchema.parse({
-        ...(JSON.parse(payload.choices[0].message.content) as Record<string, unknown>),
+        ...generated,
         // The activity theme is a locked fact and is the T01 title. AI may
         // optimize optional copy, never the title itself.
         title: input.activityName,
+        slogan: input.slogan || generated.slogan,
+        subtitle: input.subtitle || generated.subtitle,
         sessions: input.sessions,
         audience: input.audience,
         notice: input.notice,
@@ -249,8 +253,9 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     outputFormat: input.outputFormat,
     category: input.category,
     title: input.activityName,
-    subtitle: "",
-    summary: input.description,
+    slogan: input.slogan,
+    subtitle: input.subtitle,
+    summary: "",
     sessions: input.sessions,
     audience: input.audience,
     highlights: input.highlights,
@@ -280,7 +285,8 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
 
 function hasOptionalCopyInput(input: EmployeeActivityInput) {
   return [
-    input.description,
+    input.slogan,
+    input.subtitle,
     ...input.highlights,
     ...input.participationSteps,
     input.notice,

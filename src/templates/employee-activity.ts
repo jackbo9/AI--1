@@ -802,8 +802,7 @@ function sessionTimesMarkup(document: PosterDocument) {
       (session) =>
         "<p>" +
         chineseDate(session.date) +
-        " " +
-        escape(session.time) +
+        (session.time ? " " + escape(session.time) : "") +
         "</p>"
     )
     .join("");
@@ -853,7 +852,9 @@ export function employeeActivityPosterMarkup(
     '" alt="活动主视觉">',
     '<section class="hero-content" data-readability-region="hero">',
     brandHeaderMarkup(assets, "primary"),
-    '<i class="hero-divider" aria-hidden="true"></i><p class="hero-eyebrow">九号员工活动 / ACTIVITY</p><section class="title-region"><h1 class="title" data-poster-title>',
+    '<i class="hero-divider" aria-hidden="true"></i>',
+    document.slogan ? '<p class="hero-eyebrow" data-poster-slogan>' + escape(document.slogan) + "</p>" : "",
+    '<section class="title-region" style="top:' + (document.slogan ? "292" : "222") + 'px"><h1 class="title" data-poster-title>',
     escape(document.title),
     "</h1>",
     document.subtitle

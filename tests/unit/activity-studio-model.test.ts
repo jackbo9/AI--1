@@ -22,7 +22,7 @@ describe("activity studio model", () => {
         ...initialForm,
         session: { ...initialForm.session, location: " " }
       })
-    ).toBe("请完整填写每一场的日期、时间和地点");
+    ).toBe("请完整填写比赛日期和比赛地点");
     expect(validateForm({ ...initialForm, qrUrl: "example.com" })).toBe(
       "二维码 URL 必须以 http:// 或 https:// 开头"
     );
@@ -46,7 +46,7 @@ describe("activity studio model", () => {
   });
 
   it("maps backend statuses to the same stages and labels", () => {
-    expect(getStageForJob(job("READY_FOR_COPY_REVIEW"))).toBe(2);
+    expect(getStageForJob(job("READY_FOR_COPY_REVIEW"))).toBe(1);
     expect(getStageForJob(job("READY_FOR_VISUAL_REVIEW"))).toBe(3);
     expect(getStageForJob(job("READY_FOR_REVIEW"))).toBe(4);
     expect(getStageForJob(job("GENERATING_COPY"))).toBeUndefined();

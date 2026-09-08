@@ -3,10 +3,9 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import {
   campaignBriefFromLegacyInput,
+  confirmedCampaignDocumentFromPoster,
   createJobSchema,
-  posterDocumentSchema,
-  t01PortraitTitleMaxCharacters,
-  textCharacterCount
+  posterDocumentSchema
 } from "@/contracts/poster";
 import { createJob, findByKey } from "@/server/job-store";
 import { runCopyStage } from "@/worker/run-job";
@@ -41,21 +40,6 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (
-    textCharacterCount(parsed.data.input.activityName) >
-    t01PortraitTitleMaxCharacters
-  ) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "T01_TITLE_TOO_LONG",
-          message: `T01 竖版主题建议 14 字以内；超过 ${t01PortraitTitleMaxCharacters} 字会被拒绝，最终以实际排版边界为准`
-        }
-      },
-      { status: 422 }
-    );
-  }
-
   const existing = await findByKey(parsed.data.idempotencyKey);
   if (existing) {
     return existing.userId === identity.userId
@@ -82,15 +66,15 @@ export async function POST(request: Request) {
           identity.userId
         )
       : undefined;
-    await preflightEmployeeActivity(
-      posterDocumentSchema.parse({
+    const manualDocument = posterDocumentSchema.parse({
         schemaVersion: "1.7",
         scene: "employee_activity",
         locale: "zh-CN",
         outputFormat: parsed.data.input.outputFormat,
         category: parsed.data.input.category,
         title: parsed.data.input.activityName,
-        subtitle: "",
+        slogan: parsed.data.input.slogan,
+        subtitle: parsed.data.input.subtitle,
         summary: parsed.data.input.description,
         sessions: parsed.data.input.sessions,
         audience: parsed.data.input.audience,
@@ -116,9 +100,44 @@ export async function POST(request: Request) {
           qrAssetId: true,
           notice: true
         }
-      }),
-      { qrDataUri }
-    );
+      });
+    await preflightEmployeeActivity(manualDocument, { qrDataUri });
+
+    const now = new Date().toISOString();
+    const candidate = {
+      id: crypto.randomUUID(),
+      traceId: crypto.randomUUID(),
+      idempotencyKey: parsed.data.idempotencyKey,
+      actionIdempotencyKeys: [],
+      userId: identity.userId,
+      campaignBrief,
+      input: parsed.data.input,
+      status: parsed.data.skipCopy ? "READY_FOR_VISUAL_INPUT" as const : "QUEUED" as const,
+      currentStep: parsed.data.skipCopy ? "文案已确认，等待输入主视觉想法" : "已进入文案生成队列",
+      retryCount: 0,
+      copyDraft: parsed.data.skipCopy ? {
+        document: manualDocument,
+        provider: "manual-input",
+        model: "none",
+        promptVersion: "manual-copy-v1",
+        createdAt: now
+      } : undefined,
+      confirmedDocument: parsed.data.skipCopy
+        ? confirmedCampaignDocumentFromPoster(manualDocument, crypto.randomUUID())
+        : undefined,
+      artifacts: [],
+      versions: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    const job = await createJob(candidate);
+    if (job.id !== candidate.id) {
+      return job.userId === identity.userId
+        ? NextResponse.json({ jobId: job.id, status: job.status, reused: true }, { status: 202 })
+        : NextResponse.json({ error: { code: "IDEMPOTENCY_CONFLICT", message: "幂等键已被占用" } }, { status: 409 });
+    }
+    if (!parsed.data.skipCopy) void runCopyStage(job.id);
+    return NextResponse.json({ jobId: job.id, status: job.status }, { status: 202 });
   } catch (error) {
     if (error instanceof QrAssetError) {
       return NextResponse.json(
@@ -146,44 +165,4 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  const now = new Date().toISOString();
-  const candidate = {
-    id: crypto.randomUUID(),
-    traceId: crypto.randomUUID(),
-    idempotencyKey: parsed.data.idempotencyKey,
-    actionIdempotencyKeys: [],
-    userId: identity.userId,
-    campaignBrief,
-    input: parsed.data.input,
-    status: "QUEUED" as const,
-    currentStep: "已进入文案生成队列",
-    retryCount: 0,
-    artifacts: [],
-    versions: [],
-    createdAt: now,
-    updatedAt: now
-  };
-  const job = await createJob(candidate);
-  if (job.id !== candidate.id) {
-    return job.userId === identity.userId
-      ? NextResponse.json(
-          { jobId: job.id, status: job.status, reused: true },
-          { status: 202 }
-        )
-      : NextResponse.json(
-          {
-            error: {
-              code: "IDEMPOTENCY_CONFLICT",
-              message: "幂等键已被占用"
-            }
-          },
-          { status: 409 }
-        );
-  }
-
-  void runCopyStage(job.id);
-  return NextResponse.json(
-    { jobId: job.id, status: job.status },
-    { status: 202 }
-  );
 }
