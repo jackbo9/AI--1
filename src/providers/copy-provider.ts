@@ -109,6 +109,14 @@ export async function generateCopy(
       const generated = JSON.parse(payload.choices[0].message.content) as Record<string, unknown>;
       const document = posterDocumentSchema.parse({
         ...generated,
+        // Schema identity and immutable facts are owned by the application.
+        // Never trust a model-provided object here, even when its text fields
+        // are otherwise valid.
+        schemaVersion: "1.7",
+        scene: "employee_activity",
+        locale: "zh-CN",
+        outputFormat: input.outputFormat,
+        category: input.category,
         // The activity theme is a locked fact and is the T01 title. AI may
         // optimize optional copy, never the title itself.
         title: input.activityName,
@@ -124,7 +132,18 @@ export async function generateCopy(
         contact: input.contact,
         deadline: input.deadline,
         rules: input.rules,
-        prize: input.prize
+        prize: input.prize,
+        immutableSource: {
+          outputFormat: true,
+          sessions: true,
+          audience: true,
+          contact: true,
+          includeQr: true,
+          ctaLabel: true,
+          qrPayload: true,
+          qrAssetId: true,
+          notice: true
+        }
       });
       assertImmutable(input, document);
       assertT01CopyCapacity(document);
