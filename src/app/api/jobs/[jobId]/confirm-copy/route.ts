@@ -91,12 +91,6 @@ async function confirmCopy(
   }
 
   const input = employeeActivityInputSchema.parse(job.input);
-  if (!parsed.data.content.slogan.trim() || !parsed.data.content.subtitle.trim()) {
-    return NextResponse.json(
-      { error: { code: "COPY_FIELDS_REQUIRED", message: "宣言标题和副标题均为 T01 竖版必填内容。" } },
-      { status: 422 }
-    );
-  }
   if (parsed.data.content.title !== input.activityName) {
     return NextResponse.json(
       { error: { code: "IMMUTABLE_FIELD_CHANGED", message: "活动主题属于锁定事实，不能在确认文案时改写" } },

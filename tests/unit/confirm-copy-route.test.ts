@@ -34,7 +34,7 @@ it("returns a JSON error without committing when the renderer fails unexpectedly
     expect(claimJobAction).not.toHaveBeenCalled();
   } finally { log.mockRestore(); }
 });
-it("does not confirm a T01 document with an empty title companion", async () => {
+it("allows an empty optional title companion", async () => {
   const response = await POST(new Request("http://localhost/api/jobs/test/confirm-copy", {
     method: "POST",
     body: JSON.stringify({
@@ -42,7 +42,7 @@ it("does not confirm a T01 document with an empty title companion", async () => 
       content: { ...document, slogan: "" }
     })
   }), { params: Promise.resolve({ jobId: "test" }) });
-  expect(response.status).toBe(422);
-  await expect(response.json()).resolves.toMatchObject({ error: { code: "COPY_FIELDS_REQUIRED" } });
-  expect(claimJobAction).not.toHaveBeenCalled();
+  expect(response.status).toBe(202);
+  await expect(response.json()).resolves.toMatchObject({ status: "READY_FOR_VISUAL_INPUT" });
+  expect(claimJobAction).toHaveBeenCalledOnce();
 });

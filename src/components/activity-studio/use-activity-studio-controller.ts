@@ -21,7 +21,6 @@ import {
   requestVisualReplacement
 } from "./activity-studio-api";
 import {
-  createCopyReview,
   createPreviewCopy,
   getStageForJob,
   getStatusLabel,
@@ -116,7 +115,11 @@ export function useActivityStudioController(fixtureMode: boolean) {
     const nextStage = getStageForJob(job);
     if (nextStage) setStage(nextStage);
     if (job.status === "READY_FOR_COPY_REVIEW") {
-      setCopyReview((current) => current ?? createCopyReview(job));
+      setForm((current) => ({ ...current, slogan: job.copyDraft?.document.slogan ?? current.slogan, subtitle: job.copyDraft?.document.subtitle ?? current.subtitle }));
+      setCopyReview(undefined);
+      setJob(undefined);
+      setJobId(undefined);
+      window.history.replaceState(null, "", window.location.pathname);
     } else if (
       ["READY_FOR_VISUAL_INPUT", "REFINING_VISUAL", "READY_FOR_VISUAL_REVIEW"].includes(
         job.status
@@ -264,19 +267,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
   }
 
   async function assistTitles() {
-    if (job?.status === "READY_FOR_COPY_REVIEW" && job.copyDraft) {
-      setForm((current) => ({
-        ...current,
-        slogan: job.copyDraft!.document.slogan,
-        subtitle: job.copyDraft!.document.subtitle
-      }));
-      setCopyReview(undefined);
-      setJob(undefined);
-      setJobId(undefined);
-      window.history.replaceState(null, "", window.location.pathname);
-      return;
-    }
-    const validationError = validateForm(form, false);
+    const validationError = validateForm(form);
     if (validationError) return setError(validationError);
     setError(undefined);
     setPendingAction("submit");

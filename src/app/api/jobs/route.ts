@@ -59,20 +59,6 @@ export async function POST(request: Request) {
   }
 
   const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input);
-  if (
-    parsed.data.skipCopy &&
-    (!parsed.data.input.slogan.trim() || !parsed.data.input.subtitle.trim())
-  ) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "COPY_FIELDS_REQUIRED",
-          message: "请填写宣言标题和副标题，或先使用 AI 辅助生成后明确应用。"
-        }
-      },
-      { status: 422 }
-    );
-  }
   try {
     const qrDataUri = parsed.data.input.qrAssetId
       ? await readOwnedQrAssetDataUri(
