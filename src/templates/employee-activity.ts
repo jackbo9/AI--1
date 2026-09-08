@@ -71,6 +71,7 @@ export type EmployeeActivityRenderResult = {
 export type EmployeeActivityRenderOptions = {
   readabilityMode?: "strict" | "trial";
   qrDataUri?: string;
+  readability?: T01ReadabilityReport;
 };
 
 const layoutReferenceBackgroundPath = path.join(
@@ -114,6 +115,37 @@ export async function preflightEmployeeActivity(
   }
 }
 
+export async function analyzeEmployeeActivityVisual(
+  document: PosterDocument,
+  illustrationPath: string,
+  options: Pick<EmployeeActivityRenderOptions, "qrDataUri"> = {}
+): Promise<T01ReadabilityReport> {
+  const [imageBytes, assets] = await Promise.all([
+    readFile(illustrationPath),
+    loadEmbeddedBrandAssets()
+  ]);
+  const imageData = dataUriForPath(illustrationPath, imageBytes);
+  const qr = await qrDataUriForDocument(document, options.qrDataUri);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 1080, height: 1920 },
+      deviceScaleFactor: 1
+    });
+    await page.addInitScript("globalThis.__name = (target) => target;");
+    await page.goto("about:blank");
+    await page.setContent(
+      employeeActivityPosterMarkup(document, imageData, qr, assets),
+      { waitUntil: "load" }
+    );
+    await assertRenderReadiness(page);
+    await assertLayoutCapacity(page);
+    return analyzeAndApplyReadability(page, assets);
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function renderEmployeeActivity(
   document: PosterDocument,
   illustrationPath: string,
@@ -149,40 +181,69 @@ export async function renderEmployeeActivity(
     await assertRenderReadiness(page);
     await assertLayoutCapacity(page);
 
-    const initialAnalysis = await analyzeBackground(page);
-    // Keep an inspectable result even when neither tone passes. The worker
-    // retries the visual first; after its bounded retries this warning render
-    // is shown with download and regeneration actions.
-    const treatments = selectT01Treatments(initialAnalysis) ??
-      selectT01Treatments(initialAnalysis, { allowWarnings: true });
-    if (!treatments) throw new PosterRenderError("brand.readability.contrast_failed", "无法分析主视觉的文字可读性。");
-    const logoVariant = logoVariantForTreatment(treatments);
-    await applyTextToneTreatment(
-      page,
-      treatments,
-      logoVariant,
-      assets.companyLogo,
-      assets.companyLogoInverse
-    );
-    const finalAnalysis = await analyzeAppliedTreatment(page, treatments);
-    const passed = finalAnalysis.every((region) =>
-      region.candidates.every((candidate) => candidate.passed)
-    );
-
-    const readability: T01ReadabilityReport = {
-      contractVersion: "t01-readability-v1",
-      backgroundMode: "input",
-      logoVariant,
-      treatments,
-      initialAnalysis,
-      finalAnalysis,
-      passed
-    };
+    const readability = options.readability
+      ? await applyStoredReadability(page, options.readability, assets)
+      : await analyzeAndApplyReadability(page, assets);
     await page.screenshot({ path: outputPath, type: "png" });
     return { outputPath, readability };
   } finally {
     await browser.close();
   }
+}
+
+async function analyzeAndApplyReadability(
+  page: Page,
+  assets: Awaited<ReturnType<typeof loadEmbeddedBrandAssets>>
+) {
+  const initialAnalysis = await analyzeBackground(page);
+  // Keep an inspectable result even when neither tone passes. The worker
+  // retries the visual first; after its bounded retries this warning render
+  // is shown with download and regeneration actions.
+  const treatments =
+    selectT01Treatments(initialAnalysis) ??
+    selectT01Treatments(initialAnalysis, { allowWarnings: true });
+  if (!treatments) {
+    throw new PosterRenderError(
+      "brand.readability.contrast_failed",
+      "无法分析主视觉的文字可读性。"
+    );
+  }
+  const logoVariant = logoVariantForTreatment(treatments);
+  await applyTextToneTreatment(
+    page,
+    treatments,
+    logoVariant,
+    assets.companyLogo,
+    assets.companyLogoInverse
+  );
+  const finalAnalysis = await analyzeAppliedTreatment(page, treatments);
+  const passed = finalAnalysis.every((region) =>
+    region.candidates.every((candidate) => candidate.passed)
+  );
+  return {
+    contractVersion: "t01-readability-v1",
+    backgroundMode: "input",
+    logoVariant,
+    treatments,
+    initialAnalysis,
+    finalAnalysis,
+    passed
+  } satisfies T01ReadabilityReport;
+}
+
+async function applyStoredReadability(
+  page: Page,
+  readability: T01ReadabilityReport,
+  assets: Awaited<ReturnType<typeof loadEmbeddedBrandAssets>>
+) {
+  await applyTextToneTreatment(
+    page,
+    readability.treatments,
+    readability.logoVariant,
+    assets.companyLogo,
+    assets.companyLogoInverse
+  );
+  return readability;
 }
 
 async function qrDataUriForDocument(
@@ -843,7 +904,8 @@ export function employeeActivityPosterMarkup(
   document: PosterDocument,
   image: string,
   qr: string,
-  assets: Awaited<ReturnType<typeof loadEmbeddedBrandAssets>>
+  assets: Awaited<ReturnType<typeof loadEmbeddedBrandAssets>>,
+  readability?: T01ReadabilityReport
 ) {
   const qrMarkup = qr
     ? '<aside class="qr-region" data-poster-qr><img class="qr" src="' +
@@ -866,8 +928,12 @@ export function employeeActivityPosterMarkup(
     "</style></head><body><main class=\"poster\"><img class=\"background\" src=\"",
     image,
     '" alt="活动主视觉">',
-    '<section class="hero-content" data-readability-region="hero">',
-    brandHeaderMarkup(assets, "primary"),
+    `<section class="hero-content" data-readability-region="hero"${
+      readability
+        ? ` data-text-tone="${readability.treatments.hero.textTone}"`
+        : ""
+    }>`,
+    brandHeaderMarkup(assets, readability?.logoVariant ?? "primary"),
     '<i class="hero-divider" aria-hidden="true"></i>',
     '<p class="hero-eyebrow" data-poster-slogan>' + escape(document.slogan || " ") + "</p>",
     '<section class="title-region"><h1 class="title" data-poster-title>',
