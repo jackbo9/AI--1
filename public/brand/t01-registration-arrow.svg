@@ -1,11 +1,5 @@
-<svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="34" height="34" fill="#5F5F5F"/>
-<g id="&#231;&#171;&#150;&#231;&#137;&#136; / 1080&#195;&#151;1920">
-<rect width="1080" height="1920" transform="translate(-980 -1303)" fill="white"/>
-<g id="&#232;&#149;&#137;&#229;&#134;&#133;&#229;&#143;&#130;&#232;&#128;&#131; / &#228;&#184;&#139;&#230;&#150;&#185;&#228;&#191;&#161;&#230;&#129;&#175;&#230;&#142;&#146;&#231;&#137;&#136;">
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="DETAIL / &#230;&#138;&#165;&#229;&#144;&#141;&#230;&#140;&#135;&#229;&#188;&#149;&#231;&#174;&#173;&#229;&#164;&#180;">
-<path id="Vector" d="M6.7998 27.1998L27.1998 6.7998M27.1998 25.4998V6.7998H8.4998" stroke="#181818" stroke-width="3"/>
-</g>
-</g>
+<path id="Vector" d="M6.8 27.2L27.2 6.8M27.2 25.5V6.8H8.5" stroke="#181818" stroke-width="3"/>
 </g>
 </svg>

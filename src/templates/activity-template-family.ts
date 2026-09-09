@@ -163,13 +163,13 @@ export const activityTemplateFamilyManifest =
       landscape_1920x1080: {
         id: "landscape_1920x1080",
         templateId: "employee-activity-landscape",
-        templateVersion: "t01-figma-2026-09-04-v1",
+        templateVersion: "t01-figma-2026-09-09-v3",
         dimensions: {
           width: 1920,
           heightMode: "fixed",
           height: 1080
         },
-        safeArea: { top: 80, right: 72, bottom: 72, left: 72 },
+        safeArea: { top: 64, right: 64, bottom: 48, left: 64 },
         titleLevel: "H0",
         modules: [
           "brand_header",
@@ -178,86 +178,82 @@ export const activityTemplateFamilyManifest =
           "all_sessions",
           "audience",
           "rules",
-          "footer"
+          "qr"
         ],
         backgroundMode: "full_bleed",
-        focalArea: { x: 0.52, y: 0.18, width: 0.43, height: 0.65 },
-        textSafeArea: { x: 0.038, y: 0.2, width: 0.47, height: 0.62 },
+        focalArea: { x: 0, y: 0, width: 1, height: 0.7222 },
+        textSafeArea: { x: 0.0333, y: 0.213, width: 0.6188, height: 0.5 },
         logoZones: {
-          company: { x: 81, y: 82, width: 280, height: 82.5179 },
+          company: { x: 64, y: 64, width: 224, height: 66.014 },
           administration: {
-            x: 1771.5,
-            y: 83.0088,
-            width: 76.5001,
-            height: 76.5001
+            x: 1794.8,
+            y: 66.41,
+            width: 61.2,
+            height: 61.2
           }
         },
-        qrZone: null,
+        qrZone: { x: 1704, y: 829, width: 134, height: 134 },
         overflow: {
-          titleMaxLines: 1,
+          titleMaxLines: 3,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
-          svg: "会议输入/03 Template Overview/Template/Landscape/1920×1080.svg",
+          svg: "Figma node 426:74",
           note:
-            "Figma 191:3112 / 案例 191:3677：单行120px标题，描述、全部场次、参与对象与规则；超出固定容量阻止导出。"
+            "Figma 426:74：标题宽 1188px、高度自适应，建议不超过 14 字；副标题宽 1188px，建议不超过 25 字。"
         }
       },
       banner_2227x950: {
         id: "banner_2227x950",
         templateId: "employee-activity-banner",
-        templateVersion: "t01-figma-2026-09-04-v1",
+        templateVersion: "t01-figma-2026-09-09-v3",
         dimensions: {
           width: 2227,
           heightMode: "fixed",
           height: 950
         },
-        safeArea: { top: 80, right: 72, bottom: 72, left: 72 },
+        safeArea: { top: 64, right: 64, bottom: 64, left: 64 },
         titleLevel: "H0",
         modules: [
           "brand_header",
           "title",
-          "all_sessions",
-          "audience",
-          "subtitle",
-          "footer"
+          "subtitle"
         ],
         backgroundMode: "full_bleed",
-        focalArea: { x: 0.58, y: 0.15, width: 0.37, height: 0.7 },
-        textSafeArea: { x: 0.036, y: 0.22, width: 0.48, height: 0.58 },
+        focalArea: { x: 0, y: 0, width: 1, height: 1 },
+        textSafeArea: { x: 0.0287, y: 0.2316, width: 0.6255, height: 0.55 },
         logoZones: {
-          company: { x: 81, y: 82, width: 280, height: 82.5179 },
+          company: { x: 64, y: 64, width: 224, height: 66.014 },
           administration: {
-            x: 2078.5,
-            y: 83.0088,
-            width: 76.5001,
-            height: 76.5001
+            x: 2101.8,
+            y: 66.41,
+            width: 61.2,
+            height: 61.2
           }
         },
         qrZone: null,
         overflow: {
-          titleMaxLines: 1,
+          titleMaxLines: 3,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
-          svg: "会议输入/03 Template Overview/Template/Banner/2227×950.svg",
+          svg: "Figma node 426:140",
           note:
-            "Figma 191:3138 / 案例 191:3708：单行120px标题、两行核心事实及四行描述；无二维码和详细规则槽位。"
+            "Figma 426:140：标题宽 1393px、高度自适应，建议不超过 14 字；副标题宽 1393px，建议不超过 25 字。"
         }
       },
       longform_1080xAuto: {
         id: "longform_1080xAuto",
         templateId: "employee-activity-longform",
-        templateVersion: "t01-figma-2026-09-04-v1",
+        templateVersion: "t01-figma-2026-09-09-v3",
         dimensions: {
           width: 1080,
-          heightMode: "auto",
-          minHeight: 1920,
-          maxHeight: 12000
+          heightMode: "fixed",
+          height: 3000
         },
-        safeArea: { top: 82, right: 72, bottom: 72, left: 72 },
+        safeArea: { top: 64, right: 64, bottom: 63, left: 64 },
         titleLevel: "H0",
         modules: [
           "brand_header",
@@ -276,29 +272,28 @@ export const activityTemplateFamilyManifest =
           "qr",
           "footer"
         ],
-        backgroundMode: "image_slot",
-        focalArea: { x: 0.42, y: 0.06, width: 0.52, height: 0.34 },
-        textSafeArea: { x: 0.067, y: 0.08, width: 0.52, height: 0.34 },
+        backgroundMode: "full_bleed",
+        focalArea: { x: 0, y: 0, width: 1, height: 0.4033 },
+        textSafeArea: { x: 0.0593, y: 0.074, width: 0.8815, height: 0.3 },
         logoZones: {
-          company: { x: 81, y: 82, width: 280, height: 82.5179 },
+          company: { x: 64, y: 64, width: 224, height: 66.014 },
           administration: {
-            x: 922.5,
-            y: 85.0088,
-            width: 76.5001,
-            height: 76.5001
+            x: 954.8,
+            y: 66.41,
+            width: 61.2,
+            height: 61.2
           }
         },
-        qrZone: { x: 96, y: 2562, width: 240, height: 240 },
-        qrPlacement: "content_flow",
+        qrZone: null,
         overflow: {
           titleMaxLines: 3,
           titleStrategy: "block_export",
-          bodyStrategy: "auto_height"
+          bodyStrategy: "fit_declared_modules"
         },
         measurementSource: {
-          svg: "会议输入/03 Template Overview/Template/Longform/1080×3000.svg",
+          svg: "Figma node 426:156",
           note:
-            "Figma 191:3158：独立936×780图片槽、120px标题、信息卡及规则卡；二维码坐标仅为3000px样例参考，运行时随内容流布局，缺失组隐藏。"
+            "Figma 426:156：固定 1080×3000；标题宽 952px、高度自适应，建议不超过 14 字；副标题宽 952px，建议不超过 25 字。"
         }
       }
     }

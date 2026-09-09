@@ -39,6 +39,7 @@ function buildDocument(
     outputFormat: "portrait_1080x1920",
     category: input.category,
     title,
+    slogan: "九号员工赛事 / EVENT",
     subtitle,
     summary: "summary 不应偷偷进入竖版副标题",
     sessions: input.sessions,
@@ -121,15 +122,22 @@ describe("T01 multiline portrait layout", () => {
         expect(boxes.gap).toBeCloseTo(22, 0);
         expect(boxes.width).toBe(1080);
         expect(boxes.height).toBe(1920);
-        if (expectedLines === 3) expect(boxes.titleHeight).toBeCloseTo(498, 0);
+        if (expectedLines === 3) expect(boxes.titleHeight).toBeCloseTo(390, 0);
       } finally {
         await browser.close();
       }
     }
   }, 20_000);
 
-  it("uses the rendered y=1196 boundary rather than the legacy three-line cap and omits empty subtitle markup", async () => {
-    await expect(preflightEmployeeActivity(buildDocument("这是一条接近四十字的活动主题用于验证新版标题按真实边界而非旧三行规则进行预检"))).rejects.toMatchObject({ code: "content.capacity" });
+  it("accepts the declared 40-character budget against y=1196 and omits empty subtitle markup", async () => {
+    await expect(
+      preflightEmployeeActivity(
+        buildDocument(
+          "四十字标题用于验证新版标题按照真实边界完成预检并且不再被旧版顶部坐标误判失败",
+          "副".repeat(40)
+        )
+      )
+    ).resolves.toBeUndefined();
     const { browser, page } = await renderMarkup("赛事主题", "");
     try {
       expect(await page.$("[data-poster-subtitle]")).toBeNull();
@@ -139,21 +147,21 @@ describe("T01 multiline portrait layout", () => {
     }
   }, 20_000);
 
-  it("keeps the fixed eyebrow slot and title origin when companions are temporarily empty", async () => {
-    const { browser, page } = await renderDocument(buildDocument("赛事主题", "", { slogan: "" }));
+  it("flows the required slogan into the title group with the Figma 22px gap", async () => {
+    const { browser, page } = await renderDocument(buildDocument("赛事主题"));
     try {
       const geometry = await page.evaluate(() => {
         const eyebrow = document.querySelector<HTMLElement>("[data-poster-slogan]")!;
         const title = document.querySelector<HTMLElement>("[data-poster-title]")!;
         return {
           eyebrowTop: eyebrow.getBoundingClientRect().top,
-          titleTop: title.getBoundingClientRect().top,
+          gap: title.getBoundingClientRect().top - eyebrow.getBoundingClientRect().bottom,
           eyebrowText: eyebrow.textContent
         };
       });
       expect(geometry.eyebrowTop).toBeCloseTo(222, 0);
-      expect(geometry.titleTop).toBeCloseTo(292, 0);
-      expect(geometry.eyebrowText?.trim()).toBe("");
+      expect(geometry.gap).toBeCloseTo(22, 0);
+      expect(geometry.eyebrowText?.trim()).toBe("九号员工赛事 / EVENT");
     } finally {
       await browser.close();
     }

@@ -11,11 +11,11 @@ import { adaptWideContrast } from "./t01-wide-contrast";
 
 export const extraFormats = ["landscape_1920x1080", "banner_2227x950", "longform_1080xAuto"] as const;
 export type ExtraFormat = (typeof extraFormats)[number];
-export const extraTemplateVersion = "t01-figma-2026-09-04-v1";
+export const extraTemplateVersion = "t01-figma-2026-09-09-v3";
 export const extraTemplateNodes = {
-  landscape_1920x1080: "191:3112",
-  banner_2227x950: "191:3138",
-  longform_1080xAuto: "191:3158"
+  landscape_1920x1080: "426:74",
+  banner_2227x950: "426:140",
+  longform_1080xAuto: "426:156"
 } as const;
 
 export class ExtraRenderError extends Error {
@@ -53,11 +53,17 @@ export async function renderT01Extra(
       });
     }
   }
-  const assets = { companyLogo: brand.companyLogo, administrationLogo: brand.administrationMark, image: `data:${imageMime};base64,${imageBytes.toString("base64")}`, qr };
+  const assets = {
+    companyLogo: brand.companyLogo,
+    administrationLogo: brand.administrationMark,
+    registrationArrow: brand.registrationArrow,
+    image: `data:${imageMime};base64,${imageBytes.toString("base64")}`,
+    qr
+  };
   const content = options.content ?? t01ContentFromDocument(posterDocument);
   const markup = format === "longform_1080xAuto" ? longformMarkup(content, assets) : wideMarkup(format, content, assets);
   const width = format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080;
-  const fixedHeight = format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : undefined;
+  const fixedHeight = format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : 3000;
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: fixedHeight ?? 3000 }, deviceScaleFactor: 1 });
@@ -81,7 +87,7 @@ export async function renderT01Extra(
     const box = await page.locator(".t01-extra").boundingBox();
     if (!box) throw new ExtraRenderError("TEMPLATE_INVALID", "模板未生成有效画布");
     const height = Math.ceil(box.height);
-    if (Math.round(box.width) !== width || (fixedHeight ? height !== fixedHeight : height < 1920 || height > 12000)) {
+    if (Math.round(box.width) !== width || height !== fixedHeight) {
       throw new ExtraRenderError("TEMPLATE_HEIGHT_EXCEEDED", "内容超出当前模板尺寸范围，请缩短内容后重试");
     }
     await page.setViewportSize({ width, height });
@@ -102,7 +108,9 @@ export async function renderT01Extra(
       });
     });
     if (overflows.length) throw new ExtraRenderError("TEMPLATE_CONTENT_OVERFLOW", `内容超出模板容量（${[...new Set(overflows)].join("、")}），请修改后重试`);
-    const contrast = fixedHeight ? await adaptWideContrast(page, brand.companyLogoInverse) : undefined;
+    const contrast = (await adaptWideContrast(page, brand.companyLogoInverse)) as
+      | Awaited<ReturnType<typeof adaptWideContrast>>
+      | undefined;
     if (contrast && !contrast.passed && options.readabilityMode !== "trial") {
       throw new ExtraRenderError("TEMPLATE_CONTRAST_FAILED", "文字与背景对比度不足，请更换主视觉后重试");
     }

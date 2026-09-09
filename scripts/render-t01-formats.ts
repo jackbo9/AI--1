@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { posterDocumentSchema } from "../src/contracts/poster";
 import { extraFormats, renderT01Extra, ExtraRenderError } from "../src/templates/t01-extra-renderer";
+import { t01ContentFromDocument } from "../src/templates/t01-template-content";
 
 // Deterministic local fixtures only: this script never calls a model.
 const document = posterDocumentSchema.parse({
@@ -21,13 +22,19 @@ async function main() {
     const result = await renderT01Extra(format, sample, imagePath, format.replaceAll("_", "-"), { outputDirectory, readabilityMode: "trial" });
     console.log(JSON.stringify({ format, width: result.width, height: result.height, path: result.outputPath, contrast: result.contrast?.passed ?? "not-sampled" }));
   }
-  const empty = { ...document, subtitle: "", summary: "", rules: "", includeQr: false, qrPayload: "", contact: "", deadline: "", ctaLabel: "" };
-  const short = await renderT01Extra("longform_1080xAuto", empty, imagePath, "longform-empty", { outputDirectory });
-  console.log(JSON.stringify({ case: "empty", height: short.height }));
-  const long = { ...document, sessions: [...document.sessions, { ...document.sessions[0], label: "第二场", date: "2026-09-19" }], rules: "活动规则：" + "请在指定时间到场并遵守活动规则。".repeat(100) };
-  const tall = await renderT01Extra("longform_1080xAuto", long, imagePath, "longform-long", { outputDirectory });
-  if (tall.height <= short.height) throw new Error("Longform did not grow with content");
-  console.log(JSON.stringify({ case: "two-sessions-long", height: tall.height }));
+  const longform = await renderT01Extra("longform_1080xAuto", document, imagePath, "longform-fixed", { outputDirectory, readabilityMode: "trial" });
+  if (longform.height !== 3000) throw new Error("Longform did not match the fixed 1080×3000 Figma frame");
+  console.log(JSON.stringify({ case: "fixed-longform", height: longform.height }));
+  const finalistGroups = ["男单", "女单", "混合双人", "男子双人", "女子双人"].map((label) => ({
+    label,
+    entrants: ["张三", "李四", "王五", "赵六"].map((name) => ({ name, region: "园区赛区" }))
+  }));
+  const fullLongform = await renderT01Extra("longform_1080xAuto", document, imagePath, "longform-full-fixture", {
+    outputDirectory,
+    readabilityMode: "trial",
+    content: { ...t01ContentFromDocument(document), finalistGroups }
+  });
+  if (fullLongform.height !== 3000) throw new Error("Full longform fixture did not match the Figma frame");
   try {
     await renderT01Extra("banner_2227x950", { ...document, title: "超长活动标题".repeat(10) }, imagePath, crypto.randomUUID(), { outputDirectory });
     throw new Error("Expected title overflow to block output");

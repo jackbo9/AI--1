@@ -32,7 +32,13 @@ export async function POST(request: Request) {
   if (format === "portrait_1080x1920") {
     return NextResponse.json({ html: employeeActivityPosterMarkup(document, fallback, qr, brand) });
   }
-  const assets = { companyLogo: brand.companyLogo, administrationLogo: brand.administrationMark, image: fallback, qr: qr || undefined };
+  const assets = {
+    companyLogo: brand.companyLogo,
+    administrationLogo: brand.administrationMark,
+    registrationArrow: brand.registrationArrow,
+    image: fallback,
+    qr: qr || undefined
+  };
   const content = t01ContentFromDocument(document);
   const markup = format === "longform_1080xAuto"
     ? longformMarkup(content, assets)

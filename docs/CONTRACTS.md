@@ -1,5 +1,7 @@
 # 领域、API 与生成契约
 
+2026-09-09 T01 四尺寸补充：当前像素契约来自 Figma `426:4`、`426:74`、`426:140`、`426:156`。四个精确输出尺寸为 1080×1920、1920×1080、2227×950、1080×3000；对应标题／副标题最大内容宽为 952、1188、1393、952px。宣言 `slogan` 对新建及确认 T01 文案必填，模板必须原样渲染，不得以默认值补齐。`longform_1080xAuto` 仅作为历史兼容 ID 保留，v2 Artifact 的 `heightMode` 为 `fixed`、`height` 为 3000。
+
 2026-09-08 T01 最终查看补充：竖版结果页展示与下载必须引用同一 `previewUrl`／正式 Artifact，不得为适屏或放大另外生成图片。适屏、放大仅是客户端显示状态；下载文件继续保持 1080×1920。质量检查或 `exportAllowed` 阻止下载时，关键操作区域仍需保持可见并显示不可下载状态。
 2026-09-08 T01 主视觉方案补充：`GenerationJob.visualOptions` 是追加式方案列表；每项必须保存图片、确认生成描述、来源文案版本与完整来源 `PosterDocument`、Prompt／Brief、图片 Provider 和模型。`selectedVisualOptionId` 表示当前选择，刷新后保持；`confirmedVisualOptionId` 只在用户明确确认并完成排版后写入。`confirm-visual` 只确认描述并新增图片方案，完成后返回视觉阶段，不自动排版。`POST visual-options/select` 只切换选择；客户端使用选中方案响应中的 `previewUrl` 与 `sourceDocument` 进行轻量 T01 竖版预览，并在图片加载后本地计算标题区黑／白处理，不新增持久化字段，也不把这一近似结果视为发布校验。`POST visual-options/confirm` 才开始使用选中图片正式排版。生成失败不得删除已有方案，同一幂等键不得重复调用图片模型。
 2026-09-08 体育赛事 Prompt 补充：T01 基础描述必须根据已确认标题／规则识别赛事类型，并提供 1–3 个核心器材符号、自动主色、真实体育摄影语言和统一母版构图。默认禁止人物、人体、手脚、面部、合影与团建摆拍；最终图片 Prompt 必须再次追加该禁止项，不能只依赖可编辑描述。固定构图为 `LEFT TOP = TITLE SAFE AREA`、`CENTER-RIGHT = MAIN VISUAL`（X 68%–78%、Y 48%–58%）和 `SURROUNDING AREA = EXTENDABLE BACKGROUND`。前端流程编号固定为 1 文案、2 主视觉、3 查看与下载。
@@ -239,10 +241,10 @@ T01 Demo 当前使用可读性观察模式：成功生成的背景不会因对�
 
 - 两接口均验证任务所有者。追加生成要求任务为 `READY_FOR_REVIEW` 且最新竖版版本满足 `exportAllowed ?? passed`；不支持绕过竖版直接生成长图。
 - 认领时冻结来源 `PosterDocument` 与素材引用；同规格、内容版本、视觉族和模板版本复用未失败项。失败重试追加 Artifact，不覆盖旧结果；不同规格失败彼此隔离。
-- 追加输出只复用已生成资产并确定性裁切／排版，不调用模型。新增模板版本为 `t01-figma-2026-09-04-v1`；素材记录 `derived` 或原始 `fallback`。
-- 横版：标题、说明、全部场次、参与对象、规则；Banner：标题、场次与对象核心信息、说明；长图：标题、说明、全部场次、对象、截止、规则分段、联系人、报名说明和条件二维码。奖品没有独立槽位；未投影字段不从领域数据删除。详细映射见 `TEMPLATE_FIELD_MATRIX_2026-09-04.md`。
-- 标题及固定槽位按真实行数／边界测量，超限返回 `TEMPLATE_CONTENT_OVERFLOW`，不缩字或截断。长图宽 1080，高度按内容计算为 1920–12000，超出返回 `TEMPLATE_HEIGHT_EXCEEDED`。
-- 横版／Banner 对比度失败在严格模式返回 `TEMPLATE_CONTRAST_FAILED`，试用模式 `passed=false`、`exportAllowed=true` 并保留警告。长图未做像素对比度采样，结果消息必须注明；其 `passed=true` 仅代表本轮执行的检查通过。
+- 追加输出只复用已生成资产并确定性裁切／排版，不调用模型。当前模板版本为 `t01-figma-2026-09-09-v3`；素材记录 `derived` 或原始 `fallback`。
+- 横版投影标题、宣言、副标题、时间、地点、参与对象、赛事规则和二维码；Banner 只投影品牌头、宣言、标题和副标题；长图可在基础信息后投影决赛名单与赛事回顾。名单和回顾是可选结构化槽位，生产文档没有数据时整组隐藏，不伪造内容。
+- 标题及固定槽位按真实行数／边界测量，超限返回 `TEMPLATE_CONTENT_OVERFLOW`，不缩字或截断。长图固定 1080×3000；内容越界同样阻止输出。
+- 四尺寸均执行文字区像素对比度采样；严格模式失败返回 `TEMPLATE_CONTRAST_FAILED`，试用模式 `passed=false`、`exportAllowed=true` 并保留警告。
 - 图片 URL 与下载资格按具体 Artifact 的 `exportAllowed ?? passed` 判定，不按当前全局策略追溯放开历史失败产物。当前未验证二维码可扫描性或画面语义。
 
 ### 修改文案

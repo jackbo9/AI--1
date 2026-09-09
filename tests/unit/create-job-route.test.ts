@@ -4,6 +4,7 @@ import { POST } from "@/app/api/jobs/route";
 import { createJob, findByKey } from "@/server/job-store";
 import { runCopyStage } from "@/worker/run-job";
 import { campaignBriefFromLegacyInput } from "@/contracts/poster";
+import { preflightEmployeeActivity } from "@/templates/employee-activity";
 
 vi.mock("@/server/auth", () => ({
   requireApiIdentity: async () => ({ userId: "owner" }),
@@ -46,6 +47,7 @@ it("starts copy generation once and reuses a repeated submission", async () => {
   expect(first.status).toBe(202);
   await expect(first.json()).resolves.toEqual({ jobId: created.id, status: "QUEUED" });
   expect(runCopyStage).toHaveBeenCalledExactlyOnceWith(created.id);
+  expect(preflightEmployeeActivity).not.toHaveBeenCalled();
 
   vi.mocked(findByKey).mockResolvedValue(created);
   const repeated = await POST(request());
@@ -109,5 +111,6 @@ it("confirms manually entered copy without starting the copy model", async () =>
   expect(candidate?.visualDraft?.description).toContain("色彩：");
   expect(candidate?.visualDraft?.description).toContain("LEFT TOP = TITLE SAFE AREA");
   expect(candidate?.visualDraft?.description).toContain("默认不生成人物");
+  expect(preflightEmployeeActivity).toHaveBeenCalledOnce();
   expect(runCopyStage).not.toHaveBeenCalled();
 });

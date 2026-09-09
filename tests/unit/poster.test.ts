@@ -34,8 +34,8 @@ describe("employee activity v1.7 contract", () => {
       2
     ));
 
-  it("rejects a missing location", () =>
-    expect(() => employeeActivityInputSchema.parse(missing)).toThrow());
+  it("allows missing activity facts at the shared input boundary for Banner-only creation", () =>
+    expect(employeeActivityInputSchema.parse(missing).sessions[0]?.location).toBe(""));
 
   it("requires a valid link when QR is enabled", () => {
     expect(

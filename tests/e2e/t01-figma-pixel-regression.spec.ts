@@ -11,7 +11,7 @@ test("T01 portrait matches the approved pixel baseline", async ({ page }) => {
   const fallback = `data:image/svg+xml;base64,${(await readFile(path.join(process.cwd(), "public/brand/employee-activity-fallback.svg"))).toString("base64")}`;
   const posterDocument = posterDocumentSchema.parse({
     schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", outputFormat: "portrait_1080x1920",
-    category: normal.category, title: "羽球挑战赛", subtitle: "零基础也能参加，现场自由组队", sessions: normal.sessions.slice(0, 1), audience: normal.audience,
+    category: normal.category, title: "羽球挑战赛", slogan: "九号员工羽毛球挑战赛 / BADMINTON", subtitle: "零基础也能参加，现场自由组队", sessions: normal.sessions.slice(0, 1), audience: normal.audience,
     highlights: [], participationSteps: ["小组循环赛", "三局两胜"], notice: "晋升通道：详见报名页", includeQr: false, ctaLabel: "", qrPayload: "", qrAssetId: "", contact: normal.contact,
     immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true }
   });

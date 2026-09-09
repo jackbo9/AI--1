@@ -37,7 +37,7 @@ export async function claimFormat(jobId: string, userId: string, format: ExtraFo
       id: crypto.randomUUID(), renderTargetId: format, status: "RENDERING", createdAt: new Date().toISOString(),
       brandSpecVersion: 1, documentVersionId, visualFamilyId,
       width: format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080,
-      heightMode: format === "longform_1080xAuto" ? "auto" : "fixed",
+      heightMode: "fixed",
       templateId: `employee-activity-${format.split("_")[0]}`, templateVersion: extraTemplateVersion,
       assetMode: version.assetMode === "fallback" ? "fallback" : "derived", assetPath: version.assetPath,
       assetDetail: "复用本次已生成的主视觉，按模板裁切；未再次调用图片模型。",
@@ -69,7 +69,7 @@ export async function renderClaimedFormat(jobId: string, artifactId: string, for
         checks: rendered.checks,
         messages: [
           "已检查字体与图片加载、内容容量、画布尺寸。",
-          ...(rendered.contrast ? [contrastPassed ? "实际文字区背景采样对比度通过。" : "文字与背景对比度待优化，可下载试用稿。"] : ["长图正文使用模板固定纯色内容区；未执行背景像素对比度检测。"])
+          ...(rendered.contrast ? [contrastPassed ? "实际文字区背景采样对比度通过。" : "文字与背景对比度待优化，可下载试用稿。"] : [])
         ]
       }
     }) }));

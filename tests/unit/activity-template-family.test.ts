@@ -17,7 +17,7 @@ describe("employee activity template family manifest", () => {
     expect(manifest.brandSpecVersion).toBe(1);
   });
 
-  it("keeps fixed targets fixed and longform auto-height", () => {
+  it("keeps all four Figma targets at their exact canvas dimensions", () => {
     const { renderTargets } = activityTemplateFamilyManifest;
 
     expect(renderTargets.portrait_1080x1920.dimensions).toEqual({
@@ -35,9 +35,10 @@ describe("employee activity template family manifest", () => {
       heightMode: "fixed",
       height: 950
     });
-    expect(renderTargets.longform_1080xAuto.dimensions).toMatchObject({
+    expect(renderTargets.longform_1080xAuto.dimensions).toEqual({
       width: 1080,
-      heightMode: "auto"
+      heightMode: "fixed",
+      height: 3000
     });
   });
 
@@ -58,10 +59,7 @@ describe("employee activity template family manifest", () => {
     expect(banner.modules).toEqual([
       "brand_header",
       "title",
-      "all_sessions",
-      "audience",
-      "subtitle",
-      "footer"
+      "subtitle"
     ]);
   });
 });

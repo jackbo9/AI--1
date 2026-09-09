@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState, type SyntheticEvent } from "react";
 import type { PosterDocument } from "@/contracts/poster";
+import type { RenderTargetId } from "@/contracts/brand";
 import {
   choosePreviewTextTone,
   type PreviewTextTone
@@ -13,20 +14,23 @@ const toneCache = new Map<string, PreviewTextTone>();
 export function LightweightT01Preview({
   document,
   imageUrl,
-  optionId
+  optionId,
+  format
 }: {
   document: PosterDocument;
   imageUrl: string;
   optionId: string;
+  format: RenderTargetId;
 }) {
+  const toneKey = `${optionId}:${format}`;
   const [tone, setTone] = useState<PreviewTextTone>(
-    () => toneCache.get(optionId) ?? "dark"
+    () => toneCache.get(toneKey) ?? "dark"
   );
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
-    setTone(toneCache.get(optionId) ?? "dark");
-  }, [optionId]);
+    setTone(toneCache.get(toneKey) ?? "dark");
+  }, [toneKey]);
 
   useEffect(() => {
     let active = true;
@@ -59,11 +63,11 @@ export function LightweightT01Preview({
 
   function adaptTone(event: SyntheticEvent<HTMLImageElement>) {
     try {
-      const detected = detectToneFromDisplayedHero(event.currentTarget);
-      toneCache.set(optionId, detected);
+      const detected = detectToneFromDisplayedHero(event.currentTarget, format);
+      toneCache.set(toneKey, detected);
       setTone(detected);
     } catch {
-      toneCache.set(optionId, "dark");
+      toneCache.set(toneKey, "dark");
       setTone("dark");
     }
   }
@@ -75,7 +79,7 @@ export function LightweightT01Preview({
     : qrDataUrl;
 
   return (
-    <div className={`t01-preview t01-selected-preview is-${tone}`}>
+    <div className={`t01-preview t01-selected-preview is-${tone} is-format-${format}`}>
       <img
         className="t01-preview-background"
         src={imageUrl}
@@ -98,8 +102,8 @@ export function LightweightT01Preview({
       <div
         className={`t01-preview-info-stack ${document.includeQr ? "has-qr" : ""}`}
       >
-        <b>活动指南</b>
-        <h5>先看这里。</h5>
+        <b>{format === "longform_1080xAuto" ? "上场之前" : "活动指南"}</b>
+        <h5>{format === "longform_1080xAuto" ? "时间地点，记一下。" : "先看这里。"}</h5>
         <section className="t01-preview-session-block">
           <h4>活动时间</h4>
           <p>{formatSessionDate(session?.date, session?.time) || "待定"}</p>
@@ -127,9 +131,13 @@ export function LightweightT01Preview({
   );
 }
 
-function detectToneFromDisplayedHero(image: HTMLImageElement) {
-  const width = 146;
-  const height = 171;
+function detectToneFromDisplayedHero(
+  image: HTMLImageElement,
+  format: RenderTargetId
+) {
+  const wide = format === "landscape_1920x1080" || format === "banner_2227x950";
+  const width = wide ? 200 : 146;
+  const height = wide ? 112 : 171;
   const canvas = window.document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;

@@ -21,14 +21,6 @@ type FixedArtifactExpectation = {
   brandCheck: BrandCheckExpectation;
 };
 
-type AutoArtifactExpectation = {
-  width: number;
-  heightMode: "auto";
-  minHeight: number;
-  maxHeight: number;
-  brandCheck: BrandCheckExpectation;
-};
-
 export type CampaignBundleFixture = {
   id:
     | "normal"
@@ -45,7 +37,7 @@ export type CampaignBundleFixture = {
   visualMode: "generated" | "fallback";
   expectedArtifacts: Record<
     RenderTargetId,
-    FixedArtifactExpectation | AutoArtifactExpectation
+    FixedArtifactExpectation
   >;
 };
 
@@ -92,9 +84,7 @@ function expectedArtifacts(input?: {
   landscape?: BrandCheckExpectation;
   banner?: BrandCheckExpectation;
   longform?: BrandCheckExpectation;
-  longformHeight?: [number, number];
 }) {
-  const longformHeight = input?.longformHeight ?? [2400, 3800];
   return {
     portrait_1080x1920: {
       width: 1080,
@@ -116,9 +106,8 @@ function expectedArtifacts(input?: {
     },
     longform_1080xAuto: {
       width: 1080,
-      heightMode: "auto" as const,
-      minHeight: longformHeight[0],
-      maxHeight: longformHeight[1],
+      heightMode: "fixed" as const,
+      height: 3000,
       brandCheck: input?.longform ?? pass()
     }
   };
@@ -235,7 +224,7 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
       }
     ),
     visualMode: "generated",
-    expectedArtifacts: expectedArtifacts({ longformHeight: [2200, 3400] })
+    expectedArtifacts: expectedArtifacts()
   },
   {
     id: "with-qr",
@@ -256,7 +245,7 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
       }
     ),
     visualMode: "generated",
-    expectedArtifacts: expectedArtifacts({ longformHeight: [2600, 4000] })
+    expectedArtifacts: expectedArtifacts()
   },
   {
     id: "long-copy",
@@ -337,7 +326,7 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
     visualMode: "generated",
     expectedArtifacts: expectedArtifacts({
       portrait: fail("content.capacity"),
-      longformHeight: [3400, 5600]
+      longform: pass()
     })
   },
   {

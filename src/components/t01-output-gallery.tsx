@@ -9,7 +9,7 @@ const formats = [
   ["portrait_1080x1920", "竖版", "1080 × 1920"],
   ["landscape_1920x1080", "横版", "1920 × 1080"],
   ["banner_2227x950", "Banner", "2227 × 950"],
-  ["longform_1080xAuto", "长图", "1080 × 自动高度"]
+  ["longform_1080xAuto", "长图", "1080 × 3000"]
 ] as const;
 type Format = (typeof formats)[number][0];
 type Output = {

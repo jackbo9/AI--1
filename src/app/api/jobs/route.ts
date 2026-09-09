@@ -116,7 +116,12 @@ export async function POST(request: Request) {
           notice: true
         }
       });
-    await preflightEmployeeActivity(manualDocument, { qrDataUri });
+    // Manual copy is final at this point and must satisfy the template before
+    // the job is created. In the AI-copy path slogan/subtitle are intentionally
+    // still empty; the generated draft is checked when the user confirms it.
+    if (parsed.data.skipCopy) {
+      await preflightEmployeeActivity(manualDocument, { qrDataUri });
+    }
 
     const now = new Date().toISOString();
     const baseVisualDraft = parsed.data.skipCopy

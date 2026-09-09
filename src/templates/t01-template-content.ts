@@ -3,6 +3,7 @@ import type { PosterDocument } from "@/contracts/poster";
 /** A deterministic projection of confirmed activity content, not model output. */
 export type T01TemplateContent = {
   title: string;
+  slogan: string;
   description: string;
   sessions: Array<{ label?: string; date: string; time: string; location: string }>;
   audience: string;
@@ -10,12 +11,19 @@ export type T01TemplateContent = {
   contact: string;
   ruleSections: Array<{ title: string; body: string }>;
   registrationNote: string;
+  finalistGroups?: Array<{
+    label: string;
+    entrants: Array<{ name: string; region: string }>;
+  }>;
+  recap?: { city: string; caption: string };
 };
 
 export type T01TemplateAssets = {
   companyLogo: string;
   administrationLogo: string;
   image: string;
+  registrationArrow?: string;
+  recapImage?: string;
   qr?: string;
 };
 
@@ -34,6 +42,7 @@ export function t01ContentFromDocument(document: PosterDocument): T01TemplateCon
   const rules = document.rules?.trim() || document.participationSteps.join("\n");
   return {
     title: document.title,
+    slogan: document.slogan,
     description: document.subtitle || document.summary,
     sessions: document.sessions,
     audience: document.audience,

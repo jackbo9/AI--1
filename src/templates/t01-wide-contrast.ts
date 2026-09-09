@@ -10,7 +10,15 @@ export async function adaptWideContrast(page: Page, inverseLogo: string) {
       node.dataset.contrastIndex = String(index);
       node.style.visibility = "hidden";
       const large = Number.parseFloat(style.fontSize) >= 24 || (Number.parseFloat(style.fontSize) >= 18.67 && Number(style.fontWeight) >= 600);
-      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, minimum: node.matches("img") || large ? 3 : 4.5, logo: node.matches("img") };
+      return {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        minimum: node.matches("img") || large ? 3 : 4.5,
+        logo: node.matches("img"),
+        readability: node.dataset.readability
+      };
     });
   });
   const background = await page.screenshot({ type: "png" });
@@ -42,6 +50,17 @@ export async function adaptWideContrast(page: Page, inverseLogo: string) {
         if (useLight) (node as HTMLImageElement).src = inverseLogo;
       } else {
         for (const child of [node, ...Array.from(node.querySelectorAll<HTMLElement>("*"))]) child.style.setProperty("color", useLight ? "#ffffff" : "#000000", "important");
+        if (region.readability) {
+          for (const companion of document.querySelectorAll<HTMLElement>(
+            `[data-readability-companion="${region.readability}"]`
+          )) {
+            companion.style.setProperty(
+              "background-color",
+              useLight ? "#ffffff" : "#151515",
+              "important"
+            );
+          }
+        }
       }
       return { index, tone: useLight ? "light" : "dark", ...chosen, passed: chosen.rate >= 0.95 && chosen.p05 >= region.minimum };
     });

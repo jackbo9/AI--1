@@ -45,24 +45,9 @@ describe("four-target campaign fixture suite", () => {
         expect(expected.width).toBe(manifest.dimensions.width);
         expect(expected.heightMode).toBe(manifest.dimensions.heightMode);
 
-        if (
-          expected.heightMode === "fixed" &&
-          manifest.dimensions.heightMode === "fixed"
-        ) {
+        expect(manifest.dimensions.heightMode).toBe("fixed");
+        if (manifest.dimensions.heightMode === "fixed") {
           expect(expected.height).toBe(manifest.dimensions.height);
-        }
-
-        if (
-          expected.heightMode === "auto" &&
-          manifest.dimensions.heightMode === "auto"
-        ) {
-          expect(expected.minHeight).toBeGreaterThanOrEqual(
-            manifest.dimensions.minHeight
-          );
-          expect(expected.maxHeight).toBeLessThanOrEqual(
-            manifest.dimensions.maxHeight
-          );
-          expect(expected.maxHeight).toBeGreaterThan(expected.minHeight);
         }
       }
     }
