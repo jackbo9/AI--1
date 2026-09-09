@@ -7,6 +7,16 @@ import {
 
 export const outputFormatSchema = z.literal("portrait_1080x1920");
 export const activityCategorySchema = z.enum(["team", "festival", "competition"]);
+export const finalistGroupLabels = ["男单", "女单", "混合双人", "男子双人", "女子双人"] as const;
+export const sportTypeSchema = z.enum(["auto", "tennis", "badminton", "basketball", "football", "volleyball", "table_tennis", "tug_of_war", "running", "other"]);
+export const sportsThemeColorSchema = z.enum(["auto", "blue", "green", "red", "yellow", "purple", "orange", "neutral"]);
+export const peopleModeSchema = z.enum(["auto", "forbid", "allow"]);
+export const sportsVisualTypeSchema = z.enum(["auto", "action", "equipment", "venue"]);
+
+const sportKeywords = /网球|羽毛球|羽球|篮球|足球|排球|乒乓球|乒乓|拔河|跑步|马拉松|接力|田径/;
+export function isRecognizedSportsActivity(value: string) {
+  return sportKeywords.test(value);
+}
 // Figma V2 uses 952px-wide, auto-height title slots. Recommendations guide
 // authors; rendered bounds remain the export gate.
 export const t01PortraitTitleMaxCharacters = 40;
@@ -59,6 +69,54 @@ const optionalQrAssetIdSchema = z
   .optional()
   .default("");
 
+const finalistEntrantSchema = z.object({
+  name: z.string().trim().min(1, "请填写名单姓名").max(16, "姓名请控制在 16 字以内"),
+  region: z.string().trim().min(1, "请填写所属赛区").max(24, "赛区请控制在 24 字以内")
+});
+
+export const finalistGroupSchema = z.object({
+  label: z.enum(finalistGroupLabels),
+  entrants: z.array(finalistEntrantSchema).max(6, "每个组别最多 6 人")
+});
+
+export const finalistGroupsSchema = z.array(finalistGroupSchema).max(5).optional();
+
+function validateLongformRoster(
+  finalistGroups: Array<z.infer<typeof finalistGroupSchema>> | undefined,
+  renderTargets: readonly z.infer<typeof renderTargetIdSchema>[],
+  context: z.RefinementCtx
+) {
+  if (!renderTargets.includes("longform_1080xAuto")) return;
+  // Historical jobs predate the roster contract. New form submissions always
+  // send this field; preserve renderability of immutable legacy versions.
+  if (finalistGroups === undefined) return;
+  if (finalistGroups.length !== finalistGroupLabels.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups"], message: "长图需要填写全部 5 个固定组别的名单" });
+    return;
+  }
+  finalistGroupLabels.forEach((label, index) => {
+    const group = finalistGroups[index];
+    if (!group || group.label !== label) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups", index, "label"], message: "长图名单组别需按固定顺序填写" });
+    } else if (group.entrants.length < 1) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups", index, "entrants"], message: `${label}至少需要填写 1 人` });
+    }
+  });
+}
+
+function validateSportsScope(
+  input: { activityName: string; description: string; rules: string; sportType: z.infer<typeof sportTypeSchema>; sportsConfirmed: boolean },
+  context: z.RefinementCtx
+) {
+  const source = `${input.activityName} ${input.description} ${input.rules}`;
+  if (input.sportType === "auto" && !isRecognizedSportsActivity(source)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "sportType"], message: "未识别到体育项目。当前模板仅生成体育赛事主视觉，请明确选择体育项目；非体育活动请改用对应场景。" });
+  }
+  if (input.sportType === "other" && !input.sportsConfirmed) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "sportsConfirmed"], message: "请选择“确认这是体育赛事”后继续生成。" });
+  }
+}
+
 const employeeActivityFieldsSchema = z.object({
     activityName: z
       .string()
@@ -92,7 +150,14 @@ const employeeActivityFieldsSchema = z.object({
     visualIntent: z.string().trim().max(180).default(""),
     deadline: z.string().trim().max(80).default(""),
     rules: z.string().trim().max(240).default(""),
-    prize: z.string().trim().max(240).default("")
+    prize: z.string().trim().max(240).default(""),
+    finalistGroups: finalistGroupsSchema,
+    sportType: sportTypeSchema.default("auto"),
+    themeColor: sportsThemeColorSchema.default("auto"),
+    peopleMode: peopleModeSchema.default("auto"),
+    visualType: sportsVisualTypeSchema.default("auto"),
+    visualTreatment: z.string().trim().max(80).default(""),
+    sportsConfirmed: z.boolean().default(false)
   });
 
 function validateQrRequirement(
@@ -176,6 +241,7 @@ export const posterDocumentSchema = z.object({
   deadline: z.string().max(80).optional(),
   rules: z.string().max(240).optional(),
   prize: z.string().max(240).optional(),
+  finalistGroups: finalistGroupsSchema,
   immutableSource: z.object({
     outputFormat: z.literal(true),
     sessions: z.literal(true),
@@ -185,7 +251,8 @@ export const posterDocumentSchema = z.object({
     ctaLabel: z.literal(true),
     qrPayload: z.literal(true),
     qrAssetId: z.literal(true),
-    notice: z.literal(true)
+    notice: z.literal(true),
+    finalistGroups: z.literal(true).optional()
   })
 });
 
@@ -232,6 +299,7 @@ export const editablePosterContentSchema = z.object({
 export const illustrationBriefSchema = z.object({
   confirmedDescription: z.string().trim().min(2).max(420).optional(),
   visualStyleMode: z.enum(["editorial", "legacy"]).optional(),
+  systemDirection: z.string().trim().max(1400).optional(),
   subject: z.string().min(2).max(80),
   action: z.string().min(2).max(80),
   setting: z.string().min(2).max(80),
@@ -279,6 +347,9 @@ export const createJobSchema = z.object({
   // per-request choice, never a migration of historical tasks.
   skipCopy: z.boolean().default(false),
   renderTargets: z.array(renderTargetIdSchema).min(1).max(4).default([...defaultRenderTargetIds])
+}).superRefine((value, context) => {
+  validateLongformRoster(value.input.finalistGroups, value.renderTargets, context);
+  validateSportsScope(value.input, context);
 });
 
 export const confirmCopySchema = z.object({

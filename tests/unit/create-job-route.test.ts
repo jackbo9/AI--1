@@ -37,7 +37,7 @@ it("starts copy generation once and reuses a repeated submission", async () => {
   const request = () => new Request("http://localhost/api/jobs", {
     method: "POST",
     body: JSON.stringify({
-      input: { ...normal, activityName: "羽毛球赛" },
+      input: { ...normal, activityName: "羽毛球赛", sportType: "badminton" },
       idempotencyKey: "ab52c7a3-420c-4eee-9a41-5dce13f3a835"
     })
   });
@@ -57,6 +57,19 @@ it("starts copy generation once and reuses a repeated submission", async () => {
   expect(runCopyStage).toHaveBeenCalledTimes(1);
 });
 
+it("rejects unclassified non-sports content before creating a job", async () => {
+  const response = await POST(new Request("http://localhost/api/jobs", {
+    method: "POST",
+    body: JSON.stringify({
+      input: { ...normal, activityName: "中秋下午茶", rules: "自由参加" },
+      idempotencyKey: "a3b2c7a3-420c-4eee-9a41-5dce13f3a835"
+    })
+  }));
+  expect(response.status).toBe(400);
+  expect(createJob).not.toHaveBeenCalled();
+  expect(runCopyStage).not.toHaveBeenCalled();
+});
+
 it("defers long-title capacity to the rendered T01 template", async () => {
   vi.mocked(createJob).mockImplementation(async (job) => ({
     ...job,
@@ -68,7 +81,9 @@ it("defers long-title capacity to the rendered T01 template", async () => {
     body: JSON.stringify({
       input: {
         ...normal,
-        activityName: "这是一条超过四十个字符的活动主题用于验证提交前的容量拦截不会调用文案模型并且不会创建任务"
+        activityName: "这是一条超过四十个字符的活动主题用于验证提交前的容量拦截不会调用文案模型并且不会创建任务",
+        sportType: "other",
+        sportsConfirmed: true
       },
       idempotencyKey: "ab52c7a3-420c-4eee-9a41-5dce13f3a835"
     })
@@ -90,7 +105,7 @@ it("confirms manually entered copy without starting the copy model", async () =>
   const response = await POST(new Request("http://localhost/api/jobs", {
     method: "POST",
     body: JSON.stringify({
-      input: { ...normal, activityName: "羽毛球赛", slogan: "一起上场", subtitle: "现场自由组队" },
+      input: { ...normal, activityName: "羽毛球赛", sportType: "badminton", slogan: "一起上场", subtitle: "现场自由组队" },
       idempotencyKey: "c262b214-3ff2-4cb6-9358-83088df0f9a5",
       skipCopy: true
     })
@@ -106,11 +121,8 @@ it("confirms manually entered copy without starting the copy model", async () =>
   });
   expect(candidate?.confirmedDocument).toBeDefined();
   expect(candidate?.visualDraft?.description).toContain("赛事类型：羽毛球");
-  expect(candidate?.visualDraft?.description).toContain("主体与瞬间：");
-  expect(candidate?.visualDraft?.description).toContain("风格：");
-  expect(candidate?.visualDraft?.description).toContain("色彩：");
-  expect(candidate?.visualDraft?.description).toContain("LEFT TOP = TITLE SAFE AREA");
-  expect(candidate?.visualDraft?.description).toContain("默认不生成人物");
+  expect(candidate?.visualDraft?.description).toContain("画面建议：");
+  expect(candidate?.visualDraft?.description).toContain("色彩倾向：");
   expect(preflightEmployeeActivity).toHaveBeenCalledOnce();
   expect(runCopyStage).not.toHaveBeenCalled();
 });

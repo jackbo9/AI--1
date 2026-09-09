@@ -30,10 +30,16 @@ describe("T01 confirmed content projections", () => {
     expect(html).not.toContain("决赛名单");
     expect(html).not.toContain("赛区回顾");
   });
-  it("renders structured finalist groups only when the contract supplies them", () => {
-    const { html } = longformMarkup({ ...content, finalistGroups: [{ label: "男单", entrants: [{ name: "张三", region: "华东赛区" }] }] }, assets);
+  it("renders up to six entrants in each fixed finalist group and grows the longform canvas", () => {
+    const sixEntrants = ["张三", "李四", "王五", "赵六", "钱七", "孙八"].map((name) => ({ name, region: "华东赛区" }));
+    const one = longformMarkup({ ...content, finalistGroups: [{ label: "男单", entrants: [{ name: "张三", region: "华东赛区" }] }] }, assets);
+    const { html } = longformMarkup({ ...content, finalistGroups: [{ label: "男单", entrants: sixEntrants }] }, assets);
     expect(html).toContain("决赛名单");
     expect(html).toContain("张三");
     expect(html).toContain("华东赛区");
+    expect(html).toContain("孙八");
+    expect(html).toContain("--lf-roster-row-height:181.05px");
+    expect(html).not.toContain("slice(0, 4)");
+    expect(one.html).toContain("--lf-roster-row-height:84.35px");
   });
 });

@@ -50,7 +50,7 @@ describe("background-only image prompt", () => {
   it("adds mandatory exclusions to the existing saved brief contract", () => {
     const prompt = seedreamPrompt({ subject: "企业同事", action: "共同参与活动", setting: "开阔城市街道", composition: "同事在画面中部自然互动", palette: "黑白灰和黄色", style: "纪实摄影", mood: "活力", negative: "不要文字、字母、数字、Logo、二维码、水印、签名" });
     expect(prompt).toContain("【系统强制禁止】" + backgroundNegative);
-    expect(prompt).toContain("不要人物");
+    expect(prompt).not.toContain("NO PEOPLE");
     expect(prompt).not.toContain("留给二维码");
   });
 });

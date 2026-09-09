@@ -79,11 +79,9 @@ export function createT01BaseVisualDescription(document: PosterDocument) {
   const profile = sportProfileFor(document);
   return [
     `赛事类型：${profile.name}。`,
-    `主体与瞬间：只选${profile.elements}中的 1–3 个核心符号，表现${profile.motion}；默认不生成人物或人体。`,
-    `色彩：${profile.palette}，色彩统一。`,
-    `风格：高端体育品牌 Campaign、Editorial Sports Photography、器材商业摄影；${profile.mood}，像赛场正在发生的一帧；拒绝 AI 概念图、3D、CGI 和廉价宣传图。`,
-    "构图：LEFT TOP = TITLE SAFE AREA，低信息、低对比、低细节；CENTER-RIGHT = MAIN VISUAL，中心 X 68%–78%、Y 48%–58%；外围为可 Crop / Reframe / Outpainting 的连续背景，适配多尺寸。",
-    "禁止：人物、面部、合影、团建摆拍、文字、数字、Logo、二维码、水印、卡通、火焰、闪电、粒子、HUD。"
+    `画面建议：从${profile.elements}中选择最有识别度的元素，表现${profile.motion}。`,
+    `色彩倾向：${profile.palette}。`,
+    `整体感受：${profile.mood}、真实、有品牌感。`
   ].join("\n");
 }
 

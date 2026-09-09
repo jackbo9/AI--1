@@ -330,7 +330,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       window.history.replaceState(null, "", window.location.pathname);
       return;
     }
-    const validationError = validateForm(form, false);
+    const validationError = validateForm(form, false, false);
     if (validationError) return setError(validationError);
     setError(undefined);
     setPendingAction("submit");

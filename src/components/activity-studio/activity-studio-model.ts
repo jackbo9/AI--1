@@ -1,4 +1,4 @@
-import { textLineCount, t01PortraitTitleMaxLines, type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
+import { finalistGroupLabels, isRecognizedSportsActivity, textLineCount, t01PortraitTitleMaxLines, type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import type {
   ActivityJob,
@@ -22,11 +22,18 @@ export const initialForm: FormState = {
   rules: "小组循环赛\n三局两胜",
   qrUrl: "",
   qrAssetId: "",
-  qrAssetName: ""
+  qrAssetName: "",
+  finalistGroups: finalistGroupLabels.map((label) => ({ label, entrants: [{ name: "", region: "" }] })),
+  sportType: "auto",
+  themeColor: "auto",
+  peopleMode: "auto",
+  visualType: "auto",
+  visualTreatment: "",
+  sportsConfirmed: false
 };
 
 export function newFormState(): FormState {
-  return { ...initialForm, session: { ...initialForm.session } };
+  return { ...initialForm, session: { ...initialForm.session }, finalistGroups: initialForm.finalistGroups.map((group) => ({ ...group, entrants: group.entrants.map((entrant) => ({ ...entrant })) })) };
 }
 
 export const scenes = [
@@ -114,6 +121,9 @@ export function hydrateForm(current: FormState, job: ActivityJob): FormState {
       ? `/api/uploads/qr/${document.qrAssetId}`
       : undefined,
     qrAssetName: document.qrAssetId ? "已上传二维码图片" : "",
+    finalistGroups: document.finalistGroups?.length
+      ? document.finalistGroups
+      : current.finalistGroups,
   };
 }
 
@@ -132,12 +142,20 @@ export function createPreviewCopy(
   };
 }
 
-export function validateForm(form: FormState, requireTitleCompanions = true) {
+export function validateForm(
+  form: FormState,
+  requireTitleCompanions = true,
+  requireQr = true
+) {
   if (!form.activityName.trim()) return "请填写活动主题";
   if (textLineCount(form.activityName) > t01PortraitTitleMaxLines) {
     return `一级大标题最多 ${t01PortraitTitleMaxLines} 行，请删除多余换行`;
   }
   if (!form.renderTargets.length) return "请至少选择一种海报尺寸";
+  if (form.sportType === "auto" && !isRecognizedSportsActivity(`${form.activityName} ${form.rules}`)) {
+    return "未识别到体育项目。当前模板仅生成体育赛事主视觉，请明确选择体育项目；非体育活动请改用对应场景。";
+  }
+  if (form.sportType === "other" && !form.sportsConfirmed) return "请选择“确认这是体育赛事”后继续生成。";
   const needsActivityFacts = form.renderTargets.some((format) => format !== "banner_2227x950");
   if (needsActivityFacts) {
     if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
@@ -149,13 +167,20 @@ export function validateForm(form: FormState, requireTitleCompanions = true) {
   const requiresQr = form.renderTargets.some(
     (target) => target === "portrait_1080x1920" || target === "landscape_1920x1080"
   );
-  if (requiresQr && !form.qrUrl.trim() && !form.qrAssetId) {
+  if (requireQr && requiresQr && !form.qrUrl.trim() && !form.qrAssetId) {
     return "竖版和横版海报需要添加报名二维码";
   }
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }
   if (form.qrUrl && form.qrAssetId) return "二维码链接与上传图片只能选择一种";
+  if (form.renderTargets.includes("longform_1080xAuto")) {
+    for (const group of form.finalistGroups) {
+      if (!group.entrants.length) return `${group.label}至少需要填写 1 人`;
+      if (group.entrants.length > 6) return `${group.label}最多填写 6 人`;
+      if (group.entrants.some((entrant) => !entrant.name.trim() || !entrant.region.trim())) return `请完整填写${group.label}的姓名和赛区`;
+    }
+  }
   return undefined;
 }
 
@@ -187,6 +212,13 @@ export function normalizeForm(form: FormState): EmployeeActivityInput {
     visualIntent: "",
     deadline: "",
     rules: form.rules.trim(),
-    prize: ""
+    prize: "",
+    finalistGroups: form.finalistGroups.map((group) => ({ label: group.label, entrants: group.entrants.map((entrant) => ({ name: entrant.name.trim(), region: entrant.region.trim() })) })),
+    sportType: form.sportType,
+    themeColor: form.themeColor,
+    peopleMode: form.peopleMode,
+    visualType: form.visualType,
+    visualTreatment: form.visualTreatment.trim(),
+    sportsConfirmed: form.sportsConfirmed
   };
 }

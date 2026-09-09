@@ -53,6 +53,7 @@ export function t01ContentFromDocument(document: PosterDocument): T01TemplateCon
       ...ruleSectionsFromText(rules),
       ...(document.notice.trim() ? [{ title: "注意事项", body: document.notice }] : [])
     ],
-    registrationNote: document.ctaLabel
+    registrationNote: document.ctaLabel,
+    finalistGroups: document.finalistGroups ?? []
   };
 }

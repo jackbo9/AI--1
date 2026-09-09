@@ -11,6 +11,11 @@ export type SessionState = {
   location: string;
 };
 
+export type FinalistGroupState = {
+  label: "男单" | "女单" | "混合双人" | "男子双人" | "女子双人";
+  entrants: Array<{ name: string; region: string }>;
+};
+
 export type FormState = {
   renderTargets: RenderTargetId[];
   activeRenderTarget: RenderTargetId;
@@ -24,6 +29,13 @@ export type FormState = {
   qrAssetId: string;
   qrAssetPreviewUrl?: string;
   qrAssetName: string;
+  finalistGroups: FinalistGroupState[];
+  sportType: "auto" | "tennis" | "badminton" | "basketball" | "football" | "volleyball" | "table_tennis" | "tug_of_war" | "running" | "other";
+  themeColor: "auto" | "blue" | "green" | "red" | "yellow" | "purple" | "orange" | "neutral";
+  peopleMode: "auto" | "forbid" | "allow";
+  visualType: "auto" | "action" | "equipment" | "venue";
+  visualTreatment: string;
+  sportsConfirmed: boolean;
 };
 
 export type CopyReview = {

@@ -36,6 +36,7 @@ export function seedreamPrompt(brief: IllustrationBrief) {
   if (brief.confirmedDescription) {
     return illustrationPromptSchema.parse([
       "【已确认画面方案】" + brief.confirmedDescription,
+      ...(brief.systemDirection ? ["【受控赛事方向】" + brief.systemDirection] : []),
       ...(brief.visualStyleMode === "legacy" ? [] : ["【视觉指导】" + editorialDirection]),
       "【版式构图】" + (brief.visualStyleMode === "legacy" ? t01CompositionContract : editorialComposition),
       "【系统强制禁止】" + backgroundNegative
@@ -49,6 +50,7 @@ export function seedreamPrompt(brief: IllustrationBrief) {
     "【视觉风格】" + brief.style,
     "【色彩】" + brief.palette,
     "【氛围】" + brief.mood,
+    ...(brief.systemDirection ? ["【受控赛事方向】" + brief.systemDirection] : []),
     "【禁止】" + brief.negative,
     "【版式构图】" + t01CompositionContract,
     "【系统强制禁止】" + backgroundNegative,

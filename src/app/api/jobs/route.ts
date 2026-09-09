@@ -104,6 +104,7 @@ export async function POST(request: Request) {
         deadline: parsed.data.input.deadline,
         rules: parsed.data.input.rules,
         prize: parsed.data.input.prize,
+        finalistGroups: parsed.data.input.finalistGroups,
         immutableSource: {
           outputFormat: true,
           sessions: true,
@@ -113,7 +114,8 @@ export async function POST(request: Request) {
           ctaLabel: true,
           qrPayload: true,
           qrAssetId: true,
-          notice: true
+          notice: true,
+          finalistGroups: true
         }
       });
     // Manual copy is final at this point and must satisfy the template before

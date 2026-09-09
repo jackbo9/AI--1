@@ -41,14 +41,10 @@ describe("T01 base visual description", () => {
   it("starts from confirmed copy with subject, style, color and safe composition", () => {
     const description = createT01BaseVisualDescription(document);
     expect(description).toContain("赛事类型：羽毛球");
-    expect(description).toContain("主体与瞬间：");
-    expect(description).toContain("风格：");
-    expect(description).toContain("色彩：");
-    expect(description).toContain("构图：");
-    expect(description).toContain("LEFT TOP = TITLE SAFE AREA");
-    expect(description).toContain("CENTER-RIGHT = MAIN VISUAL");
-    expect(description).toContain("X 68%–78%");
-    expect(description).toContain("默认不生成人物或人体");
+    expect(description).toContain("画面建议：");
+    expect(description).toContain("色彩倾向：");
+    expect(description).not.toContain("LEFT TOP = TITLE SAFE AREA");
+    expect(description).not.toContain("默认不生成人物或人体");
     expect(description.length).toBeLessThanOrEqual(420);
     expect(description).not.toContain(input.sessions[0].date);
     expect(description).not.toContain(input.sessions[0].location);

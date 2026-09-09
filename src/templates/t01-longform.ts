@@ -19,10 +19,18 @@ export function longformMarkup(
     .map((session) => [session.date, session.time].filter(Boolean).join(" "))
     .join("\n");
   const locations = content.sessions.map((session) => session.location).join("\n");
-  const groups = content.finalistGroups?.slice(0, 5) ?? [];
+  const groups = content.finalistGroups ?? [];
+  const rosterHeight = groups.reduce((total, group) => {
+    const rows = Math.max(1, Math.ceil(group.entrants.length / 2));
+    return total + 51 + rows * 33.35 + (rows - 1) * 15;
+  }, 0);
+  const recapTop = 1680 + rosterHeight + 52;
+  const canvasHeight = Math.max(3000, recapTop + 508);
   const rosterRows = groups.map((group, index) => {
-    const entrants = group.entrants.slice(0, 4);
-    return `<div class="lf-roster-row${index % 2 ? " is-tinted" : ""}" data-capacity="finalist-group">
+    const entrants = group.entrants;
+    const rows = Math.max(1, Math.ceil(entrants.length / 2));
+    const rowHeight = 51 + rows * 33.35 + (rows - 1) * 15;
+    return `<div class="lf-roster-row${index % 2 ? " is-tinted" : ""}" data-capacity="finalist-group" style="--lf-roster-row-height:${rowHeight}px">
       <p class="lf-group-name">${escapeHtml(group.label)}</p>
       <div class="lf-entrants">${entrants.map((entrant) => `<div class="lf-entrant"><b>${escapeHtml(entrant.name)}</b><span>${escapeHtml(entrant.region)}</span></div>`).join("")}</div>
     </div>`;
@@ -37,7 +45,7 @@ export function longformMarkup(
   const eyebrow = content.slogan;
 
   return {
-    html: `<main class="t01-extra t01-longform" lang="zh-CN" data-background-mode="full_bleed_background">
+    html: `<main class="t01-extra t01-longform" lang="zh-CN" data-background-mode="full_bleed_background" style="--lf-canvas-height:${canvasHeight}px;--lf-recap-top:${recapTop}px">
       <img class="lf-background" src="${escapeHtml(assets.image)}" alt="活动主视觉">
       <div class="lf-information-panel" aria-hidden="true"></div>
       <header class="lf-brand-header" data-brand-header><img class="lf-company-logo" data-brand-company-logo src="${escapeHtml(assets.companyLogo)}" alt="九号公司"><img class="lf-administration-logo" src="${escapeHtml(assets.administrationLogo)}" alt="行政"></header>
@@ -50,8 +58,8 @@ export function longformMarkup(
       ${roster}${recap}
     </main>`,
     css: `
-      .t01-longform,.t01-longform *{box-sizing:border-box}.t01-longform{position:relative;width:1080px;height:3000px;overflow:hidden;background:#fff;color:#181818;font-family:MiSans,sans-serif;font-weight:400;font-synthesis:none;line-break:strict;word-break:normal;overflow-wrap:break-word}.t01-longform p,.t01-longform h1,.t01-longform h2,.t01-longform h3,.t01-longform figure{margin:0}.t01-longform p,.t01-longform h1{white-space:pre-wrap}.t01-longform img{display:block}
-      .lf-background{position:absolute;left:0;top:0;width:1080px;height:1210px;object-fit:cover;object-position:center;z-index:0}.lf-information-panel{position:absolute;left:0;top:1210px;width:1080px;height:1790px;background:#f2f2ee;z-index:1}
+      .t01-longform,.t01-longform *{box-sizing:border-box}.t01-longform{position:relative;width:1080px;height:var(--lf-canvas-height);overflow:hidden;background:#fff;color:#181818;font-family:MiSans,sans-serif;font-weight:400;font-synthesis:none;line-break:strict;word-break:normal;overflow-wrap:break-word}.t01-longform p,.t01-longform h1,.t01-longform h2,.t01-longform h3,.t01-longform figure{margin:0}.t01-longform p,.t01-longform h1{white-space:pre-wrap}.t01-longform img{display:block}
+      .lf-background{position:absolute;left:0;top:0;width:1080px;height:1210px;object-fit:cover;object-position:center;z-index:0}.lf-information-panel{position:absolute;left:0;top:1210px;width:1080px;height:calc(var(--lf-canvas-height) - 1210px);background:#f2f2ee;z-index:1}
       .lf-brand-header{position:absolute;z-index:2;left:64px;right:64px;top:64px;height:66.014px;display:flex;align-items:center;justify-content:space-between}.lf-company-logo{width:224px;height:66.014px;object-fit:contain;object-position:left center}.lf-administration-logo{width:61.2px;height:61.2px;object-fit:contain}.lf-hero-divider{position:absolute;z-index:2;left:64px;top:184px;width:952px;height:2px;background:#151515}
       .lf-title-block{position:absolute;z-index:2;left:64px;top:222px;width:952px;display:flex;flex-direction:column;gap:22px;color:#151515}.lf-eyebrow{font-size:26px;font-weight:500;line-height:32.5px}.lf-title{width:952px;font-size:125px;font-weight:600;line-height:1.04}.lf-description{width:952px;font-size:28px;font-weight:500;line-height:35px}
       .lf-kicker{display:block;width:max-content;height:37px;padding:5px 10px;background:#181818;color:#f2f2ee;font-size:21px;font-weight:600;line-height:25.2px}
@@ -59,8 +67,8 @@ export function longformMarkup(
       .lf-cross{position:absolute;width:14px;height:14px;transform:translate(-50%,-50%)}.lf-cross::before,.lf-cross::after{content:'';position:absolute;background:#75756f}.lf-cross::before{left:0;top:6px;width:14px;height:2px}.lf-cross::after{left:6px;top:0;width:2px;height:14px}.lf-cross.c1{left:0;top:63px}.lf-cross.c2{left:502px;top:63px}.lf-cross.c3{left:952px;top:63px}.lf-cross.c4{left:0;top:195px}.lf-cross.c5{left:952px;top:195px}
       .lf-fact{position:absolute;top:88px;display:flex;flex-direction:column;gap:17px;overflow:hidden}.lf-fact.time{left:0;width:478px}.lf-fact.location{left:533px;width:419px}.lf-fact h3{display:flex;gap:14px;font-size:23px;font-weight:600;line-height:28px}.lf-fact h3 span{width:32px;color:#75756f;font-size:20px;font-weight:500;line-height:24px}.lf-fact>p{font-size:28px;font-weight:400;line-height:34.8px}
       .lf-roster-heading{position:absolute;z-index:2;left:64px;top:1507px;width:952px;height:154px}.lf-roster-heading h2{position:absolute;left:0;top:58px;width:770px;font-size:52px;font-weight:600;line-height:62.4px}.lf-roster-heading strong,.lf-recap-heading strong{position:absolute;height:37px;padding:5px 10px;background:#f7e600;font-size:21px;font-weight:600;line-height:25.2px}.lf-roster-heading strong{left:798px;top:69px;width:140px}.lf-column-project,.lf-column-person{position:absolute;top:128px;color:#75756f;font-size:18px;font-weight:500;line-height:22.8px}.lf-column-project{left:16px;width:174px}.lf-column-person{left:252px;width:680px}
-      .lf-roster{position:absolute;z-index:2;left:64px;top:1680px;width:952px}.lf-roster-row{height:134px;padding:25px 16px 0;display:grid;grid-template-columns:174px 716px;column-gap:30px;border-top:1px solid #d7d7cf}.lf-roster-row.is-tinted{background:#e9e9e4}.lf-group-name{font-size:34px;font-weight:600;line-height:39.1px}.lf-entrants{display:grid;grid-template-columns:repeat(2,302px);grid-auto-rows:33.35px;gap:15px 35px}.lf-entrant{display:grid;grid-template-columns:80px 202px;column-gap:20px;align-items:start}.lf-entrant b{font-size:29px;font-weight:600;line-height:33.35px}.lf-entrant span{color:#777770;font-size:24px;font-weight:400;line-height:28px}
-      .lf-recap-heading{position:absolute;z-index:2;left:64px;top:2402px;width:952px;height:135px}.lf-recap-heading h2{position:absolute;left:0;top:58px;width:780px;font-size:50px;font-weight:600;line-height:60px}.lf-recap-heading strong{left:812px;top:68px;width:140px}.lf-recap-heading>img{position:absolute;left:915px;top:7px;width:33px;height:33px}.lf-recap{position:absolute;z-index:2;left:64px;top:2570px;width:952px}.lf-recap>img{width:952px;height:315px;object-fit:cover}.lf-recap figcaption{margin-top:25px;color:#75756f;font-size:22px;font-weight:400;line-height:28px}
+      .lf-roster{position:absolute;z-index:2;left:64px;top:1680px;width:952px}.lf-roster-row{min-height:var(--lf-roster-row-height);padding:25px 16px 26px;display:grid;grid-template-columns:174px 716px;column-gap:30px;border-top:1px solid #d7d7cf}.lf-roster-row.is-tinted{background:#e9e9e4}.lf-group-name{font-size:34px;font-weight:600;line-height:39.1px}.lf-entrants{display:grid;grid-template-columns:repeat(2,302px);grid-auto-rows:33.35px;gap:15px 35px}.lf-entrant{display:grid;grid-template-columns:80px 202px;column-gap:20px;align-items:start}.lf-entrant b{font-size:29px;font-weight:600;line-height:33.35px}.lf-entrant span{color:#777770;font-size:24px;font-weight:400;line-height:28px}
+      .lf-recap-heading{position:absolute;z-index:2;left:64px;top:var(--lf-recap-top);width:952px;height:135px}.lf-recap-heading h2{position:absolute;left:0;top:58px;width:780px;font-size:50px;font-weight:600;line-height:60px}.lf-recap-heading strong{left:812px;top:68px;width:140px}.lf-recap-heading>img{position:absolute;left:915px;top:7px;width:33px;height:33px}.lf-recap{position:absolute;z-index:2;left:64px;top:calc(var(--lf-recap-top) + 168px);width:952px}.lf-recap>img{width:952px;height:315px;object-fit:cover}.lf-recap figcaption{margin-top:25px;color:#75756f;font-size:22px;font-weight:400;line-height:28px}
     `
   };
 }

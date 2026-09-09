@@ -29,12 +29,18 @@ describe("activity studio model", () => {
       "二维码 URL 必须以 http:// 或 https:// 开头"
     );
     expect(validateForm(initialForm)).toBe("竖版和横版海报需要添加报名二维码");
+    expect(validateForm(initialForm, false, false)).toBeUndefined();
     expect(
       validateForm({
         ...initialForm,
         renderTargets: ["banner_2227x950"]
       })
     ).toBeUndefined();
+  });
+
+  it("does not silently turn non-sports content into a sports visual", () => {
+    expect(validateForm({ ...initialForm, activityName: "中秋下午茶", rules: "自由参加", sportType: "auto" })).toBe("未识别到体育项目。当前模板仅生成体育赛事主视觉，请明确选择体育项目；非体育活动请改用对应场景。");
+    expect(validateForm({ ...initialForm, activityName: "桌游联谊", sportType: "other", sportsConfirmed: false })).toBe("请选择“确认这是体育赛事”后继续生成。");
   });
 
   it("normalizes the form into the existing job request shape", () => {
@@ -52,6 +58,21 @@ describe("activity studio model", () => {
       includeQr: true,
       qrPayload: "https://example.com/signup"
     });
+  });
+
+  it("requires all fixed groups only when the longform target is selected", () => {
+    expect(validateForm({
+      ...initialForm,
+      renderTargets: ["longform_1080xAuto"],
+      finalistGroups: initialForm.finalistGroups.map((group, index) => index === 0
+        ? { ...group, entrants: [] }
+        : { ...group, entrants: [{ name: "测试选手", region: "华东赛区" }] })
+    })).toBe("男单至少需要填写 1 人");
+    expect(validateForm({
+      ...initialForm,
+      renderTargets: ["banner_2227x950"],
+      finalistGroups: initialForm.finalistGroups.map((group) => ({ ...group, entrants: [] }))
+    })).toBeUndefined();
   });
 
   it("preserves an intentional title line break", () => {

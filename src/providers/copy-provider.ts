@@ -133,6 +133,7 @@ export async function generateCopy(
         deadline: input.deadline,
         rules: input.rules,
         prize: input.prize,
+        finalistGroups: input.finalistGroups,
         immutableSource: {
           outputFormat: true,
           sessions: true,
@@ -142,7 +143,8 @@ export async function generateCopy(
           ctaLabel: true,
           qrPayload: true,
           qrAssetId: true,
-          notice: true
+          notice: true,
+          finalistGroups: true
         }
       });
       assertImmutable(input, document);
@@ -235,7 +237,8 @@ function assertImmutable(
     document.includeQr === input.includeQr &&
     document.ctaLabel === input.ctaLabel &&
     document.qrPayload === input.qrPayload &&
-    document.qrAssetId === input.qrAssetId;
+    document.qrAssetId === input.qrAssetId &&
+    JSON.stringify(document.finalistGroups ?? []) === JSON.stringify(input.finalistGroups ?? []);
 
   if (!immutableMatches) {
     throw new ProviderError(
@@ -294,6 +297,7 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
     deadline: input.deadline,
     rules: input.rules,
     prize: input.prize,
+    finalistGroups: input.finalistGroups,
     immutableSource: {
       outputFormat: true,
       sessions: true,
@@ -303,7 +307,8 @@ function fallbackCopy(input: EmployeeActivityInput): PosterDocument {
       ctaLabel: true,
       qrPayload: true,
       qrAssetId: true,
-      notice: true
+      notice: true,
+      finalistGroups: true
     }
   };
 }
