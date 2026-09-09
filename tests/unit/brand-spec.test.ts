@@ -11,7 +11,7 @@ describe("BrandSpec v1", () => {
       family: "MiSans",
       h0Px: 120,
       h1Px: 80,
-      titleMaxLines: 3
+      titleMaxLines: 2
     });
     expect(brandSpecV1.defaultRenderTargets).toHaveLength(4);
   });

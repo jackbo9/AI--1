@@ -4,7 +4,7 @@ export const t01PortraitLayout = {
   contentWidth: 952,
   titleFontSize: 125,
   titleLineHeight: 130,
-  titleMaxLines: 6,
+  titleMaxLines: 2,
   titleRecommendedCharacters: 14,
   subtitleFontSize: 28,
   subtitleLineHeight: 35,

@@ -29,7 +29,6 @@ import {
   createCopyReview,
   createPreviewCopy,
   getStageForJob,
-  getStatusLabel,
   hydrateForm,
   initialForm,
   isJobWorking,
@@ -163,7 +162,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       setJob(loaded);
       return loaded;
     } catch {
-      setError("本地预览连接中断，请确认开发服务仍在运行后重试");
+      setError("连接中断，请刷新页面后重试");
       return undefined;
     } finally {
       refreshingRef.current = false;
@@ -340,7 +339,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (fixtureMode) {
         setJobId(UI_FIXTURE_JOB_ID);
         window.history.replaceState(null, "", `?fixture=1&job=${UI_FIXTURE_JOB_ID}`);
-        setJob({ id: UI_FIXTURE_JOB_ID, status: "GENERATING_COPY", currentStep: "Fixture 正在生成小标题", versions: [] });
+        setJob({ id: UI_FIXTURE_JOB_ID, status: "GENERATING_COPY", currentStep: "正在准备文案建议", versions: [] });
         await pauseFixture();
         setJob(createFixtureCopyJob(normalizeForm({ ...form, slogan: "", subtitle: "" })));
         return;
@@ -407,7 +406,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setPendingAction("refine");
     try {
       if (fixtureMode) {
-        setJob((current) => current ? { ...current, status: "REFINING_VISUAL", currentStep: "Fixture 正在优化画面描述" } : current);
+        setJob((current) => current ? { ...current, status: "REFINING_VISUAL", currentStep: "正在优化画面描述" } : current);
         await pauseFixture();
         setJob((current) => current ? createFixtureVisualDraftJob(current, visualDescription.trim()) : current);
         return;
@@ -427,7 +426,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
     setPendingAction("visual");
     try {
       if (fixtureMode) {
-        setJob((current) => current ? { ...current, status: "GENERATING_ASSET", currentStep: "Fixture 正在生成主视觉" } : current);
+        setJob((current) => current ? { ...current, status: "GENERATING_ASSET", currentStep: "正在生成主视觉" } : current);
         await pauseFixture();
         setJob((current) =>
           current
@@ -455,7 +454,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
             ? {
                 ...current,
                 selectedVisualOptionId: optionId,
-                currentStep: "Fixture 已选择主视觉方案"
+                currentStep: "已选择主视觉方案"
               }
             : current
         );
@@ -489,7 +488,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (fixtureMode) {
         setJob((current) =>
           current
-            ? { ...current, status: "RENDERING", currentStep: "Fixture 正在排版" }
+            ? { ...current, status: "RENDERING", currentStep: "正在排版" }
             : current
         );
         await pauseFixture();
@@ -593,7 +592,6 @@ export function useActivityStudioController(fixtureMode: boolean) {
     // A generated suggestion is not applied until the user explicitly
     // replaces both fields. Keep the form and portrait preview in sync.
     previewCopy: stage === 1 ? undefined : createPreviewCopy(job, copyReview),
-    statusLabel: getStatusLabel(job),
     updateForm,
     toggleRenderTarget,
     selectRenderTarget,

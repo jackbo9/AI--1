@@ -11,7 +11,7 @@ import { adaptWideContrast } from "./t01-wide-contrast";
 
 export const extraFormats = ["landscape_1920x1080", "banner_2227x950", "longform_1080xAuto"] as const;
 export type ExtraFormat = (typeof extraFormats)[number];
-export const extraTemplateVersion = "t01-figma-2026-09-09-v3";
+export const extraTemplateVersion = "t01-figma-2026-09-09-v5-typography";
 export const extraTemplateNodes = {
   landscape_1920x1080: "426:74",
   banner_2227x950: "426:140",

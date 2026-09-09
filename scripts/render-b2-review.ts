@@ -21,7 +21,7 @@ function portraitDocument(
     outputFormat: "portrait_1080x1920",
     category: document.category,
     title: document.title,
-    slogan: "",
+    slogan: document.slogan,
     subtitle: document.subtitle,
     summary: document.summary,
     sessions: document.sessions,

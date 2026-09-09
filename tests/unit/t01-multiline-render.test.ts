@@ -93,11 +93,10 @@ async function lineCount(page: import("playwright").Page, selector: string) {
 }
 
 describe("T01 multiline portrait layout", () => {
-  it("keeps 1–3 lines natural, pushes subtitle by 22px, and stays 1080×1920", async () => {
+  it("keeps one or two title lines, preserves manual breaks, and stays 1080×1920", async () => {
     const cases = [
       ["赛事主题", 1],
-      ["赛事主题赛事主题赛事", 2],
-      ["赛事主题赛事主题赛事主题赛事主题", 3]
+      ["赛事主题\n热爱不设限", 2]
     ] as const;
     for (const [title, expectedLines] of cases) {
       const { browser, page } = await renderMarkup(
@@ -122,18 +121,18 @@ describe("T01 multiline portrait layout", () => {
         expect(boxes.gap).toBeCloseTo(22, 0);
         expect(boxes.width).toBe(1080);
         expect(boxes.height).toBe(1920);
-        if (expectedLines === 3) expect(boxes.titleHeight).toBeCloseTo(390, 0);
+        if (expectedLines === 2) expect(boxes.titleHeight).toBeCloseTo(260, 0);
       } finally {
         await browser.close();
       }
     }
   }, 20_000);
 
-  it("accepts the declared 40-character budget against y=1196 and omits empty subtitle markup", async () => {
+  it("accepts a manual two-line title and omits empty subtitle markup", async () => {
     await expect(
       preflightEmployeeActivity(
         buildDocument(
-          "四十字标题用于验证新版标题按照真实边界完成预检并且不再被旧版顶部坐标误判失败",
+          "羽球挑战赛\n热爱不设限",
           "副".repeat(40)
         )
       )
@@ -145,6 +144,16 @@ describe("T01 multiline portrait layout", () => {
     } finally {
       await browser.close();
     }
+  }, 20_000);
+
+  it("blocks a title that naturally wraps beyond two lines", async () => {
+    await expect(
+      preflightEmployeeActivity(
+        buildDocument("赛事主题赛事主题赛事主题赛事主题")
+      )
+    ).rejects.toMatchObject({
+      code: "brand.title.max_lines"
+    });
   }, 20_000);
 
   it("flows the required slogan into the title group with the Figma 22px gap", async () => {

@@ -1,4 +1,4 @@
-import { type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
+import { textLineCount, t01PortraitTitleMaxLines, type EmployeeActivityInput, type PosterDocument } from "@/contracts/poster";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
 import type {
   ActivityJob,
@@ -30,10 +30,10 @@ export function newFormState(): FormState {
 }
 
 export const scenes = [
-  ["01", "员工活动", "节日 / 安全 / 差旅 / 体育赛事 / 员工俱乐部", "当前切片"],
-  ["02", "员工福利", "下午茶 / 周边折扣 / 体检与商务保险 / 员工关怀", "后续开放"],
-  ["03", "员工通知", "安全通知 / 温馨提示 / 截止提醒", "后续开放"],
-  ["04", "调查问卷", "满意度调研 / 体验改善 / 行政调研", "后续开放"]
+  ["01", "员工活动", "羽毛球、篮球、足球等企业赛事"],
+  ["02", "员工福利", "下午茶 / 周边折扣 / 体检与商务保险 / 员工关怀"],
+  ["03", "员工通知", "安全通知 / 温馨提示 / 截止提醒"],
+  ["04", "调查问卷", "满意度调研 / 体验改善 / 行政调研"]
 ] as const;
 
 export const stages: Array<[Stage, string]> = [
@@ -132,20 +132,12 @@ export function createPreviewCopy(
   };
 }
 
-export function getStatusLabel(job?: ActivityJob) {
-  if (!job) return "填写完成后开始生成";
-  if (job.status === "READY_FOR_COPY_REVIEW") return "文案待确认";
-  if (["READY_FOR_VISUAL_INPUT", "READY_FOR_VISUAL_REVIEW"].includes(job.status)) {
-    return "视觉待确认";
-  }
-  if (job.status === "READY_FOR_REVIEW") return "海报已生成";
-  if (job.status === "FAILED_FINAL") return "任务未完成";
-  return job.currentStep;
-}
-
 export function validateForm(form: FormState, requireTitleCompanions = true) {
   if (!form.activityName.trim()) return "请填写活动主题";
-  if (!form.renderTargets.length) return "请至少选择一款 T01 模板";
+  if (textLineCount(form.activityName) > t01PortraitTitleMaxLines) {
+    return `一级大标题最多 ${t01PortraitTitleMaxLines} 行，请删除多余换行`;
+  }
+  if (!form.renderTargets.length) return "请至少选择一种海报尺寸";
   const needsActivityFacts = form.renderTargets.some((format) => format !== "banner_2227x950");
   if (needsActivityFacts) {
     if (!form.session.date || !form.session.location.trim()) return "请完整填写比赛日期和比赛地点";
@@ -154,6 +146,12 @@ export function validateForm(form: FormState, requireTitleCompanions = true) {
   }
   if (requireTitleCompanions && !form.slogan.trim()) return "请填写宣言标题，或使用 AI 辅助生成";
   if (requireTitleCompanions && !form.subtitle.trim()) return "请填写副标题，或使用 AI 辅助生成";
+  const requiresQr = form.renderTargets.some(
+    (target) => target === "portrait_1080x1920" || target === "landscape_1920x1080"
+  );
+  if (requiresQr && !form.qrUrl.trim() && !form.qrAssetId) {
+    return "竖版和横版海报需要添加报名二维码";
+  }
   if (form.qrUrl && !/^https?:\/\//i.test(form.qrUrl)) {
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }

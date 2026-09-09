@@ -16,7 +16,7 @@ export const brandSpecV1 = brandSpecSchema.parse({
       family: "MiSans",
       h0Px: 120,
       h1Px: 80,
-      titleMaxLines: 3
+      titleMaxLines: 2
     },
     brandHeader: {
       companyLogoPosition: "left",

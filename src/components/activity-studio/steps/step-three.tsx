@@ -50,11 +50,7 @@ export function StepThree({
   return (
     <section className="ead-visual-workbench">
       <div className="ead-visual-block">
-        <SectionHead
-          index="02"
-          title="确认描述并生成方案"
-          hint="每次生成都会新增一个方案，不覆盖此前结果"
-        />
+        <SectionHead index="02" title="确认描述并生成方案" />
         <label className="ead-visual-label" htmlFor={promptId}>
           主视觉生成描述
         </label>
@@ -69,9 +65,6 @@ export function StepThree({
           placeholder="基础描述加载中，可直接编辑赛事类型、主题色和视觉表现。"
         />
         <div className="ead-generate-row">
-          <p>
-            可以沿用当前描述再次生成，也可以修改或 AI 优化后生成新方案。生成完成后仍停留在本页。
-          </p>
           <button
             type="button"
             className="ead-secondary"
@@ -81,15 +74,6 @@ export function StepThree({
             {pendingRefine ? "正在优化…" : "AI 优化"}
           </button>
         </div>
-        {job?.visualDraft && (
-          <div className="ead-draft-badge">
-            {job.visualDraft.provider === "t01-base-description"
-              ? "品牌标准基础描述 · 尚未确认"
-              : job.visualDraft.fallback
-                ? "本地规则优化 · 尚未确认"
-                : `${job.visualDraft.provider} 优化结果 · 尚未确认`}
-          </div>
-        )}
         <div className="ead-stage-actions ead-description-actions">
           <button
             type="button"
@@ -112,9 +96,6 @@ export function StepThree({
                 : "确认描述并生成方案"}
           </button>
         </div>
-        <p className="ead-model-note">
-          上方操作确认的是本次生成描述，不代表已经确认主视觉图片。
-        </p>
       </div>
 
       <div className="ead-visual-divider" />
@@ -122,9 +103,6 @@ export function StepThree({
       <div className="ead-visual-block ead-option-section">
         <div className="ead-visual-confirm-head">
           <h3>选择并确认主视觉</h3>
-          <small>
-            {options.length ? `已保留 ${options.length} 个方案` : "尚未生成方案"}
-          </small>
         </div>
         {isGenerating && (
           <div className="ead-visual-progress">
@@ -191,9 +169,6 @@ export function StepThree({
               : "确认主视觉并进入排版 →"}
           </button>
         </div>
-        <p className="ead-model-note">
-          只有点击“确认主视觉”后才会进入最终排版与下载。
-        </p>
       </div>
     </section>
   );

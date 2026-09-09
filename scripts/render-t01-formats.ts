@@ -7,7 +7,7 @@ import { t01ContentFromDocument } from "../src/templates/t01-template-content";
 // Deterministic local fixtures only: this script never calls a model.
 const document = posterDocumentSchema.parse({
   schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", outputFormat: "portrait_1080x1920",
-  category: "competition", title: "赛事主题", subtitle: "一起运动，享受友好竞赛的乐趣。", summary: "一起运动，享受友好竞赛的乐趣。",
+  category: "competition", title: "赛事主题\n热爱不设限", slogan: "九号员工赛事 / EVENT", subtitle: "一起运动，享受友好竞赛的乐趣。", summary: "一起运动，享受友好竞赛的乐趣。",
   sessions: [{ label: "第一场", date: "2026-09-18", time: "18:30–20:30", location: "园区体育馆", details: [] }],
   audience: "全体员工", highlights: [], participationSteps: [], notice: "", includeQr: true,
   ctaLabel: "请选择适合自己的场次报名。", qrPayload: "https://example.com/register", qrAssetId: "", contact: "行政服务台", deadline: "9月16日 18:00",

@@ -10,12 +10,21 @@ export const activityCategorySchema = z.enum(["team", "festival", "competition"]
 // Figma V2 uses 952px-wide, auto-height title slots. Recommendations guide
 // authors; rendered bounds remain the export gate.
 export const t01PortraitTitleMaxCharacters = 40;
+export const t01PortraitTitleMaxLines = 2;
 export const t01PortraitSubtitleMaxCharacters = 40;
 export const t01PortraitTitleRecommendedCharacters = 14;
 export const t01PortraitSubtitleRecommendedCharacters = 25;
 
 export function textCharacterCount(value: string) {
   return Array.from(value.trim()).length;
+}
+
+export function textLineCount(value: string) {
+  return value.trim().replace(/\r\n?/g, "\n").split("\n").length;
+}
+
+function hasValidT01TitleLines(value: string) {
+  return textLineCount(value) <= t01PortraitTitleMaxLines;
 }
 
 export const activitySessionSchema = z.object({
@@ -55,7 +64,11 @@ const employeeActivityFieldsSchema = z.object({
       .string()
       .trim()
       .min(1, "请填写活动名称")
-      .max(150, "活动名称请控制在 150 字以内"),
+      .max(150, "活动名称请控制在 150 字以内")
+      .refine(
+        hasValidT01TitleLines,
+        `一级大标题最多 ${t01PortraitTitleMaxLines} 行，请删除多余换行`
+      ),
     category: activityCategorySchema.default("team"),
     themeKeywords: z.array(z.string().trim().min(1).max(24)).max(6).default([]),
     // The trial UI treats these as optional narrative fields. Keep the names
@@ -138,7 +151,15 @@ export const posterDocumentSchema = z.object({
   category: activityCategorySchema,
   // Text capacity is enforced against the rendered 952px slot, rather than
   // a character-count cutoff that can reject a perfectly valid short glyph run.
-  title: z.string().min(1).max(150),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(150)
+    .refine(
+      hasValidT01TitleLines,
+      `一级大标题最多 ${t01PortraitTitleMaxLines} 行`
+    ),
   slogan: z.string().max(40).default(""),
   subtitle: z.string().max(150),
   summary: z.string().max(150).default(""),
@@ -182,7 +203,15 @@ export const confirmedCampaignDocumentSchema = posterDocumentSchema
   });
 
 export const editablePosterContentSchema = z.object({
-  title: z.string().trim().min(1).max(40),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .refine(
+      hasValidT01TitleLines,
+      `一级大标题最多 ${t01PortraitTitleMaxLines} 行`
+    ),
   slogan: z.string().trim().max(40).default(""),
   subtitle: z
     .string()

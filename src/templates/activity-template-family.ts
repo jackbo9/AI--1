@@ -98,7 +98,7 @@ export const renderTargetManifestSchema = z.object({
 
 export const activityTemplateFamilyManifestSchema = z.object({
   id: z.literal("employee-activity-template-family"),
-  version: z.literal("1.0.0"),
+  version: z.literal("1.1.0"),
   scene: z.literal("employee_activity"),
   brandSpecVersion: brandSpecVersionSchema,
   renderTargets: z.object({
@@ -112,14 +112,14 @@ export const activityTemplateFamilyManifestSchema = z.object({
 export const activityTemplateFamilyManifest =
   activityTemplateFamilyManifestSchema.parse({
     id: "employee-activity-template-family",
-    version: "1.0.0",
+    version: "1.1.0",
     scene: "employee_activity",
     brandSpecVersion: 1,
     renderTargets: {
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "2.0.0-figma-426-4",
+        templateVersion: "2.2.0-figma-typography",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
@@ -163,7 +163,7 @@ export const activityTemplateFamilyManifest =
       landscape_1920x1080: {
         id: "landscape_1920x1080",
         templateId: "employee-activity-landscape",
-        templateVersion: "t01-figma-2026-09-09-v3",
+        templateVersion: "t01-figma-2026-09-09-v5-typography",
         dimensions: {
           width: 1920,
           heightMode: "fixed",
@@ -194,7 +194,7 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: { x: 1704, y: 829, width: 134, height: 134 },
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 2,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
@@ -207,7 +207,7 @@ export const activityTemplateFamilyManifest =
       banner_2227x950: {
         id: "banner_2227x950",
         templateId: "employee-activity-banner",
-        templateVersion: "t01-figma-2026-09-09-v3",
+        templateVersion: "t01-figma-2026-09-09-v5-typography",
         dimensions: {
           width: 2227,
           heightMode: "fixed",
@@ -234,7 +234,7 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: null,
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 2,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },
@@ -247,7 +247,7 @@ export const activityTemplateFamilyManifest =
       longform_1080xAuto: {
         id: "longform_1080xAuto",
         templateId: "employee-activity-longform",
-        templateVersion: "t01-figma-2026-09-09-v3",
+        templateVersion: "t01-figma-2026-09-09-v5-typography",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
@@ -286,7 +286,7 @@ export const activityTemplateFamilyManifest =
         },
         qrZone: null,
         overflow: {
-          titleMaxLines: 3,
+          titleMaxLines: 2,
           titleStrategy: "block_export",
           bodyStrategy: "fit_declared_modules"
         },

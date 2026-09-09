@@ -12,16 +12,11 @@ import {
   selectedRenderTarget
 } from "./render-target-options";
 
-export function LivePreview({ form, copy, hasQr, job, stage, statusLabel, fixtureMode, activeRenderTarget, onRenderTarget }: { form: FormState; copy?: PosterDocument; hasQr: boolean; job?: ActivityJob; stage: Stage; statusLabel: string; fixtureMode: boolean; activeRenderTarget: RenderTargetId; onRenderTarget: (target: RenderTargetId) => void }) {
+export function LivePreview({ form, copy, hasQr, job, stage, fixtureMode, activeRenderTarget, onRenderTarget }: { form: FormState; copy?: PosterDocument; hasQr: boolean; job?: ActivityJob; stage: Stage; fixtureMode: boolean; activeRenderTarget: RenderTargetId; onRenderTarget: (target: RenderTargetId) => void }) {
   const version = job?.versions.at(-1);
   const selectedVisualOption = job?.visualOptions?.find(
     (option) => option.id === job.selectedVisualOptionId
   );
-  const selectedVisualNumber = selectedVisualOption
-    ? (job?.visualOptions?.findIndex(
-        (option) => option.id === selectedVisualOption.id
-      ) ?? -1) + 1
-    : 0;
   const displayTarget = selectedRenderTarget(
     form.renderTargets,
     activeRenderTarget
@@ -61,5 +56,5 @@ export function LivePreview({ form, copy, hasQr, job, stage, statusLabel, fixtur
   const visibleTargets = renderTargetOptions.filter(({ id }) =>
     form.renderTargets.includes(id)
   );
-  return <aside className="ead-preview"><div className="ead-preview-head"><header><b>实时预览</b><span>{fixtureMode ? "Fixture 演练" : stage === 2 && selectedVisualNumber > 0 ? `方案 ${selectedVisualNumber} · 轻量预览` : statusLabel}</span></header><div className={`ead-size-tabs ${visibleTargets.length === 1 ? "is-single" : ""}`} role="group" aria-label="切换已选物料尺寸">{visibleTargets.map(({ id, label }) => <button type="button" key={id} className={displayTarget === id ? "is-selected" : ""} aria-pressed={displayTarget === id} onClick={() => onRenderTarget(id)}>{label}</button>)}</div><small className="ead-size-note">{stage === 2 ? "同一主视觉即时适配已选尺寸，不会再次调用图片模型" : "与最终模板共用同一份 HTML/CSS"}</small></div><div className="ead-canvas-wrap"><div className={`ead-poster-frame is-${displayTarget}`}>{stage === 2 ? selectedVisualOption ? <LightweightT01Preview document={selectedVisualOption.sourceDocument} imageUrl={selectedVisualOption.previewUrl} optionId={selectedVisualOption.id} format={displayTarget} /> : <span className="t01-preview-loading">生成并选择主视觉后，在这里查看完整海报</span> : portraitResult ? <img className="ead-generated-poster" src={portraitResult} alt="生成的员工活动海报" /> : html ? <iframe title="T01 海报预览" className={`t01-preview-frame is-${displayTarget}`} srcDoc={html} sandbox="" /> : <span className="t01-preview-loading">正在同步模板…</span>}</div></div>{stage === 3 && portraitResult && <div className="ead-exportbar"><a href={portraitResult} download={fixtureMode ? "employee-activity-fixture.svg" : "employee-activity-t01.png"}>{fixtureMode ? "下载演练稿" : version?.validation.exportAllowed === false ? "下载不可用" : version?.validation.passed ? "下载 PNG" : "下载风险结果"}</a><small>{fixtureMode ? "Fixture 成品 · 不代表真实生成质量" : version?.validation.passed ? "质量检查通过" : "图文对比度未通过，可重新生成主视觉"}</small></div>}</aside>;
+  return <aside className="ead-preview"><div className="ead-preview-head"><header><b>海报预览</b></header><div className={`ead-size-tabs ${visibleTargets.length === 1 ? "is-single" : ""}`} role="group" aria-label="切换已选海报尺寸">{visibleTargets.map(({ id, label }) => <button type="button" key={id} className={displayTarget === id ? "is-selected" : ""} aria-pressed={displayTarget === id} onClick={() => onRenderTarget(id)}>{label}</button>)}</div></div><div className="ead-canvas-wrap"><div className={`ead-poster-frame is-${displayTarget}`}>{stage === 2 ? selectedVisualOption ? <LightweightT01Preview document={selectedVisualOption.sourceDocument} imageUrl={selectedVisualOption.previewUrl} optionId={selectedVisualOption.id} format={displayTarget} /> : <span className="t01-preview-loading">生成并选择主视觉后，可在这里查看完整海报</span> : portraitResult ? <img className="ead-generated-poster" src={portraitResult} alt="生成的体育赛事海报" /> : html ? <iframe title="海报预览" className={`t01-preview-frame is-${displayTarget}`} srcDoc={html} sandbox="" /> : <span className="t01-preview-loading">正在更新预览…</span>}</div></div>{stage === 3 && portraitResult && <div className="ead-exportbar"><a href={portraitResult} download={fixtureMode ? "employee-activity-fixture.svg" : "employee-activity-t01.png"}>{version?.validation.exportAllowed === false ? "下载不可用" : version?.validation.passed ? "下载 PNG" : "下载待确认结果"}</a><small>{version?.validation.passed ? "质量检查通过" : "图文对比度待优化，可重新选择主视觉"}</small></div>}</aside>;
 }

@@ -54,6 +54,7 @@ const baseDocument = confirmedCampaignDocumentSchema.parse({
   sourceCopySchemaVersion: "1.7",
   category: baseBrief.category,
   title: "秋日同行日",
+  slogan: "九号员工活动 / EVENT",
   subtitle: "一起出发，把日常过得更有意思",
   summary: baseBrief.description,
   sessions: baseBrief.sessions,
@@ -185,7 +186,12 @@ export const campaignBundleFixtures: CampaignBundleFixture[] = [
       }
     ),
     visualMode: "generated",
-    expectedArtifacts: expectedArtifacts()
+    expectedArtifacts: expectedArtifacts({
+      portrait: fail("brand.title.max_lines"),
+      landscape: fail("brand.title.max_lines"),
+      banner: fail("brand.title.max_lines"),
+      longform: fail("brand.title.max_lines")
+    })
   },
   {
     id: "title-overflow",

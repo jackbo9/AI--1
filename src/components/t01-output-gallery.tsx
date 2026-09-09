@@ -46,9 +46,9 @@ export function T01OutputGallery({ jobId, renderTargets }: { jobId: string; rend
   const visibleFormats = formats.filter(([format]) => renderTargets.includes(format));
   const safeSelected = renderTargets.includes(selected) ? selected : renderTargets[0] ?? "portrait_1080x1920";
   const current = [...outputs].reverse().find(output => output.format === safeSelected && (!family || output.visualFamilyId === family));
-  return <section className={styles.gallery} aria-label="T01 四尺寸输出">
+  return <section className={styles.gallery} aria-label="海报尺寸输出">
     <h3>本次选择的物料</h3>
-    <p>复用已确认的文案和本次主视觉。生成其他尺寸不会再次调用图片模型；横向裁切可能改变主体呈现。</p>
+    <p>各尺寸会使用已确认的文案和主视觉；横向尺寸的主体呈现可能不同。</p>
     <div className={styles.tabs} role="group" aria-label="选择物料尺寸">
       {visibleFormats.map(([format, name, size]) => <button type="button" key={format} aria-pressed={safeSelected === format} onClick={() => setSelected(format)}><strong>{name}</strong><small>{size}</small></button>)}
     </div>
@@ -59,7 +59,7 @@ export function T01OutputGallery({ jobId, renderTargets }: { jobId: string; rend
     {current?.previewUrl && <>
       <div className={styles.preview}><img src={current.previewUrl} alt={`${formats.find(item => item[0] === safeSelected)?.[1]}海报预览`} /></div>
       <ul className={styles.messages}>{current.validation.messages.map((message, index) => <li key={index}>{message}</li>)}</ul>
-      <a className={styles.download} href={current.previewUrl} download={`T01-${safeSelected}.png`}>{current.validation.passed ? "下载 PNG" : "下载试用稿"} · {current.width} × {current.height}</a>
+      <a className={styles.download} href={current.previewUrl} download={`poster-${safeSelected}.png`}>{current.validation.passed ? "下载 PNG" : "下载待确认结果"} · {current.width} × {current.height}</a>
     </>}
     {!current?.previewUrl && current?.status !== "RENDERING" && <p>{safeSelected === "portrait_1080x1920" ? "竖版结果正在准备。" : "该尺寸正在等待排版。"}</p>}
   </section>;

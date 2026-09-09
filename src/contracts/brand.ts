@@ -27,7 +27,7 @@ export const brandTokensSchema = z.object({
     family: z.literal("MiSans"),
     h0Px: z.literal(120),
     h1Px: z.literal(80),
-    titleMaxLines: z.literal(3)
+    titleMaxLines: z.literal(2)
   }),
   brandHeader: z.object({
     companyLogoPosition: z.literal("left"),

@@ -7,6 +7,8 @@ import {
   employeeActivityInputSchema,
   t01PortraitSubtitleMaxCharacters,
   t01PortraitTitleMaxCharacters,
+  t01PortraitTitleMaxLines,
+  textLineCount,
   textCharacterCount
 } from "@/contracts/poster";
 import { generateCopy } from "@/providers/copy-provider";
@@ -90,6 +92,14 @@ describe("employee activity v1.7 contract", () => {
   it("enforces the T01 title and subtitle presentation budgets", () => {
     expect(textCharacterCount("羽球挑战赛")).toBeLessThanOrEqual(t01PortraitTitleMaxCharacters);
     expect(t01PortraitTitleMaxCharacters).toBe(40);
+    expect(t01PortraitTitleMaxLines).toBe(2);
+    expect(textLineCount("羽球挑战赛\n热爱不设限")).toBe(2);
+    expect(
+      employeeActivityInputSchema.safeParse({
+        ...normal,
+        activityName: "第一行\n第二行\n第三行"
+      }).success
+    ).toBe(false);
     expect(
       editablePosterContentSchema.safeParse({
         title: "羽球挑战赛",

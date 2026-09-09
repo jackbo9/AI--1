@@ -125,7 +125,7 @@ export function StepFour({
         </header>
         <div className={`ead-final-canvas is-${viewMode} is-${target}`}>
           {previewUrl ? (
-            <img src={previewUrl} alt={`最终生成的 T01 ${targetMeta.label}员工活动海报`} />
+            <img src={previewUrl} alt={`最终生成的${targetMeta.label}体育赛事海报`} />
           ) : showFixtureLayout && fixtureDocument && fixturePreviewUrl ? (
             <LightweightT01Preview
               document={fixtureDocument}
@@ -142,7 +142,7 @@ export function StepFour({
             <div className="ead-final-output-state" role="status">
               <span className="ead-loading-dot" />
               <b>{targetMeta.label}正在排版和检查</b>
-              <p>完成后会自动显示，不会再次调用图片模型。</p>
+              <p>完成后会自动显示，请稍候。</p>
             </div>
           )}
         </div>
@@ -173,15 +173,13 @@ export function StepFour({
                   : `employee-activity-t01-${target}.png`
               }
             >
-              {fixtureMode
-                ? "下载演练稿"
-                : validation?.passed
+              {validation?.passed
                   ? "下载 PNG"
-                  : "下载风险结果"}
+                  : "下载待确认结果"}
             </a>
           ) : (
             <span aria-disabled="true">
-              {showFixtureLayout ? "Fixture 仅供预览" : "等待该尺寸完成"}
+              {showFixtureLayout ? "当前尺寸正在准备" : "等待该尺寸完成"}
             </span>
           )}
           <small>
@@ -290,13 +288,13 @@ function StepFourQuality({
   const statusLabel = outputPending
     ? "生成中"
     : fixtureMode
-      ? "演练通过"
+      ? "已完成"
       : validation?.passed
         ? "通过"
         : trialWarning
           ? "警告"
           : "阻断";
-  return <section className="ead-section ead-quality"><div className="ead-quality-head"><div><h3>{fixtureMode ? "Fixture 交互验收" : `${meta.label}品牌质量校验`}</h3><p>{outputPending ? "该尺寸正在完成排版和输出检查" : fixtureMode ? "多尺寸切换已跑通；未执行真实生成与品牌检查" : trialWarning ? "已生成风险结果：可下载查看，或重新生成主视觉" : validation?.passed ? "该尺寸全部实际检查通过" : "该尺寸存在阻断项，暂不可下载"}</p></div><div className={`ead-status-pill ${validation?.passed ? "is-pass" : trialWarning ? "is-warning" : "is-fail"}`}>{statusLabel}</div></div><div className="ead-check-grid">{checks.map(([label, passed]) => <div className={`ead-check-row ${passed === false ? "is-failed" : ""}`} key={label}><i>{passed === undefined ? "—" : passed ? "✓" : "!"}</i><span>{label}</span><small>{fixtureMode ? "Fixture 模拟" : passed === undefined ? "未记录" : passed ? "通过" : label === "图文对比度" ? "文字与背景对比度待优化" : "未通过"}</small></div>)}</div>{trialWarning && !fixtureMode && <p className="ead-trial-note">当前风险结果保留原始主视觉，不添加遮罩或替换底图。你可以下载查看，或选择“只换主视觉”。</p>}<div className="ead-stage-actions"><button type="button" className="ead-secondary" onClick={onRestart}>开始新海报</button><button type="button" className="ead-secondary" onClick={onReplace} disabled={pending}>{pending ? "正在返回…" : "只换主视觉"}</button></div></section>;
+  return <section className="ead-section ead-quality"><div className="ead-quality-head"><div><h3>{fixtureMode ? "海报检查" : `${meta.label}品牌质量校验`}</h3><p>{outputPending ? "该尺寸正在完成排版和输出检查" : fixtureMode ? "当前结果已准备好供查看" : trialWarning ? "当前结果需要确认：可下载查看，或重新选择主视觉" : validation?.passed ? "该尺寸全部检查通过" : "该尺寸存在阻断项，暂不可下载"}</p></div><div className={`ead-status-pill ${validation?.passed ? "is-pass" : trialWarning ? "is-warning" : "is-fail"}`}>{statusLabel}</div></div><div className="ead-check-grid">{checks.map(([label, passed]) => <div className={`ead-check-row ${passed === false ? "is-failed" : ""}`} key={label}><i>{passed === undefined ? "—" : passed ? "✓" : "!"}</i><span>{label}</span><small>{passed === undefined ? "未记录" : passed ? "通过" : label === "图文对比度" ? "文字与背景对比度待优化" : "未通过"}</small></div>)}</div>{trialWarning && !fixtureMode && <p className="ead-trial-note">当前结果保留原始主视觉。你可以下载查看，或选择“只换主视觉”。</p>}<div className="ead-stage-actions"><button type="button" className="ead-secondary" onClick={onRestart}>开始新海报</button><button type="button" className="ead-secondary" onClick={onReplace} disabled={pending}>{pending ? "正在返回…" : "只换主视觉"}</button></div></section>;
 }
 
 async function readJson<T>(response: Response): Promise<T> {

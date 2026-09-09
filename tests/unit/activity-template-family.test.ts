@@ -15,6 +15,7 @@ describe("employee activity template family manifest", () => {
       brandSpecV1.defaultRenderTargets
     );
     expect(manifest.brandSpecVersion).toBe(1);
+    expect(manifest.version).toBe("1.1.0");
   });
 
   it("keeps all four Figma targets at their exact canvas dimensions", () => {
