@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type CSSProperties, type SyntheticEvent } from "react";
 import type { PosterDocument } from "@/contracts/poster";
 import type { RenderTargetId } from "@/contracts/brand";
 import {
@@ -74,12 +74,22 @@ export function LightweightT01Preview({
 
   const session = document.sessions[0];
   const participation = document.participationSteps.join(" / ");
+  const finalistGroups = document.finalistGroups ?? [];
+  const longformMetrics = format === "longform_1080xAuto"
+    ? longformPreviewMetrics(finalistGroups)
+    : undefined;
+  const previewStyle = longformMetrics
+    ? ({
+        "--t01-preview-longform-height": `${longformMetrics.height}px`,
+        "--t01-preview-recap-top": `${longformMetrics.recapTop}px`
+      } as CSSProperties)
+    : undefined;
   const qrUrl = document.qrAssetId
     ? `/api/uploads/qr/${document.qrAssetId}`
     : qrDataUrl;
 
   return (
-    <div className={`t01-preview t01-selected-preview is-${tone} is-format-${format}`}>
+    <div className={`t01-preview t01-selected-preview is-${tone} is-format-${format}`} style={previewStyle}>
       <img
         className="t01-preview-background"
         src={imageUrl}
@@ -127,8 +137,57 @@ export function LightweightT01Preview({
           <span>{document.ctaLabel || "扫码报名"}</span>
         </aside>
       )}
+      {format === "longform_1080xAuto" && (
+        <>
+          {finalistGroups.length > 0 && <section className="t01-preview-longform-roster">
+            <header>
+              <b>决赛名单</b>
+              <strong>高手，都在这。</strong>
+              <span>{finalistGroups.length} 个组别</span>
+            </header>
+            {finalistGroups.map((group, index) => (
+              <div
+                className={`t01-preview-roster-group${index % 2 ? " is-tinted" : ""}`}
+                key={group.label}
+                style={{ height: `${longformRosterRowHeight(group.entrants.length)}px` }}
+              >
+                <b>{group.label}</b>
+                <div>{group.entrants.map((entrant, entrantIndex) => (
+                  <p key={`${entrant.name}-${entrant.region}-${entrantIndex}`}><strong>{entrant.name}</strong><span>{entrant.region}</span></p>
+                ))}</div>
+              </div>
+            ))}
+          </section>}
+          <section className="t01-preview-longform-recap">
+            <b>赛区回顾</b>
+            <strong>精彩，还在继续。</strong>
+            <span>{session?.location || "赛事现场"}</span>
+            <div>赛事照片将在后续物料中补充</div>
+          </section>
+        </>
+      )}
     </div>
   );
+}
+
+function longformPreviewMetrics(
+  groups: Array<{ entrants: Array<{ name: string; region: string }> }>
+) {
+  const scale = 292 / 1080;
+  const rosterHeight = groups.reduce((total, group) => {
+    const rows = Math.max(1, Math.ceil(group.entrants.length / 2));
+    return total + 51 + rows * 33.35 + (rows - 1) * 15;
+  }, 0);
+  const recapTop = (1700 + rosterHeight + 54.5) * scale;
+  return {
+    recapTop: Math.ceil(recapTop),
+    height: Math.ceil(recapTop + 582 * scale)
+  };
+}
+
+function longformRosterRowHeight(entrantCount: number) {
+  const rows = Math.max(1, Math.ceil(entrantCount / 2));
+  return Math.ceil((51 + rows * 33.35 + (rows - 1) * 15) * (292 / 1080));
 }
 
 function detectToneFromDisplayedHero(
