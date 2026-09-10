@@ -53,8 +53,8 @@ describe("employee activity template family manifest", () => {
     expect(portrait.logoZones.company.x).toBe(64);
     expect(portrait.logoZones.administration.x).toBe(954.8);
     expect(portrait.qrZone).toEqual({
-      x: 850,
-      y: 1496,
+      x: 846,
+      y: 1591,
       width: 134,
       height: 134
     });

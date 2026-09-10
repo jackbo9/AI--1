@@ -27,12 +27,16 @@ describe("T01 confirmed content projections", () => {
     const { html, css } = longformMarkup(content, assets);
     expect(html).toContain("2026-09-18");
     expect(html).toContain("2026-09-19");
+    expect(html).toContain('class="lf-hero-background"');
+    expect(html).toContain('src="background.png"');
     expect(html).not.toContain("决赛名单");
     expect(html).toContain("赛区回顾");
     expect(html).toContain("替换为该赛区赛事照片");
     expect(css).toContain("top:75px");
     expect(css).toContain("top:145px");
     expect(css).toContain("bottom:12px");
+    expect(css).toContain("height:1210px");
+    expect(css).toContain("object-fit:cover");
   });
   it("renders up to six entrants in each fixed finalist group and grows the longform canvas", () => {
     const sixEntrants = ["张三", "李四", "王五", "赵六", "钱七", "孙八"].map((name) => ({ name, region: "华东赛区" }));

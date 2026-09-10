@@ -119,7 +119,7 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "2.2.0-figma-typography",
+        templateVersion: "2.3.0-figma-2026-09-10-info-grid",
         dimensions: {
           width: 1080,
           heightMode: "fixed",
@@ -148,7 +148,7 @@ export const activityTemplateFamilyManifest =
             height: 61.2
           }
         },
-        qrZone: { x: 850, y: 1496, width: 134, height: 134 },
+        qrZone: { x: 846, y: 1591, width: 134, height: 134 },
         overflow: {
           titleMaxLines: t01PortraitLayout.titleMaxLines,
           titleStrategy: "block_export",
@@ -157,13 +157,13 @@ export const activityTemplateFamilyManifest =
         measurementSource: {
           svg: "会议输入/03 Template Overview/Template/poster/T01 体育赛事.svg",
           note:
-            "Figma 426:4：64px 水平边距，952px 宽的标题及副标题均自适应高度，二者间距 22px；标题组必须止于 y=1196。"
+            "Figma 600:3370：底部信息区从 y=1292 开始，信息网格从 y=1346 开始；二维码固定在 x=846、y=1591。"
         }
       },
       landscape_1920x1080: {
         id: "landscape_1920x1080",
         templateId: "employee-activity-landscape",
-        templateVersion: "t01-figma-2026-09-09-v5-typography",
+        templateVersion: "t01-figma-2026-09-10-v7-info-grid",
         dimensions: {
           width: 1920,
           heightMode: "fixed",
@@ -192,7 +192,7 @@ export const activityTemplateFamilyManifest =
             height: 61.2
           }
         },
-        qrZone: { x: 1704, y: 829, width: 134, height: 134 },
+        qrZone: { x: 1683, y: 832, width: 134, height: 134 },
         overflow: {
           titleMaxLines: 2,
           titleStrategy: "block_export",
@@ -201,13 +201,13 @@ export const activityTemplateFamilyManifest =
         measurementSource: {
           svg: "Figma node 426:74",
           note:
-            "Figma 426:74：标题宽 1188px、高度自适应，建议不超过 14 字；副标题宽 1188px，建议不超过 25 字。"
+            "Figma 600:3443：底部信息区从 y=746 开始，信息网格从 y=801 开始；二维码固定在 x=1683、y=832。"
         }
       },
       banner_2227x950: {
         id: "banner_2227x950",
         templateId: "employee-activity-banner",
-        templateVersion: "t01-figma-2026-09-09-v5-typography",
+        templateVersion: "t01-figma-2026-09-10-v7-info-grid",
         dimensions: {
           width: 2227,
           heightMode: "fixed",
@@ -294,7 +294,7 @@ export const activityTemplateFamilyManifest =
         measurementSource: {
           svg: "Figma node 426:156",
           note:
-            "Figma 426:156：固定 1080×3000；标题宽 952px、高度自适应，建议不超过 14 字；副标题宽 952px，建议不超过 25 字。"
+            "Figma 600:3531 / 657:3806：长图高度按名单人数自适应；姓名列 120px、赛区列 210px。"
         }
       }
     }

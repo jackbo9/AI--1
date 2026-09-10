@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RenderTargetId } from "@/contracts/brand";
 import { LoadingCard } from "../fields";
 import { LightweightT01Preview } from "../lightweight-t01-preview";
@@ -200,6 +200,7 @@ function useFormatOutputs(
   const [family, setFamily] = useState<string>();
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const requestedFormats = useRef(new Set<string>());
   const targetKey = renderTargets.join(",");
   const expectedExtras = useMemo(
     () => renderTargets.filter((target) => target !== "portrait_1080x1920"),
@@ -215,6 +216,25 @@ function useFormatOutputs(
 
     async function refresh() {
       try {
+        // Requesting an already-current format is idempotent. Doing so once
+        // when the result screen opens also upgrades an existing job when a
+        // template version changes, rather than continuing to show a cached
+        // Artifact produced by an older template.
+        await Promise.all(expectedExtras.map(async (format) => {
+          const requestKey = `${jobId}:${format}`;
+          if (requestedFormats.current.has(requestKey)) return;
+          requestedFormats.current.add(requestKey);
+          const response = await fetch(`/api/jobs/${jobId}/formats`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ format }),
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            const data = await readJson<{ error?: { message?: string } }>(response);
+            throw new Error(data.error?.message ?? "请求尺寸生成失败");
+          }
+        }));
         const response = await fetch(`/api/jobs/${jobId}/formats`, {
           cache: "no-store",
           signal: controller.signal

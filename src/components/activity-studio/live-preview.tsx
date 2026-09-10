@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PosterDocument } from "@/contracts/poster";
 import { normalizeLines, splitDraftLines } from "@/components/multiline-fields";
+import { completedFinalistGroups } from "./activity-studio-model";
 import type { ActivityJob, FormState, Stage } from "./types";
 import type { RenderTargetId } from "@/contracts/brand";
 import { LightweightT01Preview } from "./lightweight-t01-preview";
@@ -23,7 +24,7 @@ export function LivePreview({ form, copy, hasQr, job, stage, fixtureMode, active
   );
   const document = useMemo<PosterDocument>(() => copy ?? {
     schemaVersion: "1.7", scene: "employee_activity", locale: "zh-CN", outputFormat: "portrait_1080x1920", category: "team",
-    title: form.activityName || "活动主题", slogan: form.slogan, subtitle: form.subtitle, summary: "", sessions: [{ label: "活动安排", date: form.session.date || "2026-01-01", time: "", location: form.session.location || "待定", details: [] }], audience: form.audience || "参与对象", highlights: [], participationSteps: normalizeLines(splitDraftLines(form.rules)), notice: "", includeQr: hasQr, ctaLabel: "扫码报名", qrPayload: form.qrUrl, qrAssetId: form.qrAssetId, contact: "", finalistGroups: form.finalistGroups, immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true, finalistGroups: true }
+    title: form.activityName || "活动主题", slogan: form.slogan, subtitle: form.subtitle, summary: "", sessions: [{ label: "活动安排", date: form.session.date || "2026-01-01", time: "", location: form.session.location || "待定", details: [] }], audience: form.audience || "参与对象", highlights: [], participationSteps: normalizeLines(splitDraftLines(form.rules)), notice: "", includeQr: hasQr, ctaLabel: "扫码报名", qrPayload: form.qrUrl, qrAssetId: form.qrAssetId, contact: "", finalistGroups: completedFinalistGroups(form), immutableSource: { outputFormat: true, sessions: true, audience: true, contact: true, includeQr: true, ctaLabel: true, qrPayload: true, qrAssetId: true, notice: true, finalistGroups: true }
   }, [copy, form, hasQr]);
   const [html, setHtml] = useState("");
   const previewCache = useRef(new Map<string, string>());

@@ -174,17 +174,41 @@ export function validateForm(
     return "二维码 URL 必须以 http:// 或 https:// 开头";
   }
   if (form.qrUrl && form.qrAssetId) return "二维码链接与上传图片只能选择一种";
-  if (form.renderTargets.includes("longform_1080xAuto")) {
-    for (const group of form.finalistGroups) {
-      if (!group.entrants.length) return `${group.label}至少需要填写 1 人`;
-      if (group.entrants.length > 6) return `${group.label}最多填写 6 人`;
-      if (group.entrants.some((entrant) => !entrant.name.trim() || !entrant.region.trim())) return `请完整填写${group.label}的姓名和赛区`;
-    }
-  }
   return undefined;
 }
 
+/**
+ * Incomplete roster rows are a form draft, not poster data. Keeping them out
+ * of the document lets the live preview and copy/visual flow continue while
+ * the user fills the remaining groups. Completed entries remain available to
+ * the longform projection; empty groups are simply not rendered.
+ */
+export function completedFinalistGroups(form: Pick<FormState, "finalistGroups">) {
+  const groups = form.finalistGroups
+    .map((group) => ({
+      label: group.label,
+      entrants: group.entrants.flatMap((entrant) => {
+        const name = entrant.name.trim();
+        const region = entrant.region.trim();
+        return name && region ? [{ name, region }] : [];
+      })
+    }))
+    .filter((group) => group.entrants.length > 0);
+
+  return groups.length ? groups : undefined;
+}
+
 export function normalizeForm(form: FormState): EmployeeActivityInput {
+  // The roster editor keeps its draft while the user switches output sizes, so
+  // they do not lose work when they reselect the longform. It is not, however,
+  // part of a portrait/landscape/banner request. In particular, the initial
+  // roster contains intentionally blank rows; sending them to the API makes
+  // the entrant schema reject an otherwise valid request before copy
+  // assistance or preview generation can begin.
+  const finalistGroups = form.renderTargets.includes("longform_1080xAuto")
+    ? completedFinalistGroups(form)
+    : undefined;
+
   return {
     outputFormat: "portrait_1080x1920",
     activityName: form.activityName.trim(),
@@ -213,7 +237,7 @@ export function normalizeForm(form: FormState): EmployeeActivityInput {
     deadline: "",
     rules: form.rules.trim(),
     prize: "",
-    finalistGroups: form.finalistGroups.map((group) => ({ label: group.label, entrants: group.entrants.map((entrant) => ({ name: entrant.name.trim(), region: entrant.region.trim() })) })),
+    finalistGroups,
     sportType: form.sportType,
     themeColor: form.themeColor,
     peopleMode: form.peopleMode,

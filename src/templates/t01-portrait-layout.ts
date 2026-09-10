@@ -14,12 +14,12 @@ export const t01PortraitLayout = {
   // Figma 426:4: title group y=222, required slogan line 32.5px, then 22px gap.
   titleTop: 276.5,
   titleAreaBottom: 1196,
-  infoPanelTop: 1260,
-  infoTop: 1298,
+  infoPanelTop: 1292,
+  infoTop: 1346,
   infoWidth: 952,
-  infoBottom: 1818,
-  qrTop: 1496,
-  qrLeft: 850,
+  infoBottom: 1874,
+  qrTop: 1591,
+  qrLeft: 846,
   qrSize: 134,
-  figmaSource: "426:4"
+  figmaSource: "600:3370"
 } as const;

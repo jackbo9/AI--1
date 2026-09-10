@@ -11,7 +11,7 @@ import { adaptWideContrast } from "./t01-wide-contrast";
 
 export const extraFormats = ["landscape_1920x1080", "banner_2227x950", "longform_1080xAuto"] as const;
 export type ExtraFormat = (typeof extraFormats)[number];
-export const extraTemplateVersion = "t01-figma-2026-09-09-v5-typography";
+export const extraTemplateVersion = "t01-figma-2026-09-10-v7-info-grid";
 export const extraTemplateNodes = {
   landscape_1920x1080: "426:74",
   banner_2227x950: "426:140",
@@ -108,7 +108,11 @@ export async function renderT01Extra(
       });
     });
     if (overflows.length) throw new ExtraRenderError("TEMPLATE_CONTENT_OVERFLOW", `内容超出模板容量（${[...new Set(overflows)].join("、")}），请修改后重试`);
-    const contrast = (await adaptWideContrast(page, brand.companyLogoInverse)) as
+    const contrast = (await adaptWideContrast(
+      page,
+      brand.companyLogoInverse,
+      brand.companyLogo
+    )) as
       | Awaited<ReturnType<typeof adaptWideContrast>>
       | undefined;
     if (contrast && !contrast.passed && options.readabilityMode !== "trial") {

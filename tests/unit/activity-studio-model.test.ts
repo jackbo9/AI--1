@@ -3,9 +3,11 @@ import {
   getStageForJob,
   initialForm,
   normalizeForm,
+  completedFinalistGroups,
   validateForm
 } from "@/components/activity-studio/activity-studio-model";
-import type { ActivityJob } from "@/components/activity-studio/types";
+import { createJobSchema } from "@/contracts/poster";
+import type { ActivityJob, FormState } from "@/components/activity-studio/types";
 
 function job(status: ActivityJob["status"], currentStep = "处理中"): ActivityJob {
   return { status, currentStep, versions: [] };
@@ -60,19 +62,61 @@ describe("activity studio model", () => {
     });
   });
 
-  it("requires all fixed groups only when the longform target is selected", () => {
-    expect(validateForm({
+  it("does not block the flow while a longform roster is still being filled", () => {
+    const form: FormState = {
       ...initialForm,
       renderTargets: ["longform_1080xAuto"],
       finalistGroups: initialForm.finalistGroups.map((group, index) => index === 0
         ? { ...group, entrants: [] }
         : { ...group, entrants: [{ name: "测试选手", region: "华东赛区" }] })
-    })).toBe("男单至少需要填写 1 人");
-    expect(validateForm({
+    };
+
+    expect(validateForm(form, false, false)).toBeUndefined();
+    expect(createJobSchema.safeParse({
+      input: normalizeForm(form),
+      idempotencyKey: "5ca3f7e0-24e3-4c84-b8ce-68ea8eff7304",
+      renderTargets: form.renderTargets
+    }).success).toBe(true);
+  });
+
+  it("does not submit hidden blank roster rows after longform is deselected", () => {
+    const input = normalizeForm({
       ...initialForm,
-      renderTargets: ["banner_2227x950"],
-      finalistGroups: initialForm.finalistGroups.map((group) => ({ ...group, entrants: [] }))
-    })).toBeUndefined();
+      renderTargets: ["portrait_1080x1920"],
+      finalistGroups: initialForm.finalistGroups.map((group) => ({
+        ...group,
+        entrants: [{ name: "", region: "" }]
+      }))
+    });
+
+    expect(input.finalistGroups).toBeUndefined();
+  });
+
+  it("submits roster entries only with the longform target", () => {
+    const finalistGroups = initialForm.finalistGroups.map((group) => ({
+      ...group,
+      entrants: [{ name: "测试选手", region: "华东赛区" }]
+    }));
+
+    expect(normalizeForm({
+      ...initialForm,
+      renderTargets: ["longform_1080xAuto"],
+      finalistGroups
+    }).finalistGroups).toEqual(finalistGroups);
+  });
+
+  it("keeps only complete roster rows in documents used for previews", () => {
+    expect(completedFinalistGroups({
+      finalistGroups: initialForm.finalistGroups.map((group, index) => ({
+        ...group,
+        entrants: index === 0
+          ? [{ name: " 张三 ", region: " 华东赛区 " }, { name: "李四", region: "" }]
+          : [{ name: "", region: "" }]
+      }))
+    })).toEqual([{
+      label: "男单",
+      entrants: [{ name: "张三", region: "华东赛区" }]
+    }]);
   });
 
   it("preserves an intentional title line break", () => {

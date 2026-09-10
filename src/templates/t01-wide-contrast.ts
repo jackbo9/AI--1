@@ -1,9 +1,15 @@
 import type { Page } from "playwright";
 
 /** Sample the rendered background at each template's actual text/logo regions. */
-export async function adaptWideContrast(page: Page, inverseLogo: string) {
+export async function adaptWideContrast(
+  page: Page,
+  inverseLogo: string,
+  primaryLogo: string
+) {
   const regions = await page.evaluate(() => {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-readability], [data-brand-company-logo]"));
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>(
+      "[data-readability], [data-brand-company-logo]:not([data-readability-companion])"
+    ));
     return nodes.map((node, index) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
@@ -22,7 +28,7 @@ export async function adaptWideContrast(page: Page, inverseLogo: string) {
     });
   });
   const background = await page.screenshot({ type: "png" });
-  const measurements = await page.evaluate(async ({ source, regions, inverseLogo }) => {
+  const measurements = await page.evaluate(async ({ source, regions, inverseLogo, primaryLogo }) => {
     const image = new Image(); image.src = source; await image.decode();
     const canvas = document.createElement("canvas"); canvas.width = image.width; canvas.height = image.height;
     const context = canvas.getContext("2d")!; context.drawImage(image, 0, 0);
@@ -54,17 +60,27 @@ export async function adaptWideContrast(page: Page, inverseLogo: string) {
           for (const companion of document.querySelectorAll<HTMLElement>(
             `[data-readability-companion="${region.readability}"]`
           )) {
-            companion.style.setProperty(
-              "background-color",
-              useLight ? "#ffffff" : "#151515",
-              "important"
-            );
+            if (companion.matches("img[data-brand-company-logo]")) {
+              (companion as HTMLImageElement).src = useLight ? inverseLogo : primaryLogo;
+              companion.dataset.logoVariant = useLight ? "inverse" : "primary";
+            } else {
+              companion.style.setProperty(
+                "background-color",
+                useLight ? "#ffffff" : "#151515",
+                "important"
+              );
+            }
           }
         }
       }
       return { index, tone: useLight ? "light" : "dark", ...chosen, passed: chosen.rate >= 0.95 && chosen.p05 >= region.minimum };
     });
-  }, { source: `data:image/png;base64,${background.toString("base64")}`, regions, inverseLogo });
+  }, {
+    source: `data:image/png;base64,${background.toString("base64")}`,
+    regions,
+    inverseLogo,
+    primaryLogo
+  });
   await page.evaluate(async () => { await Promise.all(Array.from(document.images).map(image => image.decode())); });
   return { passed: measurements.length > 0 && measurements.every(item => item.passed), measurements };
 }

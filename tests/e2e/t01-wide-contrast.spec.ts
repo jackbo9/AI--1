@@ -33,7 +33,7 @@ async function mount(page: Page, html: string, css: string) {
     await document.fonts.ready;
     await Promise.all(Array.from(document.images).map((image) => image.decode()));
   });
-  await adaptWideContrast(page, brand.companyLogoInverse);
+  await adaptWideContrast(page, brand.companyLogoInverse, brand.companyLogo);
 }
 
 for (const testCase of [
@@ -72,10 +72,14 @@ for (const testCase of [
       "background-color",
       "rgb(255, 255, 255)"
     );
+    await expect(page.locator("[data-brand-company-logo]")).toHaveAttribute(
+      "data-logo-variant",
+      "inverse"
+    );
   });
 }
 
-test("T01 longform divider follows the light title tone", async ({ page }) => {
+test("T01 longform company logo follows the title tone", async ({ page }) => {
   const brand = await loadEmbeddedBrandAssets();
   await page.setViewportSize({ width: 1080, height: 3000 });
   const markup = longformMarkup(content, {
@@ -86,12 +90,15 @@ test("T01 longform divider follows the light title tone", async ({ page }) => {
   });
   await mount(page, markup.html, markup.css);
 
-  await expect(page.locator(".lf-title-block")).toHaveCSS(
-    "color",
-    "rgb(255, 255, 255)"
+  const titleTone = await page.locator(".lf-title-block").evaluate((element) =>
+    getComputedStyle(element).color
   );
   await expect(page.locator(".lf-hero-divider")).toHaveCSS(
     "background-color",
-    "rgb(255, 255, 255)"
+    titleTone
+  );
+  await expect(page.locator("[data-brand-company-logo]")).toHaveAttribute(
+    "data-logo-variant",
+    titleTone === "rgb(255, 255, 255)" ? "inverse" : "primary"
   );
 });

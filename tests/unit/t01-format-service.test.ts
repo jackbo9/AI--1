@@ -69,6 +69,33 @@ describe("T01 format claims and isolated completion", () => {
     expect(renderT01Extra).not.toHaveBeenCalled();
   });
 
+  it("creates a replacement artifact after a template version upgrade", async () => {
+    stored.artifacts.push({
+      id: "old-longform",
+      renderTargetId: "longform_1080xAuto",
+      status: "READY",
+      createdAt: now,
+      brandSpecVersion: 1,
+      documentVersionId: "original-version",
+      visualFamilyId: "original-version",
+      width: 1080,
+      heightMode: "auto",
+      templateId: "employee-activity-longform",
+      templateVersion: "t01-figma-2026-09-09-v5-typography",
+      assetMode: "derived",
+      assetPath: "/fixture/source.png",
+      outputPath: "/fixture/old-longform.png",
+      validation: { passed: true, exportAllowed: true, messages: [] }
+    });
+
+    const replacement = await claimFormat("job", "owner", "longform_1080xAuto");
+
+    expect(replacement.claimed).toBe(true);
+    expect(replacement.artifact.id).not.toBe("old-longform");
+    expect(replacement.artifact.templateVersion).toBe("test-template-v1");
+    expect(stored.artifacts).toHaveLength(2);
+  });
+
   it("creates a retry artifact after failure and keeps the failed attempt", async () => {
     const first = await claimFormat("job", "owner", "landscape_1920x1080");
     vi.mocked(renderT01Extra).mockRejectedValueOnce(new ExtraRenderError("CONTENT_CAPACITY", "内容超出容量"));

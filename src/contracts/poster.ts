@@ -87,29 +87,6 @@ export const finalistGroupSchema = z.object({
 
 export const finalistGroupsSchema = z.array(finalistGroupSchema).max(5).optional();
 
-function validateLongformRoster(
-  finalistGroups: Array<z.infer<typeof finalistGroupSchema>> | undefined,
-  renderTargets: readonly z.infer<typeof renderTargetIdSchema>[],
-  context: z.RefinementCtx
-) {
-  if (!renderTargets.includes("longform_1080xAuto")) return;
-  // Historical jobs predate the roster contract. New form submissions always
-  // send this field; preserve renderability of immutable legacy versions.
-  if (finalistGroups === undefined) return;
-  if (finalistGroups.length !== finalistGroupLabels.length) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups"], message: "长图需要填写全部 5 个固定组别的名单" });
-    return;
-  }
-  finalistGroupLabels.forEach((label, index) => {
-    const group = finalistGroups[index];
-    if (!group || group.label !== label) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups", index, "label"], message: "长图名单组别需按固定顺序填写" });
-    } else if (group.entrants.length < 1) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["input", "finalistGroups", index, "entrants"], message: `${label}至少需要填写 1 人` });
-    }
-  });
-}
-
 function validateSportsScope(
   input: { activityName: string; description: string; rules: string; sportType: z.infer<typeof sportTypeSchema>; sportsConfirmed: boolean },
   context: z.RefinementCtx
@@ -354,7 +331,6 @@ export const createJobSchema = z.object({
   skipCopy: z.boolean().default(false),
   renderTargets: z.array(renderTargetIdSchema).min(1).max(4).default([...defaultRenderTargetIds])
 }).superRefine((value, context) => {
-  validateLongformRoster(value.input.finalistGroups, value.renderTargets, context);
   validateSportsScope(value.input, context);
 });
 

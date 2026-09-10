@@ -87,8 +87,8 @@ describe("B1 formal brand assets", () => {
       width: 224
     });
     expect(portrait.qrZone).toMatchObject({
-      x: 850,
-      y: 1496,
+      x: 846,
+      y: 1591,
       width: 134,
       height: 134
     });
