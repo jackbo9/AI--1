@@ -23,12 +23,16 @@ describe("T01 confirmed content projections", () => {
     expect(html).not.toContain("t01-landscape-info");
     expect(css).toContain("width:1393px");
   });
-  it("projects both sessions into the fixed 1080 by 3000 longform shell", () => {
-    const { html } = longformMarkup(content, assets);
+  it("projects both sessions into an auto-height longform with a recap photo slot", () => {
+    const { html, css } = longformMarkup(content, assets);
     expect(html).toContain("2026-09-18");
     expect(html).toContain("2026-09-19");
     expect(html).not.toContain("决赛名单");
-    expect(html).not.toContain("赛区回顾");
+    expect(html).toContain("赛区回顾");
+    expect(html).toContain("替换为该赛区赛事照片");
+    expect(css).toContain("top:75px");
+    expect(css).toContain("top:145px");
+    expect(css).toContain("bottom:12px");
   });
   it("renders up to six entrants in each fixed finalist group and grows the longform canvas", () => {
     const sixEntrants = ["张三", "李四", "王五", "赵六", "钱七", "孙八"].map((name) => ({ name, region: "华东赛区" }));
@@ -41,5 +45,20 @@ describe("T01 confirmed content projections", () => {
     expect(html).toContain("--lf-roster-row-height:181.05px");
     expect(html).not.toContain("slice(0, 4)");
     expect(one.html).toContain("--lf-roster-row-height:84.35px");
+    expect(one.html).not.toContain("--lf-canvas-height:3000px");
+  });
+  it("keeps the Figma 600:3531 baseline at 3000px for five groups of four", () => {
+    const fourEntrants = ["甲", "乙", "丙", "丁"].map((name) => ({ name, region: "XX赛区" }));
+    const finalistGroups = ["男单", "女单", "混合双人", "男子双人", "女子双人"].map((label) => ({ label, entrants: fourEntrants }));
+    const { html } = longformMarkup({ ...content, finalistGroups }, assets);
+    expect(html).toContain("--lf-recap-top:2418px");
+    expect(html).toContain("--lf-canvas-height:3000px");
+  });
+  it("keeps the complete venue in a recap label that can expand horizontally", () => {
+    const { html } = longformMarkup({ ...content, sessions: [{ date: "2026-09-18", time: "", location: "九号园区体育馆" }] }, assets);
+    expect(html).toContain("<strong>九号园区体育馆</strong>");
+    const { css } = longformMarkup(content, assets);
+    expect(css).toContain("width:max-content");
+    expect(css).toContain("right:0");
   });
 });

@@ -23,8 +23,8 @@ async function main() {
     console.log(JSON.stringify({ format, width: result.width, height: result.height, path: result.outputPath, contrast: result.contrast?.passed ?? "not-sampled" }));
   }
   const longform = await renderT01Extra("longform_1080xAuto", document, imagePath, "longform-fixed", { outputDirectory, readabilityMode: "trial" });
-  if (longform.height !== 3000) throw new Error("Longform did not match the fixed 1080×3000 Figma frame");
-  console.log(JSON.stringify({ case: "fixed-longform", height: longform.height }));
+  if (longform.height < 2240 || longform.height > 12000) throw new Error("Longform height was outside its declared auto-height bounds");
+  console.log(JSON.stringify({ case: "base-longform", height: longform.height }));
   const finalistGroups = ["男单", "女单", "混合双人", "男子双人", "女子双人"].map((label) => ({
     label,
     entrants: ["张三", "李四", "王五", "赵六"].map((name) => ({ name, region: "园区赛区" }))
@@ -34,7 +34,8 @@ async function main() {
     readabilityMode: "trial",
     content: { ...t01ContentFromDocument(document), finalistGroups }
   });
-  if (fullLongform.height !== 3000) throw new Error("Full longform fixture did not match the Figma frame");
+  if (fullLongform.height !== 3000) throw new Error("Four entrants in each Figma finalist group must produce the 3000px baseline longform");
+  console.log(JSON.stringify({ case: "figma-five-groups-of-four", height: fullLongform.height }));
   try {
     await renderT01Extra("banner_2227x950", { ...document, title: "超长活动标题".repeat(10) }, imagePath, crypto.randomUUID(), { outputDirectory });
     throw new Error("Expected title overflow to block output");

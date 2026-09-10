@@ -12,6 +12,12 @@ export const sportTypeSchema = z.enum(["auto", "tennis", "badminton", "basketbal
 export const sportsThemeColorSchema = z.enum(["auto", "blue", "green", "red", "yellow", "purple", "orange", "neutral"]);
 export const peopleModeSchema = z.enum(["auto", "forbid", "allow"]);
 export const sportsVisualTypeSchema = z.enum(["auto", "action", "equipment", "venue"]);
+export const visualPreferenceSchema = z.object({
+  themeColor: sportsThemeColorSchema.default("auto"),
+  peopleMode: peopleModeSchema.default("auto"),
+  visualType: sportsVisualTypeSchema.default("auto"),
+  visualTreatment: z.string().trim().max(80).default("")
+});
 
 const sportKeywords = /网球|羽毛球|羽球|篮球|足球|排球|乒乓球|乒乓|拔河|跑步|马拉松|接力|田径/;
 export function isRecognizedSportsActivity(value: string) {
@@ -363,6 +369,7 @@ export const refineVisualSchema = z.object({
     .trim()
     .min(10, "请至少描述 10 个字的画面想法")
     .max(420, "画面想法最多 420 字，请保留创意并精简后重试"),
+  preferences: visualPreferenceSchema,
   idempotencyKey: z.string().uuid()
 });
 
@@ -405,6 +412,7 @@ export type VisualPromptInput = Pick<
   "category" | "themeKeywords" | "visualIntent"
 > &
   Partial<Omit<EmployeeActivityInput, "outputFormat" | "category" | "themeKeywords" | "visualIntent">>;
+export type VisualPreference = z.infer<typeof visualPreferenceSchema>;
 
 export function campaignBriefFromLegacyInput(
   input: EmployeeActivityInput,

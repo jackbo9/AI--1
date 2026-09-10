@@ -5,6 +5,7 @@ node_modules/
 data/jobs.json
 data/generated/*
 !data/generated/.gitkeep
+data/archive/
 data/uploads/qr/*
 !data/uploads/qr/.gitkeep
 playwright-report/

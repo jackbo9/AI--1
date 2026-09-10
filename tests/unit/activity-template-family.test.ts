@@ -38,8 +38,9 @@ describe("employee activity template family manifest", () => {
     });
     expect(renderTargets.longform_1080xAuto.dimensions).toEqual({
       width: 1080,
-      heightMode: "fixed",
-      height: 3000
+      heightMode: "auto",
+      minHeight: 2240,
+      maxHeight: 12000
     });
   });
 

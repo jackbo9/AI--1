@@ -37,7 +37,7 @@ export async function claimFormat(jobId: string, userId: string, format: ExtraFo
       id: crypto.randomUUID(), renderTargetId: format, status: "RENDERING", createdAt: new Date().toISOString(),
       brandSpecVersion: 1, documentVersionId, visualFamilyId,
       width: format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080,
-      heightMode: "fixed",
+      heightMode: format === "longform_1080xAuto" ? "auto" : "fixed",
       templateId: `employee-activity-${format.split("_")[0]}`, templateVersion: extraTemplateVersion,
       assetMode: version.assetMode === "fallback" ? "fallback" : "derived", assetPath: version.assetPath,
       assetDetail: "复用本次已生成的主视觉，按模板裁切；未再次调用图片模型。",

@@ -5,7 +5,8 @@ import type {
   GenerationStatus,
   OutputFormat,
   PosterDocument,
-  VisualMaster
+  VisualMaster,
+  VisualPreference
 } from "./poster";
 import type {
   BrandSpecVersion,
@@ -87,6 +88,7 @@ export type VisualInput = {
   originalIntent: string;
   sourceCopyCreatedAt: string;
   createdAt: string;
+  preferences?: VisualPreference;
 };
 
 export type VisualDraft = {

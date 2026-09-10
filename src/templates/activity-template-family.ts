@@ -250,8 +250,9 @@ export const activityTemplateFamilyManifest =
         templateVersion: "t01-figma-2026-09-09-v5-typography",
         dimensions: {
           width: 1080,
-          heightMode: "fixed",
-          height: 3000
+          heightMode: "auto",
+          minHeight: 2240,
+          maxHeight: 12000
         },
         safeArea: { top: 64, right: 64, bottom: 63, left: 64 },
         titleLevel: "H0",

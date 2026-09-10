@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "prestart": "node --import tsx scripts/recover-interrupted-jobs.ts",
     "start": "next start",
+    "archive:demo": "node --import tsx scripts/archive-demo-data.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

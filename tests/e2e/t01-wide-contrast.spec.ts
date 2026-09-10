@@ -65,6 +65,9 @@ for (const testCase of [
       "color",
       "rgb(255, 255, 255)"
     );
+    for (const selector of [".t01-wide-eyebrow", ".t01-wide-title", ".t01-wide-description"]) {
+      await expect(page.locator(selector)).toHaveCSS("color", "rgb(255, 255, 255)");
+    }
     await expect(page.locator(testCase.divider)).toHaveCSS(
       "background-color",
       "rgb(255, 255, 255)"

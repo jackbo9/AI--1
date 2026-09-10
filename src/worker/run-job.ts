@@ -3,7 +3,8 @@ import {
   legacyPortraitInputFromCampaignBrief,
   type IllustrationBrief,
   visualMasterSchema,
-  type PosterDocument
+  type PosterDocument,
+  type VisualPreference
 } from "@/contracts/poster";
 import { generateCopy } from "@/providers/copy-provider";
 import {
@@ -64,7 +65,11 @@ export async function runCopyStage(jobId: string) {
   }
 }
 
-export async function runVisualRefinement(jobId: string, visualIntent: string) {
+export async function runVisualRefinement(
+  jobId: string,
+  visualIntent: string,
+  preferences?: VisualPreference
+) {
   try {
     const job = await findJob(jobId);
     if (
@@ -84,7 +89,8 @@ export async function runVisualRefinement(jobId: string, visualIntent: string) {
       visualInput: {
         originalIntent: visualIntent,
         sourceCopyCreatedAt,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        preferences
       },
       error: undefined
     }));
@@ -92,6 +98,7 @@ export async function runVisualRefinement(jobId: string, visualIntent: string) {
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
     const compiler = await compileIllustrationBrief({
       ...input,
+      ...preferences,
       visualIntent
     });
     const description = visualDescriptionFromBrief(compiler.brief);
@@ -154,7 +161,10 @@ export async function runVisualStage(
       error: undefined
     }));
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
-    const brief = briefFromConfirmedDescription(confirmedDescription, input);
+    const brief = briefFromConfirmedDescription(confirmedDescription, {
+      ...input,
+      ...job.visualInput?.preferences
+    });
     // Validate the final provider payload before any paid image request.
     seedreamPrompt(brief);
     const compiler = {

@@ -8,8 +8,14 @@ function escapeHtml(value: string): string {
   })[character]!);
 }
 
-function textSlot(name: string, text: string, maxLines: number, className = name): string {
-  return `<p class="t01-wide-${className}" data-capacity="${name}" data-max-lines="${maxLines}" data-readability="${name}">${escapeHtml(text)}</p>`;
+function textSlot(
+  name: string,
+  text: string,
+  maxLines: number,
+  className = name,
+  readable = true
+): string {
+  return `<p class="t01-wide-${className}" data-capacity="${name}" data-max-lines="${maxLines}"${readable ? ` data-readability="${name}"` : ""}>${escapeHtml(text)}</p>`;
 }
 
 function cross(className: string): string {
@@ -56,8 +62,8 @@ export function wideMarkup(
       <i class="t01-wide-divider" data-readability-companion="title-block" aria-hidden="true"></i>
       <section class="t01-wide-title-block" data-readability="title-block">
         <p class="t01-wide-eyebrow">${escapeHtml(eyebrow)}</p>
-        ${textSlot("title", content.title, 2)}
-        ${description ? textSlot("description", description, 2) : ""}
+        ${textSlot("title", content.title, 2, "title", false)}
+        ${description ? textSlot("description", description, 2, "description", false) : ""}
       </section>
       ${landscapeInfo}
     </main>`,
@@ -72,7 +78,7 @@ export function wideMarkup(
       .t01-wide-company{width:224px;height:66.014px;object-fit:contain;object-position:left center}.t01-wide-administration{width:61.2px;height:61.2px;object-fit:contain}
       .t01-wide-divider{position:absolute;left:64px;right:64px;top:178px;height:2px;background:#151515}
       .t01-wide-title-block{position:absolute;left:64px;top:230px;width:1188px;display:flex;flex-direction:column;gap:22px;overflow:visible}
-      .t01-wide-eyebrow{font-size:26px;font-weight:500;line-height:32.5px}
+      .t01-wide-eyebrow,.t01-wide-title,.t01-wide-description{color:inherit}.t01-wide-eyebrow{font-size:26px;font-weight:500;line-height:32.5px}
       .t01-wide-title{width:100%;font-size:164px;font-weight:600;line-height:170px}
       .t01-wide-description{width:100%;font-size:28px;font-weight:500;line-height:35px}
       .t01-landscape-info{position:absolute;left:64px;top:807px;width:1792px;height:225px;color:#181818}

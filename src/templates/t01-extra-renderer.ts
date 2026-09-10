@@ -63,7 +63,7 @@ export async function renderT01Extra(
   const content = options.content ?? t01ContentFromDocument(posterDocument);
   const markup = format === "longform_1080xAuto" ? longformMarkup(content, assets) : wideMarkup(format, content, assets);
   const width = format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080;
-  const fixedHeight = format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : 3000;
+  const fixedHeight = format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : undefined;
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: fixedHeight ?? 3000 }, deviceScaleFactor: 1 });
@@ -87,7 +87,7 @@ export async function renderT01Extra(
     const box = await page.locator(".t01-extra").boundingBox();
     if (!box) throw new ExtraRenderError("TEMPLATE_INVALID", "模板未生成有效画布");
     const height = Math.ceil(box.height);
-    if (Math.round(box.width) !== width || height !== fixedHeight) {
+    if (Math.round(box.width) !== width || (fixedHeight !== undefined && height !== fixedHeight)) {
       throw new ExtraRenderError("TEMPLATE_HEIGHT_EXCEEDED", "内容超出当前模板尺寸范围，请缩短内容后重试");
     }
     await page.setViewportSize({ width, height });

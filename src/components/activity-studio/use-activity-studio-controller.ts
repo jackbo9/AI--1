@@ -411,7 +411,17 @@ export function useActivityStudioController(fixtureMode: boolean) {
         setJob((current) => current ? createFixtureVisualDraftJob(current, visualDescription.trim()) : current);
         return;
       }
-      const { ok, payload } = await requestVisualRefinement(jobId, visualDescription.trim(), createClientUuid());
+      const { ok, payload } = await requestVisualRefinement(
+        jobId,
+        visualDescription.trim(),
+        {
+          themeColor: form.themeColor,
+          peopleMode: form.peopleMode,
+          visualType: form.visualType,
+          visualTreatment: form.visualTreatment.trim()
+        },
+        createClientUuid()
+      );
       if (!ok) setError(payload.error?.message ?? "优化画面描述失败");
       else await refreshJob(jobId);
     } finally {

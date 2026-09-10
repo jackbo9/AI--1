@@ -1,4 +1,4 @@
-import type { EmployeeActivityInput } from "@/contracts/poster";
+import type { EmployeeActivityInput, VisualPreference } from "@/contracts/poster";
 import type { RenderTargetId } from "@/contracts/brand";
 import type { ActivityJob } from "./types";
 
@@ -69,10 +69,12 @@ export function requestCopyConfirmation(
 export function requestVisualRefinement(
   jobId: string,
   visualIntent: string,
+  preferences: VisualPreference,
   idempotencyKey: string
 ) {
   return postJson<ErrorPayload>(`/api/jobs/${jobId}/refine-visual`, {
     visualIntent,
+    preferences,
     idempotencyKey
   });
 }

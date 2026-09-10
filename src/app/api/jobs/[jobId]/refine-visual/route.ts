@@ -53,7 +53,8 @@ export async function POST(
       visualInput: {
         originalIntent: parsed.data.visualIntent,
         sourceCopyCreatedAt: item.copyDraft?.createdAt ?? "",
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        preferences: parsed.data.preferences
       },
       error: undefined
     }));
@@ -66,6 +67,6 @@ export async function POST(
     }
     throw error;
   }
-  void runVisualRefinement(jobId, parsed.data.visualIntent);
+  void runVisualRefinement(jobId, parsed.data.visualIntent, parsed.data.preferences);
   return NextResponse.json({ jobId, status: "REFINING_VISUAL" }, { status: 202 });
 }
