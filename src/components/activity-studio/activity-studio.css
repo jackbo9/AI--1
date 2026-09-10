@@ -129,3 +129,5 @@
 .ead-final-canvas.is-zoom>.t01-preview{margin:0 auto}
 @media(max-width:1020px){.ead-final-viewer-head{align-items:flex-start}.ead-final-head-actions{align-items:flex-end;flex-direction:column}.ead-final-size-tabs button{min-width:34px;padding-inline:5px}}
 @media(max-width:760px){.ead-final-viewer-head{gap:10px}.ead-final-head-actions{width:100%;align-items:stretch}.ead-final-size-tabs{display:grid;grid-template-columns:repeat(4,1fr)}.ead-final-size-tabs button{min-width:0}.ead-final-view-controls{justify-content:flex-end}}
+.ead-preview-disclaimer{margin:-3px 0 10px;color:#858b82;font-size:9px;line-height:1.45}
+.t01-selected-preview .t01-preview-eyebrow,.t01-selected-preview .t01-preview-title p,.t01-selected-preview .t01-preview-info-stack h4::before{font-weight:500}.t01-selected-preview .t01-preview-title h3,.t01-selected-preview .t01-preview-info-stack>b,.t01-selected-preview .t01-preview-info-stack>h5,.t01-selected-preview .t01-preview-info-stack h4{font-weight:600}

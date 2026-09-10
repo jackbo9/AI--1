@@ -231,9 +231,10 @@ async function assertRenderReadiness(page: Page) {
     ];
     return {
       miSansLoaded:
-      miSansFaces.length === 3 &&
+      miSansFaces.length === 4 &&
         miSansFaces.every((face) => face.status === "loaded") &&
         window.document.fonts.check('400 28px "MiSans"') &&
+        window.document.fonts.check('500 28px "MiSans"') &&
         window.document.fonts.check('600 28px "MiSans"') &&
         window.document.fonts.check('700 125px "MiSans"'),
       logosLoaded: logoImages.every(
@@ -244,7 +245,7 @@ async function assertRenderReadiness(page: Page) {
   if (!readiness.miSansLoaded) {
     throw new PosterRenderError(
       "brand.font.load_failed",
-      "MiSans Regular、Medium 与 Bold 未完整加载，已阻止导出。"
+      "MiSans Regular、Medium、Semibold 或 Bold 未完整加载，已阻止导出。"
     );
   }
   if (!readiness.logosLoaded) {

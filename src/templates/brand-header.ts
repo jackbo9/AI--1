@@ -27,6 +27,7 @@ export const brandAssetPaths = {
   fonts: {
     regular: path.join(brandRoot, "fonts", "MiSans-Regular.otf"),
     medium: path.join(brandRoot, "fonts", "MiSans-Medium.otf"),
+    semibold: path.join(brandRoot, "fonts", "MiSans-Semibold.otf"),
     bold: path.join(brandRoot, "fonts", "MiSans-Bold.otf")
   }
 } as const;
@@ -39,13 +40,14 @@ function dataUri(bytes: Buffer, mimeType: string) {
 
 async function embedBrandAssets(): Promise<EmbeddedBrandAssets> {
   try {
-    const [companyLogo, administrationMark, registrationArrow, regular, medium, bold] =
+    const [companyLogo, administrationMark, registrationArrow, regular, medium, semibold, bold] =
       await Promise.all([
         readFile(brandAssetPaths.companyLogo),
         readFile(brandAssetPaths.administrationMark),
         readFile(brandAssetPaths.registrationArrow),
         readFile(brandAssetPaths.fonts.regular),
         readFile(brandAssetPaths.fonts.medium),
+        readFile(brandAssetPaths.fonts.semibold),
         readFile(brandAssetPaths.fonts.bold)
       ]);
 
@@ -67,6 +69,10 @@ async function embedBrandAssets(): Promise<EmbeddedBrandAssets> {
         )}") format("opentype");font-style:normal;font-weight:400;font-display:block}`,
         `@font-face{font-family:"MiSans";src:url("${dataUri(
           medium,
+          "font/otf"
+        )}") format("opentype");font-style:normal;font-weight:500;font-display:block}`,
+        `@font-face{font-family:"MiSans";src:url("${dataUri(
+          semibold,
           "font/otf"
         )}") format("opentype");font-style:normal;font-weight:600;font-display:block}`
         ,`@font-face{font-family:"MiSans";src:url("${dataUri(
