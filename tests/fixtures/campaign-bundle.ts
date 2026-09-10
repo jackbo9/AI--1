@@ -21,6 +21,18 @@ type FixedArtifactExpectation = {
   brandCheck: BrandCheckExpectation;
 };
 
+type AutoArtifactExpectation = {
+  width: number;
+  heightMode: "auto";
+  minHeight: number;
+  maxHeight: number;
+  brandCheck: BrandCheckExpectation;
+};
+
+type ArtifactExpectation =
+  | FixedArtifactExpectation
+  | AutoArtifactExpectation;
+
 export type CampaignBundleFixture = {
   id:
     | "normal"
@@ -37,7 +49,7 @@ export type CampaignBundleFixture = {
   visualMode: "generated" | "fallback";
   expectedArtifacts: Record<
     RenderTargetId,
-    FixedArtifactExpectation
+    ArtifactExpectation
   >;
 };
 
@@ -107,8 +119,9 @@ function expectedArtifacts(input?: {
     },
     longform_1080xAuto: {
       width: 1080,
-      heightMode: "fixed" as const,
-      height: 3000,
+      heightMode: "auto" as const,
+      minHeight: 2240,
+      maxHeight: 12000,
       brandCheck: input?.longform ?? pass()
     }
   };

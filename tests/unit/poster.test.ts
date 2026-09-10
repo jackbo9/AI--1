@@ -140,7 +140,7 @@ describe("employee activity v1.7 contract", () => {
     expect(prompt).toContain("CENTER-RIGHT = MAIN VISUAL");
     expect(prompt).toContain("X 68%–78%");
     expect(prompt).toContain("Editorial Sports Photography");
-    expect(prompt).toContain("不要人物");
+    expect(prompt).toContain("默认不出现人物");
     expect(prompt).toContain("不是AI概念图");
   });
 });

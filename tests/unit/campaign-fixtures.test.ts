@@ -45,9 +45,19 @@ describe("four-target campaign fixture suite", () => {
         expect(expected.width).toBe(manifest.dimensions.width);
         expect(expected.heightMode).toBe(manifest.dimensions.heightMode);
 
-        expect(manifest.dimensions.heightMode).toBe("fixed");
         if (manifest.dimensions.heightMode === "fixed") {
+          expect(expected.heightMode).toBe("fixed");
+          if (expected.heightMode !== "fixed") {
+            throw new Error("Expected a fixed-height artifact contract.");
+          }
           expect(expected.height).toBe(manifest.dimensions.height);
+        } else {
+          expect(expected.heightMode).toBe("auto");
+          if (expected.heightMode !== "auto") {
+            throw new Error("Expected an adaptive-height artifact contract.");
+          }
+          expect(expected.minHeight).toBe(manifest.dimensions.minHeight);
+          expect(expected.maxHeight).toBe(manifest.dimensions.maxHeight);
         }
       }
     }
