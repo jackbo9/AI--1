@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { NextResponse } from "next/server";
-import { findJob } from "@/server/job-store";
+import { findJob, findTeaJob } from "@/server/job-store";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -21,6 +21,20 @@ export async function GET(
   }
   const jobId = filename.match(/^([0-9a-f-]{36})(?:-|\.png)/i)?.[1];
   if (!jobId) return new NextResponse("Not found", { status: 404 });
+  const tea = await findTeaJob(jobId);
+  if (tea) {
+    if (tea.userId !== identity.userId) return forbiddenResponse();
+    const output = tea.outputs.find(o => o.exportAllowed && o.outputPath && path.basename(o.outputPath) === filename);
+    const visual = tea.options.some(o => o.status === "READY" && [o.assetPath, o.previewPath].some(p => p && path.basename(p) === filename));
+    if (!output && !visual) return new NextResponse("Not found", { status: 404 });
+    const format = new URL(request.url).searchParams.get("format");
+    if (format && (format !== "jpg" || !output)) return new NextResponse("Invalid format", { status: 400 });
+    try {
+      const bytes = await readFile(path.join(process.cwd(), "data/generated", filename));
+      const result = format === "jpg" ? await sharp(bytes).flatten({ background: "white" }).jpeg({ quality: 95 }).toBuffer() : bytes;
+      return new NextResponse(new Uint8Array(result), { headers: { "Content-Type": format === "jpg" ? "image/jpeg" : contentTypeFor(filename), "Cache-Control": "private, no-store", "Content-Disposition": `${format ? "attachment" : "inline"}; filename="${format ? filename.replace(/\.png$/, ".jpg") : filename}"` } });
+    } catch { return new NextResponse("Not found", { status: 404 }); }
+  }
   const job = await findJob(jobId);
   if (!job) return new NextResponse("Not found", { status: 404 });
   if (job.userId !== identity.userId) return forbiddenResponse();

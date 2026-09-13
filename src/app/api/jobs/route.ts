@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { isTeaJob } from "@/contracts/tea";
+import { createTeaResponse } from "@/server/tea-api";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import {
@@ -29,6 +31,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  if (isTeaJob(body.value)) return createTeaResponse(body.value, identity.userId);
   const parsed = createJobSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(

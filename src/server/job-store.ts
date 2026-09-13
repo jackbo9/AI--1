@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import crypto from "node:crypto";
+import { isTeaJob, teaFieldsSchema, type TeaJob } from "@/contracts/tea";
 import path from "node:path";
 import type {
   Artifact,
@@ -31,23 +32,33 @@ type StoredGenerationJob = Omit<
   visualOptions?: GenerationJob["visualOptions"];
 };
 
-async function readJobs(): Promise<CampaignGenerationJob[]> {
+async function readAllJobs(): Promise<Array<CampaignGenerationJob | TeaJob>> {
   try {
     const parsed = JSON.parse(await readFile(jobFile, "utf8")) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((item) => {
+    if (!Array.isArray(parsed)) throw new Error("任务存储格式无效，已停止写入以保护历史数据");
+    return parsed.flatMap<CampaignGenerationJob | TeaJob>((item) => {
+      if (isTeaJob(item)) return [{ ...item, fields: teaFieldsSchema.parse(item.fields) }];
       try {
         return [normalizeStoredJob(item as StoredGenerationJob)];
       } catch {
         return [];
       }
     });
-  } catch {
-    return [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
 }
 
+async function readJobs(): Promise<CampaignGenerationJob[]> {
+  return (await readAllJobs()).filter((job): job is CampaignGenerationJob => !isTeaJob(job));
+}
+
 async function saveJobs(jobs: GenerationJob[]) {
+  await saveAllJobs([...jobs, ...(await readAllJobs()).filter(isTeaJob)]);
+}
+
+async function saveAllJobs(jobs: Array<GenerationJob | TeaJob>) {
   await mkdir(dataDir, { recursive: true });
   const temporaryFile = `${jobFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
   try {
@@ -56,6 +67,37 @@ async function saveJobs(jobs: GenerationJob[]) {
   } finally {
     await unlink(temporaryFile).catch(() => undefined);
   }
+}
+
+export async function findTeaJob(id: string) {
+  return (await readAllJobs()).filter(isTeaJob).find(job => job.id === id);
+}
+
+export async function createTeaJob(job: TeaJob) {
+  return withMutation(async () => {
+    const jobs = await readAllJobs();
+    const existing = jobs.find(item => item.idempotencyKey === job.idempotencyKey);
+    if (existing) {
+      if (!isTeaJob(existing) || existing.userId !== job.userId) throw new Error("幂等键已被占用");
+      return existing;
+    }
+    jobs.unshift(job);
+    await saveAllJobs(jobs);
+    return job;
+  });
+}
+
+export async function updateTeaJob(id: string, change: (job: TeaJob) => TeaJob) {
+  return withMutation(async () => {
+    const jobs = await readAllJobs();
+    const index = jobs.findIndex(job => job.id === id);
+    const current = jobs[index];
+    if (!isTeaJob(current)) throw new Error("下午茶任务不存在");
+    const next = { ...change(current), updatedAt: new Date().toISOString() };
+    jobs[index] = next;
+    await saveAllJobs(jobs);
+    return next;
+  });
 }
 
 function withMutation<T>(operation: () => Promise<T>) {

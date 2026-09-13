@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
-import { findJob } from "@/server/job-store";
+import { findJob, findTeaJob } from "@/server/job-store";
+import { publicTeaJob } from "@/server/tea-api";
 import { latestPortraitPreviewOutputPath } from "@/server/portrait-preview";
 import {
   forbiddenResponse,
@@ -11,6 +12,8 @@ export const runtime = "nodejs";
 export async function GET(_: Request, context: { params: Promise<{ jobId: string }> }) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
+  const tea = await findTeaJob((await context.params).jobId);
+  if (tea) return tea.userId === identity.userId ? NextResponse.json(publicTeaJob(tea)) : forbiddenResponse();
   const job = await findJob((await context.params).jobId);
   if (!job) return NextResponse.json({ error: { code: "JOB_NOT_FOUND", message: "未找到该任务" } }, { status: 404 });
   if (job.userId !== identity.userId) return forbiddenResponse();
