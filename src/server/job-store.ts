@@ -32,7 +32,9 @@ type StoredGenerationJob = Omit<
   visualOptions?: GenerationJob["visualOptions"];
 };
 
-async function readAllJobs(): Promise<Array<CampaignGenerationJob | TeaJob>> {
+export type StoredJob = CampaignGenerationJob | TeaJob;
+
+async function readAllJobs(): Promise<StoredJob[]> {
   try {
     const parsed = JSON.parse(await readFile(jobFile, "utf8")) as unknown;
     if (!Array.isArray(parsed)) throw new Error("任务存储格式无效，已停止写入以保护历史数据");
@@ -48,6 +50,10 @@ async function readAllJobs(): Promise<Array<CampaignGenerationJob | TeaJob>> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
   }
+}
+
+export async function listOwnedJobs(userId: string): Promise<StoredJob[]> {
+  return (await readAllJobs()).filter((job) => job.userId === userId);
 }
 
 async function readJobs(): Promise<CampaignGenerationJob[]> {

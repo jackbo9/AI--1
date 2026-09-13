@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams
 }: {
-  searchParams: Promise<{ fixture?: string; scene?: string; job?: string }>;
+  searchParams: Promise<{ fixture?: string; scene?: string; job?: string; view?: string }>;
 }) {
   const identity = await getCurrentIdentity();
   if (!identity) redirect("/api/auth/feishu/start");
@@ -25,6 +25,7 @@ export default async function Page({
       fixtureMode={fixtureMode}
       initialTea={initialTea}
       initialTeaJobId={initialTea ? query.job : undefined}
+      initialHistory={query.view === "history"}
       identity={{
         displayName: identity.displayName,
         provider: identity.provider

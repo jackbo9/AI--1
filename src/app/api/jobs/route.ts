@@ -19,7 +19,21 @@ import {
   readOwnedQrAssetDataUri
 } from "@/server/qr-asset-store";
 import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
+import { historyQuerySchema } from "@/contracts/history";
+import { HistoryCursorError, listJobHistory } from "@/server/job-history";
 export const runtime = "nodejs";
+export async function GET(request: Request) {
+  const identity = await requireApiIdentity();
+  if (!identity) return unauthorizedResponse();
+  const url = new URL(request.url);
+  const parsed = historyQuerySchema.safeParse({ limit: url.searchParams.get("limit") ?? undefined, cursor: url.searchParams.get("cursor") ?? undefined });
+  if (!parsed.success) return NextResponse.json({ error: { code: "INVALID_HISTORY_QUERY", message: "历史记录分页参数无效" } }, { status: 400 });
+  try { return NextResponse.json(await listJobHistory(identity.userId, parsed.data.limit, parsed.data.cursor)); }
+  catch (error) {
+    if (error instanceof HistoryCursorError) return NextResponse.json({ error: { code: "INVALID_HISTORY_CURSOR", message: "历史记录分页位置已失效，请重新加载" } }, { status: 400 });
+    return NextResponse.json({ error: { code: "HISTORY_READ_FAILED", message: "历史记录暂时无法读取，请稍后重试" } }, { status: 500 });
+  }
+}
 export async function POST(request: Request) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
