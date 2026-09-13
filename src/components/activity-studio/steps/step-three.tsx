@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Field, SectionHead } from "../fields";
+import { VisualOptionCard } from "../visual-option-card";
 import type { ActivityJob, FormState } from "../types";
 
 type Props = {
@@ -163,26 +164,15 @@ export function StepThree({
               {options.map((option, index) => {
                 const selected = option.id === job?.selectedVisualOptionId;
                 return (
-                  <button
-                    type="button"
-                    className={`ead-option-card ${selected ? "is-selected" : ""}`}
+                  <VisualOptionCard
                     key={option.id}
-                    onClick={() => onSelect(option.id)}
+                    onSelect={() => onSelect(option.id)}
                     disabled={busy || pendingSelect || option.sourceCopyCreatedAt !== job?.copyDraft?.createdAt}
-                    aria-pressed={selected}
-                  >
-                    <span className="ead-option-image">
-                      {/* Candidate files are private authenticated routes, so Next Image cannot prefetch them. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={option.previewUrl}
-                        alt={`主视觉方案 ${index + 1}`}
-                      />
-                      <b>{selected ? "已选中" : `方案 ${index + 1}`}</b>
-                    </span>
-                    <strong>{option.sourceDocument.title}</strong>
-
-                  </button>
+                    selected={selected}
+                    src={option.previewUrl}
+                    label={`主视觉方案 ${index + 1}`}
+                    title={option.sourceDocument.title}
+                  />
                 );
               })}
             </div>

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
 
-const base = "http://127.0.0.1:3213";
+const base = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3213";
 test.setTimeout(120_000);
 
 test("empty new form, editable roster with immediate feedback and optional QR", async ({ page }) => {
@@ -109,6 +109,7 @@ for (const width of [1280, 1440, 1920, 2560]) {
 }
 
 test("real local pipeline exports PNG and JPG in all four formats without QR", async ({ page, request }) => {
+  test.skip(process.env.RUN_UNCONFIGURED_PIPELINE !== "1", "仅在确认目标服务未配置模型时显式运行，防止回归测试意外调用付费模型");
   await page.goto(base + "/?fixture=1");
   // Obtain a complete input from the UI, then use the real local API with no model configuration.
   let captured: Record<string, unknown> | undefined;

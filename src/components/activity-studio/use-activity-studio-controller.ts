@@ -53,7 +53,7 @@ function visualPreferences(form: FormState): VisualPreference {
   return { themeColor: form.themeColor, peopleMode: form.peopleMode, visualType: form.visualType, visualTreatment: form.visualTreatment.trim() };
 }
 
-export function useActivityStudioController(fixtureMode: boolean) {
+export function useActivityStudioController(fixtureMode: boolean, skipInitialRestore = false) {
   const [form, setForm] = useState<FormState>(() => fixtureMode ? structuredClone(fixtureForm) : newFormState());
   const [stage, setStage] = useState<Stage>(1);
   const [jobId, setJobId] = useState<string>();
@@ -79,6 +79,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
+    if (skipInitialRestore) return;
     const storedJobId = searchParams.get("job");
     if (fixtureMode) {
       const storedFixture = window.sessionStorage.getItem(UI_FIXTURE_STORAGE_KEY);
@@ -101,7 +102,7 @@ export function useActivityStudioController(fixtureMode: boolean) {
       if (loaded) hydrateJob(loaded);
       setRestoring(false);
     });
-  }, [fixtureMode]);
+  }, [fixtureMode, skipInitialRestore]);
 
 
   useEffect(() => {

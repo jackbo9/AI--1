@@ -35,7 +35,7 @@ test("waits for portrait readiness and automatically recovers all selected forma
       previewUrl: "/fixtures/employee-activity-poster.svg", validation: { passed: true, exportAllowed: true, messages: [] }
     })) } });
   });
-  await page.goto("http://127.0.0.1:3213/?job=automatic-format-test");
+  await page.goto(`${process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3213"}/?job=automatic-format-test`);
   await expect(page.getByText("正在排版导出", { exact: true })).toBeVisible();
   for (const label of ["竖版", "横版", "Banner", "长图"]) {
     await page.getByRole("group", { name: "切换最终物料尺寸" }).getByRole("button", { name: label, exact: true }).click();
