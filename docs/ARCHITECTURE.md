@@ -116,6 +116,8 @@ Demo 支持上传 PNG/JPEG/WebP 二维码图片。Web API 先用 magic bytes 和
 
 ### 基础设施
 
+2026-09-13 试用实现采用 Prisma + PostgreSQL 与私有阿里云 OSS；未配置数据库和 OSS 时保留 JSON/本地文件 Adapter。现阶段仍为单进程，清理由 systemd timer 每日触发。
+
 | 阶段 | 数据库 | 文件 | 部署 |
 |---|---|---|---|
 | 本地 Demo | SQLite 或本地 PostgreSQL | 本地文件 | 本机进程/Docker |
