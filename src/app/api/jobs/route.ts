@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { isTeaJob } from "@/contracts/tea";
+import { createTeaResponse } from "@/server/tea-api";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import {
@@ -7,7 +9,7 @@ import {
   createJobSchema,
   posterDocumentSchema
 } from "@/contracts/poster";
-import { createJob, findByKey } from "@/server/job-store";
+import { createJob, findByKey, findJob } from "@/server/job-store";
 import { runCopyStage } from "@/worker/run-job";
 import { requireApiIdentity, unauthorizedResponse } from "@/server/auth";
 import { preflightEmployeeActivity, PosterRenderError } from "@/templates/employee-activity";
@@ -17,7 +19,21 @@ import {
   readOwnedQrAssetDataUri
 } from "@/server/qr-asset-store";
 import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
+import { historyQuerySchema } from "@/contracts/history";
+import { HistoryCursorError, listJobHistory } from "@/server/job-history";
 export const runtime = "nodejs";
+export async function GET(request: Request) {
+  const identity = await requireApiIdentity();
+  if (!identity) return unauthorizedResponse();
+  const url = new URL(request.url);
+  const parsed = historyQuerySchema.safeParse({ limit: url.searchParams.get("limit") ?? undefined, cursor: url.searchParams.get("cursor") ?? undefined });
+  if (!parsed.success) return NextResponse.json({ error: { code: "INVALID_HISTORY_QUERY", message: "历史记录分页参数无效" } }, { status: 400 });
+  try { return NextResponse.json(await listJobHistory(identity.userId, parsed.data.limit, parsed.data.cursor)); }
+  catch (error) {
+    if (error instanceof HistoryCursorError) return NextResponse.json({ error: { code: "INVALID_HISTORY_CURSOR", message: "历史记录分页位置已失效，请重新加载" } }, { status: 400 });
+    return NextResponse.json({ error: { code: "HISTORY_READ_FAILED", message: "历史记录暂时无法读取，请稍后重试" } }, { status: 500 });
+  }
+}
 export async function POST(request: Request) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
@@ -29,6 +45,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  if (isTeaJob(body.value)) return createTeaResponse(body.value, identity.userId);
   const parsed = createJobSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
@@ -59,6 +76,10 @@ export async function POST(request: Request) {
         );
   }
 
+  if (parsed.data.previousJobId) {
+    const previous = await findJob(parsed.data.previousJobId);
+    if (!previous || previous.userId !== identity.userId) return NextResponse.json({ error: { message: "历史任务不可访问" } }, { status: 403 });
+  }
   const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input, parsed.data.renderTargets);
   if (
     parsed.data.skipCopy &&
@@ -130,6 +151,7 @@ export async function POST(request: Request) {
       ? createT01BaseVisualDraft(manualDocument, now, now)
       : undefined;
     const candidate = {
+      previousJobId: parsed.data.previousJobId,
       id: crypto.randomUUID(),
       traceId: crypto.randomUUID(),
       idempotencyKey: parsed.data.idempotencyKey,

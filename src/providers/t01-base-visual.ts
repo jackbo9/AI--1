@@ -2,10 +2,13 @@ import type { VisualDraft } from "@/contracts/job";
 import {
   illustrationBriefSchema,
   type IllustrationBrief,
+  type VisualPreference,
   type PosterDocument
 } from "@/contracts/poster";
 
-export const t01BaseVisualPromptVersion = "t01-sports-base-visual-v2";
+import { peopleDirection } from "./visual-direction";
+
+export const t01BaseVisualPromptVersion = "t01-sports-base-visual-v3-people";
 
 type SportProfile = {
   name: string;
@@ -75,26 +78,30 @@ const genericSportProfile: SportProfile = {
   mood: "真实、鲜活、有力量、有速度"
 };
 
-export function createT01BaseVisualDescription(document: PosterDocument) {
+export function createT01BaseVisualDescription(document: PosterDocument, preferences?: VisualPreference) {
   const profile = sportProfileFor(document);
   return [
     `赛事类型：${profile.name}。`,
     `画面建议：从${profile.elements}中选择最有识别度的元素，表现${profile.motion}。`,
-    `色彩倾向：${profile.palette}。`,
+    `人物：${peopleDirection(preferences?.peopleMode)}。`,
+    `色彩倾向：${preferences?.themeColor && preferences.themeColor !== "auto" ? ({ blue: "蓝色", green: "绿色", red: "红色", yellow: "黄色", purple: "紫色", orange: "橙色", neutral: "黑白中性色" }[preferences.themeColor]) : profile.palette}。`,
+    ...(preferences?.visualType && preferences.visualType !== "auto" ? [`视觉类型：${({ action: "动作接触瞬间", equipment: "器材材质特写", venue: "场地空间与光影" }[preferences.visualType])}。`] : []),
+    ...(preferences?.visualTreatment ? [`视觉表现：${preferences.visualTreatment}。`] : []),
     `整体感受：${profile.mood}、真实、有品牌感。`
   ].join("\n");
 }
 
 export function createT01BaseVisualBrief(
-  document: PosterDocument
+  document: PosterDocument,
+  preferences?: VisualPreference
 ): IllustrationBrief {
   const profile = sportProfileFor(document);
   return illustrationBriefSchema.parse({
-    subject: `从${profile.elements}中选择 1–3 个核心符号，不出现人物`,
+    subject: `从${profile.elements}中选择 1–3 个核心符号；${peopleDirection(preferences?.peopleMode)}`,
     action: profile.motion,
     setting: "真实专业运动现场，外围背景连续、简洁、可延展",
     composition:
-      "LEFT TOP 为低信息标题安全区；主视觉中心位于 X 68%–78%、Y 48%–58%；关键主体不贴边",
+      "主视觉偏右，核心内容在 X378–1080、Y443–1280 内；Y1290 以下仅连续低对比背景",
     palette: profile.palette,
     style: "高端体育品牌 Campaign 与 Editorial Sports Photography，真实摄影，非 3D、非 CGI",
     mood: profile.mood,

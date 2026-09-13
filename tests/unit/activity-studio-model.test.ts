@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   getStageForJob,
-  initialForm,
+  initialForm as emptyForm,
+  previewFinalistGroups,
   normalizeForm,
   completedFinalistGroups,
   validateForm
@@ -9,11 +10,25 @@ import {
 import { createJobSchema } from "@/contracts/poster";
 import type { ActivityJob, FormState } from "@/components/activity-studio/types";
 
+const initialForm: FormState = { ...emptyForm, activityName: "羽球赛", slogan: "九号员工羽球赛 / BADMINTON", subtitle: "一起上场", session: { date: "2026-09-18", time: "", location: "体育馆" }, audience: "全体员工", rules: "三局两胜" };
+
 function job(status: ActivityJob["status"], currentStep = "处理中"): ActivityJob {
   return { status, currentStep, versions: [] };
 }
 
 describe("activity studio model", () => {
+  it("starts empty and keeps partial roster feedback out of submissions", () => {
+    expect(emptyForm.activityName).toBe("");
+    expect(emptyForm.session.date).toBe("");
+    const form: FormState = { ...initialForm, renderTargets: ["longform_1080xAuto"], finalistGroups: [{ label: "公开组", entrants: [{ name: "张三", region: "" }] }] };
+    expect(previewFinalistGroups(form)).toEqual([{ label: "公开组", entrants: [{ name: "张三", region: "待填赛区" }] }]);
+    expect(normalizeForm(form).finalistGroups).toBeUndefined();
+    expect(validateForm(form)).toContain("补齐");
+    form.finalistGroups[0].entrants[0].region = "华东";
+    expect(validateForm(form)).toBeUndefined();
+    form.finalistGroups[0].label = "组";
+    expect(validateForm(form)).toContain("2–4");
+  });
   it("keeps the current form validation messages", () => {
     expect(validateForm({ ...initialForm, activityName: " " })).toBe(
       "请填写活动主题"
@@ -30,7 +45,8 @@ describe("activity studio model", () => {
     expect(validateForm({ ...initialForm, qrUrl: "example.com" })).toBe(
       "二维码 URL 必须以 http:// 或 https:// 开头"
     );
-    expect(validateForm(initialForm)).toBe("竖版和横版海报需要添加报名二维码");
+    expect(validateForm(initialForm)).toBeUndefined();
+    expect(validateForm(initialForm, true, true)).toContain("添加二维码后");
     expect(validateForm(initialForm, false, false)).toBeUndefined();
     expect(
       validateForm({
@@ -40,9 +56,9 @@ describe("activity studio model", () => {
     ).toBeUndefined();
   });
 
-  it("does not silently turn non-sports content into a sports visual", () => {
-    expect(validateForm({ ...initialForm, activityName: "中秋下午茶", rules: "自由参加", sportType: "auto" })).toBe("未识别到体育项目。当前模板仅生成体育赛事主视觉，请明确选择体育项目；非体育活动请改用对应场景。");
-    expect(validateForm({ ...initialForm, activityName: "桌游联谊", sportType: "other", sportsConfirmed: false })).toBe("请选择“确认这是体育赛事”后继续生成。");
+  it("defers sport selection to the visual step", () => {
+    expect(validateForm({ ...initialForm, activityName: "中秋下午茶", rules: "自由参加", sportType: "auto" })).toBeUndefined();
+    expect(validateForm({ ...initialForm, activityName: "桌游联谊", sportType: "other", sportsConfirmed: false })).toBeUndefined();
   });
 
   it("normalizes the form into the existing job request shape", () => {

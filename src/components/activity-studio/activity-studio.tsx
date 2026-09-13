@@ -1,4 +1,8 @@
 "use client";
+import { useEffect, useState } from "react";
+import { useTeaStudio } from "../tea/use-tea-studio";
+import { TeaStudio, TeaPreview } from "../tea/tea-studio";
+import { JobHistory } from "../history/job-history";
 
 import { LoadingCard } from "./fields";
 import { LivePreview } from "./live-preview";
@@ -9,13 +13,17 @@ import { StudioShell } from "./studio-shell";
 import type { ActivityStudioProps } from "./types";
 import { useActivityStudioController } from "./use-activity-studio-controller";
 
-export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudioProps) {
+export function ActivityStudio({ identity, fixtureMode = false, initialTea = false, initialTeaJobId, initialHistory = false }: ActivityStudioProps & { initialTea?: boolean; initialTeaJobId?: string; initialHistory?: boolean }) {
+  const [selectedScene, setSelectedScene] = useState(initialTea ? "02" : "01");
+  const [view, setView] = useState<"studio" | "history">(initialHistory ? "history" : "studio");
+  const tea = useTeaStudio(selectedScene === "02", initialTeaJobId, fixtureMode);
   const {
     form,
     stage,
     setStage,
     job,
     visualDescription,
+    descriptionStale,
     qrMode,
     qrUploadPending,
     error,
@@ -32,6 +40,7 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
     uploadQr,
     changeVisualDescription,
     submit,
+    retryVisual,
     assistTitles,
     refineVisual,
     confirmVisual,
@@ -39,13 +48,32 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
     confirmSelectedVisual,
     replaceVisual,
     startNewPoster
-  } = useActivityStudioController(fixtureMode);
+  } = useActivityStudioController(fixtureMode, initialTea);
+
+  useEffect(() => {
+    const syncView = () => setView(new URLSearchParams(window.location.search).get("view") === "history" ? "history" : "studio");
+    window.addEventListener("popstate", syncView);
+    return () => window.removeEventListener("popstate", syncView);
+  }, []);
+
+  const showStudio = (scene: string) => {
+    setView("studio"); setSelectedScene(scene);
+    const query = new URLSearchParams();
+    if (scene === "02") query.set("scene", "employee-afternoon-tea");
+    const currentId = scene === "02" ? tea.job?.id : job?.id;
+    if (currentId && !fixtureMode) query.set("job", currentId);
+    window.history.pushState(null, "", query.size ? `?${query}` : window.location.pathname);
+  };
 
   return <StudioShell
     identity={identity}
-    stage={stage}
-    onStage={setStage}
-    preview={<LivePreview
+    view={view}
+    onHistory={() => { setView("history"); const query = new URLSearchParams(window.location.search); query.set("view", "history"); window.history.pushState(null, "", `?${query}`); }}
+    selectedScene={selectedScene}
+    onScene={showStudio}
+    stage={selectedScene === "02" ? tea.stage : stage}
+    onStage={selectedScene === "02" ? next => { if (!tea.pending && !tea.working) tea.setStage(next); } : setStage}
+    preview={selectedScene === "02" ? <TeaPreview controller={tea} /> : <LivePreview
       form={form}
       activeRenderTarget={form.activeRenderTarget}
       onRenderTarget={selectRenderTarget}
@@ -56,12 +84,12 @@ export function ActivityStudio({ identity, fixtureMode = false }: ActivityStudio
       fixtureMode={fixtureMode}
     />}
   >
-    <div className="ead-activity-content">
+    {view === "history" ? <JobHistory localDemo={identity.provider === "local"} onOpen={id => { window.location.assign(`?job=${encodeURIComponent(id)}`); }} onNew={scene => { if (scene === "02") tea.restart(); else startNewPoster(); showStudio(scene); }} /> : selectedScene === "02" ? <TeaStudio controller={tea} fixture={fixtureMode} /> : <div className="ead-activity-content">
       <div className="ead-title-row"><div><em>体育赛事</em><h1>制作一套活动海报</h1><p>填写活动信息，依次确认文案与画面</p></div></div>
-      {restoring ? <LoadingCard title="正在恢复任务" detail="正在读取本地预览状态…" /> : stage === 1 && <StepOne form={form} qrMode={qrMode} qrUploadPending={qrUploadPending} aiReady={job?.status === "READY_FOR_COPY_REVIEW"} aiCandidate={job?.status === "READY_FOR_COPY_REVIEW" && job.copyDraft ? { slogan: job.copyDraft.document.slogan, subtitle: job.copyDraft.document.subtitle } : undefined} onToggleRenderTarget={toggleRenderTarget} onField={updateForm} onQrUrl={updateQrUrl} onSession={updateSession} onQrMode={changeQrMode} onQrUpload={uploadQr} onClearQrAsset={clearQrAsset} onAssist={assistTitles} onSubmit={submit} pending={pendingAction === "submit"} />}
-      {!restoring && stage === 2 && <StepThree job={job} form={form} onField={updateForm} visualDescription={visualDescription} onDescription={changeVisualDescription} onRefine={refineVisual} onBack={() => setStage(1)} onGenerate={confirmVisual} onSelect={selectVisualOption} onConfirmVisual={confirmSelectedVisual} pendingRefine={pendingAction === "refine"} pendingGenerate={pendingAction === "visual"} pendingSelect={pendingAction === "selectVisual"} pendingConfirmVisual={pendingAction === "confirmAsset"} />}
+      {restoring ? <LoadingCard title="正在恢复任务" detail="正在读取本地预览状态…" /> : stage === 1 && <StepOne form={form} qrMode={qrMode} qrUploadPending={qrUploadPending} aiReady={job?.status === "READY_FOR_COPY_REVIEW"} aiCandidate={job?.status === "READY_FOR_COPY_REVIEW" && job.copyDraft ? { slogan: job.copyDraft.document.slogan, subtitle: job.copyDraft.document.subtitle } : undefined} onToggleRenderTarget={toggleRenderTarget} onField={updateForm} onQrUrl={updateQrUrl} onSession={updateSession} onQrMode={changeQrMode} onQrUpload={uploadQr} onClearQrAsset={clearQrAsset} onAssist={assistTitles} onSubmit={submit} error={error ?? job?.error?.message} pending={pendingAction === "copy" || pendingAction === "submit" || job?.status === "QUEUED" || job?.status === "GENERATING_COPY"} />}
+      {!restoring && stage === 2 && <StepThree error={error ?? job?.error?.message} onRetry={retryVisual} descriptionStale={descriptionStale} job={job} form={form} onField={updateForm} visualDescription={visualDescription} onDescription={changeVisualDescription} onRefine={refineVisual} onBack={() => setStage(1)} onGenerate={confirmVisual} onSelect={selectVisualOption} onConfirmVisual={confirmSelectedVisual} pendingRefine={pendingAction === "refine"} pendingGenerate={pendingAction === "visual"} pendingSelect={pendingAction === "selectVisual"} pendingConfirmVisual={pendingAction === "confirmAsset"} />}
       {!restoring && stage === 3 && <StepFour job={job} renderTargets={form.renderTargets} activeRenderTarget={form.activeRenderTarget} onRenderTarget={selectRenderTarget} onReplace={replaceVisual} onRestart={startNewPoster} pending={pendingAction === "replace"} fixtureMode={fixtureMode} />}
-      {(error || job?.error) && <p className="ead-error">{error ?? `${job?.error?.message}（${job?.error?.code}）`}</p>}
-    </div>
+      {stage === 3 && (error || job?.error) && <p className="ead-error">{error ?? `${job?.error?.message}（${job?.error?.code}）`}</p>}
+    </div>}
   </StudioShell>;
 }

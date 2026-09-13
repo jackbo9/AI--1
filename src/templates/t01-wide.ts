@@ -72,7 +72,7 @@ export function wideMarkup(
       .t01-extra{position:relative;isolation:isolate;overflow:hidden;background:#fff;color:#151515;font-family:MiSans,sans-serif;font-weight:400;font-synthesis:none;line-break:strict;word-break:normal;overflow-wrap:break-word;font-kerning:normal}
       .t01-landscape{width:1920px;height:1080px}.t01-banner{width:2227px;height:950px}
       .t01-extra p,.t01-extra h2,.t01-extra h3{margin:0;white-space:pre-wrap}
-      .t01-wide-background{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:-2}
+      .t01-wide-background{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:right center;z-index:-2}
       .t01-landscape-panel{position:absolute;left:0;top:746px;width:1920px;height:334px;background:#f2f2ee;z-index:-1}
       .t01-wide-brand{position:absolute;left:64px;right:64px;top:64px;height:66.014px;display:flex;align-items:center;justify-content:space-between}
       .t01-wide-company{width:224px;height:66.014px;object-fit:contain;object-position:left center}.t01-wide-administration{width:61.2px;height:61.2px;object-fit:contain}

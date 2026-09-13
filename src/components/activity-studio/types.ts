@@ -12,7 +12,7 @@ export type SessionState = {
 };
 
 export type FinalistGroupState = {
-  label: "男单" | "女单" | "混合双人" | "男子双人" | "女子双人";
+  label: string;
   entrants: Array<{ name: string; region: string }>;
 };
 

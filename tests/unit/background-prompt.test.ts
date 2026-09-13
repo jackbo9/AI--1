@@ -5,11 +5,11 @@ import { editorialComposition } from "@/providers/visual-direction";
 
 describe("background-only image prompt", () => {
   it("reserves the T01 brand and title coverage area", () => {
-    expect(editorialComposition).toContain("LEFT TOP = TITLE SAFE AREA");
-    expect(editorialComposition).toContain("CENTER-RIGHT = MAIN VISUAL");
-    expect(editorialComposition).toContain("X 68%–78%");
-    expect(editorialComposition).toContain("Y 48%–58%");
-    expect(editorialComposition).toContain("936×780");
+    expect(editorialComposition).toContain("标题安全区");
+    expect(editorialComposition).toContain("Primary Visual Focus");
+    expect(editorialComposition).toContain("X=378–1080px,Y=443–1280px");
+    expect(editorialComposition).toContain("Y=1290–1920px");
+    expect(editorialComposition).not.toContain("936×780");
     expect(editorialComposition).not.toMatch(/二维码|Logo|页脚/);
   });
   it("keeps confirmed creative text intact and excludes obsolete field defaults", () => {
@@ -21,7 +21,7 @@ describe("background-only image prompt", () => {
     expect(prompt).not.toContain("【画面主体】企业同事");
     expect(prompt).not.toContain("【色彩】黑白灰与行政黄");
     expect(prompt.split(description)).toHaveLength(2);
-    expect(prompt.length).toBeLessThanOrEqual(2200);
+    expect(prompt.length).toBeLessThanOrEqual(4200);
   });
   it("retains confirmation protection when reverting the optional visual guide", () => {
     const description = "蓝色篮球，球体材质特写，真实摄影，没有人物";
@@ -43,9 +43,9 @@ describe("background-only image prompt", () => {
     expect(withQr).not.toContain("d681673d-2f98-48a8-a548-0a9efbd068b3");
   });
   it("describes empty regions without naming downstream poster elements", () => {
-    expect(t01CompositionContract).not.toMatch(/二维码|扫码|QR|Logo|标题|页脚|报名/i);
-    expect(t01CompositionContract).toContain("LEFT TOP = TITLE SAFE AREA");
-    expect(t01CompositionContract).toContain("CENTER-RIGHT = MAIN VISUAL");
+    expect(t01CompositionContract).not.toMatch(/二维码|扫码|QR|Logo|页脚|报名/i);
+    expect(t01CompositionContract).toContain("标题安全区");
+    expect(t01CompositionContract).toContain("Primary Visual Focus");
   });
   it("adds mandatory exclusions to the existing saved brief contract", () => {
     const prompt = seedreamPrompt({ subject: "企业同事", action: "共同参与活动", setting: "开阔城市街道", composition: "同事在画面中部自然互动", palette: "黑白灰和黄色", style: "纪实摄影", mood: "活力", negative: "不要文字、字母、数字、Logo、二维码、水印、签名" });

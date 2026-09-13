@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PosterViewport } from "../poster-viewport";
 import type { RenderTargetId } from "@/contracts/brand";
 import { LoadingCard } from "../fields";
 import { LightweightT01Preview } from "../lightweight-t01-preview";
@@ -45,14 +46,16 @@ export function StepFour({
   pending: boolean;
   fixtureMode: boolean;
 }) {
-  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
-  const { outputs, family, error, reload } = useFormatOutputs(
+  const [jpgPending, setJpgPending] = useState(false);
+  const [jpgError, setJpgError] = useState("");
+  const { outputs, family, error, retry } = useFormatOutputs(
     job?.id,
     renderTargets,
-    fixtureMode
+    fixtureMode,
+    job?.status === "READY_FOR_REVIEW" ? job.previewUrl : undefined
   );
 
-  if (!job?.previewUrl) {
+  if (!job?.previewUrl || (!fixtureMode && job.status !== "READY_FOR_REVIEW")) {
     return <LoadingCard title="正在排版导出" detail={job?.currentStep ?? "请稍候…"} />;
   }
 
@@ -80,6 +83,24 @@ export function StepFour({
   const downloadAllowed =
     ready && !showFixtureLayout && (fixtureMode || validation?.exportAllowed !== false);
   const status = currentOutput?.status;
+  async function downloadJpg() {
+    if (!previewUrl || jpgPending || !downloadAllowed) return;
+    setJpgPending(true);
+    setJpgError("");
+    try {
+      const response = await fetch(previewUrl + (previewUrl.includes("?") ? "&" : "?") + "format=jpg");
+      if (!response.ok) throw new Error("JPG 转换失败，请重试或下载 PNG");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = `employee-activity-t01-${target}.jpg`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setJpgError(error instanceof Error ? error.message : "下载失败，请重试");
+    } finally { setJpgPending(false); }
+  }
 
   return (
     <div className="ead-final-stage">
@@ -105,25 +126,10 @@ export function StepFour({
                   </button>
                 ))}
             </div>
-            <div className="ead-final-view-controls" role="group" aria-label="预览缩放">
-              <button
-                type="button"
-                className={viewMode === "fit" ? "is-selected" : ""}
-                onClick={() => setViewMode("fit")}
-              >
-                适合屏幕
-              </button>
-              <button
-                type="button"
-                className={viewMode === "zoom" ? "is-selected" : ""}
-                onClick={() => setViewMode("zoom")}
-              >
-                放大查看
-              </button>
-            </div>
+
           </div>
         </header>
-        <div className={`ead-final-canvas is-${viewMode} is-${target}`}>
+        <PosterViewport key={`${target}:${previewUrl}`} target={target}>
           {previewUrl ? (
             <img src={previewUrl} alt={`最终生成的${targetMeta.label}体育赛事海报`} />
           ) : showFixtureLayout && fixtureDocument && fixturePreviewUrl ? (
@@ -145,13 +151,14 @@ export function StepFour({
               <p>完成后会自动显示，请稍候。</p>
             </div>
           )}
-        </div>
+        </PosterViewport>
       </section>
       <aside className="ead-final-sidebar">
+        {status === "FAILED" && <button type="button" className="ead-secondary" onClick={() => retry(target)}>重试当前尺寸</button>}
         {error && (
           <p className="ead-final-format-error" role="alert">
             {error}
-            <button type="button" onClick={reload}>重新读取</button>
+
           </p>
         )}
         <StepFourQuality
@@ -182,6 +189,8 @@ export function StepFour({
               {showFixtureLayout ? "当前尺寸正在准备" : "等待该尺寸完成"}
             </span>
           )}
+          {!fixtureMode && downloadAllowed && <button type="button" className="ead-secondary" onClick={downloadJpg} disabled={jpgPending}>{jpgPending ? "正在准备 JPG…" : "下载 JPG"}</button>}
+          {jpgError && <p role="alert" className="ead-error">{jpgError}</p>}
           <small>
             页面缩放不改变下载文件，当前尺寸始终为 {targetMeta.size}。
           </small>
@@ -194,9 +203,11 @@ export function StepFour({
 function useFormatOutputs(
   jobId: string | undefined,
   renderTargets: RenderTargetId[],
-  fixtureMode: boolean
+  fixtureMode: boolean,
+  sourceKey: string | undefined
 ) {
   const [outputs, setOutputs] = useState<FormatOutput[]>([]);
+  const [outputSource, setOutputSource] = useState<string>();
   const [family, setFamily] = useState<string>();
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -209,7 +220,7 @@ function useFormatOutputs(
   );
 
   useEffect(() => {
-    if (!jobId || fixtureMode || expectedExtras.length === 0) return;
+    if (!jobId || !sourceKey || fixtureMode || expectedExtras.length === 0) return;
     let disposed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
@@ -221,9 +232,8 @@ function useFormatOutputs(
         // template version changes, rather than continuing to show a cached
         // Artifact produced by an older template.
         await Promise.all(expectedExtras.map(async (format) => {
-          const requestKey = `${jobId}:${format}`;
+          const requestKey = `${jobId}:${sourceKey}:${format}`;
           if (requestedFormats.current.has(requestKey)) return;
-          requestedFormats.current.add(requestKey);
           const response = await fetch(`/api/jobs/${jobId}/formats`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -234,6 +244,7 @@ function useFormatOutputs(
             const data = await readJson<{ error?: { message?: string } }>(response);
             throw new Error(data.error?.message ?? "请求尺寸生成失败");
           }
+          if (!disposed) requestedFormats.current.add(requestKey);
         }));
         const response = await fetch(`/api/jobs/${jobId}/formats`, {
           cache: "no-store",
@@ -246,6 +257,7 @@ function useFormatOutputs(
         }>(response);
         if (!response.ok) throw new Error(data.error?.message ?? "读取尺寸失败");
         if (disposed) return;
+        setOutputSource(sourceKey);
         setOutputs(data.outputs);
         setFamily(data.currentVisualFamilyId);
         setError("");
@@ -259,7 +271,8 @@ function useFormatOutputs(
         if (waiting) timer = setTimeout(refresh, 1500);
       } catch (reason) {
         if (!disposed && !(reason instanceof DOMException && reason.name === "AbortError")) {
-          setError(reason instanceof Error ? reason.message : "读取尺寸失败");
+          setError("尺寸状态暂时未能读取，正在自动重试…");
+          timer = setTimeout(refresh, 3000);
         }
       }
     }
@@ -270,13 +283,17 @@ function useFormatOutputs(
       controller.abort();
       clearTimeout(timer);
     };
-  }, [expectedExtras, fixtureMode, jobId, reloadKey]);
+  }, [expectedExtras, fixtureMode, jobId, reloadKey, sourceKey]);
 
   return {
-    outputs,
-    family,
-    error,
-    reload: () => setReloadKey((value) => value + 1)
+    outputs: outputSource === sourceKey ? outputs : [],
+    family: outputSource === sourceKey ? family : undefined,
+    error: sourceKey ? error : "",
+    retry: (format: RenderTargetId) => {
+      requestedFormats.current.delete(`${jobId}:${sourceKey}:${format}`);
+      setOutputs(items => items.map(item => item.format === format ? { ...item, status: "RENDERING" } : item));
+      setReloadKey(value => value + 1);
+    }
   };
 }
 

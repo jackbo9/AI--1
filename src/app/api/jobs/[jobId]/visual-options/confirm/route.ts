@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { dispatchTeaAction } from "@/server/tea-api";
 import { confirmVisualOptionSchema } from "@/contracts/poster";
 import {
   claimJobAction,
@@ -21,6 +22,8 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
+  const teaResponse = await dispatchTeaAction(request, (await context.params).jobId, identity.userId, "confirm");
+  if (teaResponse) return teaResponse;
   const body = await readJsonRequest(request);
   if (!body.ok) {
     return NextResponse.json(
@@ -55,7 +58,7 @@ export async function POST(
   );
   if (
     job.status !== "READY_FOR_VISUAL_REVIEW" ||
-    !option ||
+    !option || option.sourceCopyCreatedAt !== job.copyDraft?.createdAt ||
     job.selectedVisualOptionId !== option.id
   ) {
     return NextResponse.json(
@@ -72,7 +75,7 @@ export async function POST(
         const selected = item.visualOptions?.find(
           (candidate) => candidate.id === parsed.data.optionId
         );
-        if (!selected || item.selectedVisualOptionId !== selected.id) {
+        if (!selected || selected.sourceCopyCreatedAt !== item.copyDraft?.createdAt || item.selectedVisualOptionId !== selected.id) {
           throw new JobActionError("STALE_ACTION", "主视觉选择已变化，请重新确认");
         }
         return {

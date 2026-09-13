@@ -1,3 +1,5 @@
+import sharp from "sharp";
+import { sportsCanvases, sportsCanvasPrompt, sportsRequestSize } from "@/contracts/sports-canvas";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -38,7 +40,7 @@ export function seedreamPrompt(brief: IllustrationBrief) {
       "【已确认画面方案】" + brief.confirmedDescription,
       ...(brief.systemDirection ? ["【受控赛事方向】" + brief.systemDirection] : []),
       ...(brief.visualStyleMode === "legacy" ? [] : ["【视觉指导】" + editorialDirection]),
-      "【版式构图】" + (brief.visualStyleMode === "legacy" ? t01CompositionContract : editorialComposition),
+      "【版式构图】" + (brief.canvasTarget ? sportsCanvasPrompt(brief.canvasTarget) : brief.visualStyleMode === "legacy" ? t01CompositionContract : editorialComposition),
       "【系统强制禁止】" + backgroundNegative
     ].join("\n"));
   }
@@ -58,7 +60,7 @@ export function seedreamPrompt(brief: IllustrationBrief) {
   return illustrationPromptSchema.parse(prompt);
 }
 
-export const illustrationPromptSchema = z.string().trim().min(80).max(2200);
+export const illustrationPromptSchema = z.string().trim().min(80).max(4200);
 
 export function imageGenerationEndpoint(
   provider: ImageProviderId,
@@ -106,6 +108,14 @@ export async function generateIllustration(
   brief: IllustrationBrief,
   jobId: string
 ): Promise<IllustrationResult> {
+  return generateControlledImage({ prompt: imageRequestPrompt(brief), canvasTarget: brief.canvasTarget }, jobId);
+}
+
+/** Receives a server-compiled prompt; scenario rules never cross this adapter. */
+export async function generateControlledImage(
+  input: { prompt: string; size?: string; canvasTarget?: IllustrationBrief["canvasTarget"]; failWithoutFallback?: boolean },
+  jobId: string
+): Promise<IllustrationResult> {
   const provider = serverEnv.IMAGE_PROVIDER;
   const baseUrl = serverEnv.IMAGE_BASE_URL;
   const apiKey = serverEnv.IMAGE_API_KEY;
@@ -117,11 +127,12 @@ export async function generateIllustration(
     !apiKey ||
     !model
   ) {
+    if (input.failWithoutFallback) throw new ProviderError("IMAGE_GENERATION_FAILED", "图片模型暂不可用，请稍后重试");
     return fallback(jobId, "demo-image", "未配置图片模型，已使用默认品牌插画");
   }
 
   try {
-    const prompt = seedreamPrompt(brief);
+    const prompt = input.prompt;
     const payload = imageResponseSchema.parse(
       await requestJson(
         imageGenerationEndpoint(provider, baseUrl),
@@ -135,13 +146,13 @@ export async function generateIllustration(
             imageGenerationPayload(provider, {
               model,
               prompt,
-              size: serverEnv.IMAGE_SIZE
+              size: input.size ?? (input.canvasTarget ? `${sportsRequestSize(input.canvasTarget).width}x${sportsRequestSize(input.canvasTarget).height}` : serverEnv.IMAGE_SIZE)
             })
           )
         },
         {
           timeoutMs: provider === "openai-images" ? 180_000 : 90_000,
-          retries: 1,
+          retries: input.canvasTarget || input.failWithoutFallback ? 0 : 1,
           classify: classifyImageStatus,
             networkError: () =>
               new ProviderError(
@@ -166,7 +177,7 @@ export async function generateIllustration(
           retries: 1
         })
       : undefined;
-    const bytes = image.b64_json
+    let bytes = image.b64_json
       ? Buffer.from(image.b64_json, "base64")
       : downloaded?.bytes;
 
@@ -177,6 +188,20 @@ export async function generateIllustration(
       );
     }
 
+    if (input.canvasTarget) {
+      const expected = sportsRequestSize(input.canvasTarget);
+      const actual = await sharp(bytes).metadata();
+      if (actual.width !== expected.width || actual.height !== expected.height) {
+        throw new ProviderError("IMAGE_SIZE_MISMATCH", `图片尺寸不符合要求：${actual.width}×${actual.height}，应为 ${expected.width}×${expected.height}`);
+      }
+    }
+    if (input.canvasTarget) {
+      const c = sportsCanvases[input.canvasTarget];
+      const rawPath = path.join(process.cwd(), "data/generated", `${jobId}-native.png`);
+      await mkdir(path.dirname(rawPath), { recursive: true });
+      await writeFile(rawPath, bytes);
+      bytes = await sharp(bytes).extract({ left:0, top:0, width:c.width, height:c.height }).png().toBuffer();
+    }
     const imageFormat = detectImageFormat(bytes, downloaded?.contentType);
     const target = path.join(
       process.cwd(),
@@ -194,6 +219,7 @@ export async function generateIllustration(
       model
     };
   } catch (error) {
+    if (input.failWithoutFallback) throw error instanceof ProviderError ? error : new ProviderError("IMAGE_GENERATION_FAILED", "主视觉生成失败，请重试该方案");
     return fallback(
       jobId,
       provider,
@@ -288,4 +314,8 @@ async function fallback(
     model: "brand-fallback-v2-minimal",
     detail
   };
+}
+export function imageRequestPrompt(brief: IllustrationBrief) {
+  const native = brief.canvasTarget ? sportsRequestSize(brief.canvasTarget) : undefined;
+  return seedreamPrompt(brief) + (native ? `\n服务请求画布为 ${native.width}×${native.height}。以上坐标相对左上角不变；超出目标画布的右侧/底部像素仅是纯背景出血边，之后移除，不得放置主体。` : "");
 }

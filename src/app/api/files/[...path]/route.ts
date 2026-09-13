@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { NextResponse } from "next/server";
-import { findJob } from "@/server/job-store";
+import { findJob, findTeaJob } from "@/server/job-store";
+import { readOwnedStoredFile } from "@/server/job-assets";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -9,7 +11,7 @@ import {
 } from "@/server/auth";
 
 export async function GET(
-  _: Request,
+  request: Request,
   context: { params: Promise<{ path: string[] }> }
 ) {
   const identity = await requireApiIdentity();
@@ -20,6 +22,20 @@ export async function GET(
   }
   const jobId = filename.match(/^([0-9a-f-]{36})(?:-|\.png)/i)?.[1];
   if (!jobId) return new NextResponse("Not found", { status: 404 });
+  const tea = await findTeaJob(jobId);
+  if (tea) {
+    if (tea.userId !== identity.userId) return forbiddenResponse();
+    const output = tea.outputs.find(o => o.exportAllowed && o.outputPath && path.basename(o.outputPath) === filename);
+    const visual = tea.options.some(o => o.status === "READY" && [o.assetPath, o.previewPath].some(p => p && path.basename(p) === filename));
+    if (!output && !visual) return new NextResponse("Not found", { status: 404 });
+    const format = new URL(request.url).searchParams.get("format");
+    if (format && (format !== "jpg" || !output)) return new NextResponse("Invalid format", { status: 400 });
+    try {
+      const bytes = await readGeneratedFile(identity.userId, jobId, filename);
+      const result = format === "jpg" ? await sharp(bytes).flatten({ background: "white" }).jpeg({ quality: 95 }).toBuffer() : bytes;
+      return new NextResponse(new Uint8Array(result), { headers: { "Content-Type": format === "jpg" ? "image/jpeg" : contentTypeFor(filename), "Cache-Control": "private, no-store", "Content-Disposition": `${format ? "attachment" : "inline"}; filename="${format ? filename.replace(/\.png$/, ".jpg") : filename}"` } });
+    } catch { return new NextResponse("Not found", { status: 404 }); }
+  }
   const job = await findJob(jobId);
   if (!job) return new NextResponse("Not found", { status: 404 });
   if (job.userId !== identity.userId) return forbiddenResponse();
@@ -41,9 +57,27 @@ export async function GET(
   if (!belongsToArtifact && !belongsToLegacyVersion && !belongsToVisualOption) {
     return new NextResponse("Not found", { status: 404 });
   }
+  const format = new URL(request.url).searchParams.get("format");
+  if (format && format !== "jpg") return NextResponse.json({ error: { code: "INVALID_DOWNLOAD_FORMAT", message: "不支持的下载格式" } }, { status: 400 });
+  if (format === "jpg" && (!(belongsToArtifact || belongsToLegacyVersion) || !filename.endsWith(".png"))) {
+    return new NextResponse("Not found", { status: 404 });
+  }
   try {
+    const bytes = await readGeneratedFile(identity.userId, jobId, filename);
+    if (format === "jpg") {
+      try {
+        const jpeg = await sharp(bytes).flatten({ background: "#ffffff" }).jpeg({ quality: 95 }).toBuffer();
+        return new NextResponse(new Uint8Array(jpeg), { headers: {
+          "Content-Type": "image/jpeg",
+          "Content-Disposition": 'attachment; filename="' + filename.replace(/\.png$/, ".jpg") + '"',
+          "Cache-Control": "private, no-store"
+        } });
+      } catch {
+        return NextResponse.json({ error: { code: "JPG_CONVERSION_FAILED", message: "JPG 转换失败，请重试或下载 PNG" } }, { status: 500 });
+      }
+    }
     return new NextResponse(
-      await readFile(path.join(process.cwd(), "data", "generated", filename)),
+      bytes,
       {
         headers: {
           "Content-Type": contentTypeFor(filename),
@@ -62,4 +96,13 @@ function contentTypeFor(filename: string) {
   if (filename.endsWith(".webp")) return "image/webp";
   if (filename.endsWith(".svg")) return "image/svg+xml";
   return "image/png";
+}
+
+async function readGeneratedFile(ownerId: string, jobId: string, filename: string) {
+  try { return await readFile(path.join(process.cwd(), "data", "generated", filename)); }
+  catch {
+    const stored = await readOwnedStoredFile(ownerId, jobId, filename);
+    if (!stored) throw new Error("FILE_NOT_FOUND");
+    return stored.bytes;
+  }
 }

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentIdentity } from "@/integrations/feishu/session";
+import { serverEnv } from "@/lib/env";
+import { syncUserIdentity } from "./postgres-job-repository";
 
 export async function requireApiIdentity() {
-  return getCurrentIdentity();
+  const identity = await getCurrentIdentity();
+  if (identity && serverEnv.DATABASE_URL) await syncUserIdentity(identity);
+  return identity;
 }
 
 export function unauthorizedResponse() {

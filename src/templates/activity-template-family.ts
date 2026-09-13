@@ -119,7 +119,7 @@ export const activityTemplateFamilyManifest =
       portrait_1080x1920: {
         id: "portrait_1080x1920",
         templateId: "employee-activity-portrait",
-        templateVersion: "2.3.0-figma-2026-09-10-info-grid",
+        templateVersion: "2.5.0-mother-crop",
         dimensions: {
           width: 1080,
           heightMode: "fixed",

@@ -18,6 +18,7 @@ vi.mock("@/server/auth", () => ({
   unauthorizedResponse: () => new Response("unauthorized", { status: 401 })
 }));
 vi.mock("@/server/job-store", () => ({
+  findTeaJob: vi.fn(),
   findJob: vi.fn(),
   updateJob: vi.fn(),
   claimJobAction: vi.fn(),
@@ -43,6 +44,7 @@ const job: CampaignGenerationJob = {
   status: "READY_FOR_VISUAL_REVIEW",
   currentStep: "等待选择",
   retryCount: 0,
+  copyDraft: { document: {} as never, provider: "test", model: "test", promptVersion: "test", createdAt: "2026-09-08T08:00:00.000Z" },
   visualOptions: [
     {
       id: optionId,

@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState, type CSSProperties, type SyntheticEvent } from "react";
+import { rosterLayout, rosterRowHeight } from "@/templates/t01-roster-layout";
 import type { PosterDocument } from "@/contracts/poster";
 import type { RenderTargetId } from "@/contracts/brand";
 import {
@@ -15,12 +16,14 @@ export function LightweightT01Preview({
   document,
   imageUrl,
   optionId,
-  format
+  format,
+  fullCanvas = false
 }: {
   document: PosterDocument;
   imageUrl: string;
   optionId: string;
   format: RenderTargetId;
+  fullCanvas?: boolean;
 }) {
   const toneKey = `${optionId}:${format}`;
   const [tone, setTone] = useState<PreviewTextTone>(
@@ -63,7 +66,7 @@ export function LightweightT01Preview({
 
   function adaptTone(event: SyntheticEvent<HTMLImageElement>) {
     try {
-      const detected = detectToneFromDisplayedHero(event.currentTarget, format);
+      const detected = detectToneFromDisplayedHero(event.currentTarget, format, fullCanvas);
       toneCache.set(toneKey, detected);
       setTone(detected);
     } catch {
@@ -89,7 +92,7 @@ export function LightweightT01Preview({
     : qrDataUrl;
 
   return (
-    <div className={`t01-preview t01-selected-preview is-${tone} is-format-${format}`} style={previewStyle}>
+    <div className={`t01-preview t01-selected-preview is-${tone} is-format-${format} ${fullCanvas ? "is-full-canvas" : ""}`} style={previewStyle}>
       <img
         className="t01-preview-background"
         src={imageUrl}
@@ -148,7 +151,7 @@ export function LightweightT01Preview({
             {finalistGroups.map((group, index) => (
               <div
                 className={`t01-preview-roster-group${index % 2 ? " is-tinted" : ""}`}
-                key={group.label}
+                key={index}
                 style={{ height: `${longformRosterRowHeight(group.entrants.length)}px` }}
               >
                 <b>{group.label}</b>
@@ -174,11 +177,7 @@ function longformPreviewMetrics(
   groups: Array<{ entrants: Array<{ name: string; region: string }> }>
 ) {
   const scale = 292 / 1080;
-  const rosterHeight = groups.reduce((total, group) => {
-    const rows = Math.max(1, Math.ceil(group.entrants.length / 2));
-    return total + 51 + rows * 33.35 + (rows - 1) * 15;
-  }, 0);
-  const recapTop = (1700 + rosterHeight + 54.5) * scale;
+  const recapTop = rosterLayout(groups).recapTop * scale;
   return {
     recapTop: Math.ceil(recapTop),
     height: Math.ceil(recapTop + 582 * scale)
@@ -186,13 +185,13 @@ function longformPreviewMetrics(
 }
 
 function longformRosterRowHeight(entrantCount: number) {
-  const rows = Math.max(1, Math.ceil(entrantCount / 2));
-  return Math.ceil((51 + rows * 33.35 + (rows - 1) * 15) * (292 / 1080));
+  return rosterRowHeight(entrantCount) * (292 / 1080);
 }
 
 function detectToneFromDisplayedHero(
   image: HTMLImageElement,
-  format: RenderTargetId
+  format: RenderTargetId,
+  fullCanvas: boolean
 ) {
   const wide = format === "landscape_1920x1080" || format === "banner_2227x950";
   const width = wide ? 200 : 146;
@@ -203,6 +202,10 @@ function detectToneFromDisplayedHero(
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context || !image.naturalWidth || !image.naturalHeight) return "dark";
 
+  if (fullCanvas && format === "portrait_1080x1920") {
+    context.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight * 1292 / 1920, 0, 0, width, height);
+    return choosePreviewTextTone(context.getImageData(0, 0, width, height).data, width, height);
+  }
   const scale = Math.max(
     width / image.naturalWidth,
     height / image.naturalHeight
@@ -212,7 +215,7 @@ function detectToneFromDisplayedHero(
   context.drawImage(
     image,
     (width - drawWidth) / 2,
-    (height - drawHeight) / 2,
+    format === "longform_1080xAuto" ? 0 : (height - drawHeight) / 2,
     drawWidth,
     drawHeight
   );

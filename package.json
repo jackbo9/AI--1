@@ -8,6 +8,9 @@
     "prestart": "node --import tsx scripts/recover-interrupted-jobs.ts",
     "start": "next start",
     "archive:demo": "node --import tsx scripts/archive-demo-data.ts",
+    "db:deploy": "prisma migrate deploy",
+    "storage:cleanup": "node --import tsx scripts/cleanup-storage.ts",
+    "storage:migrate": "node --import tsx scripts/migrate-local-storage.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -16,20 +19,26 @@
     "render:t01-readability-review": "tsx scripts/render-t01-readability-review.ts",
     "probe:copy": "node --env-file=.env.local --import tsx scripts/probe-copy-provider.ts",
     "probe:image": "node --env-file=.env.local --import tsx scripts/probe-image-provider.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test tests/e2e"
   },
   "dependencies": {
     "@larksuiteoapi/node-sdk": "^1.73.1",
+    "@prisma/client": "^6.19.3",
     "@types/qrcode": "^1.5.6",
+    "ali-oss": "^6.23.0",
+    "graceful-fs": "^4.2.11",
     "next": "15.5.25",
+    "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "sharp": "0.35.4",
     "zod": "3.24.4"
   },
   "devDependencies": {
     "@eslint/js": "9.34.0",
     "@playwright/test": "1.55.1",
+    "@types/ali-oss": "^6.23.3",
     "@types/node": "22.15.3",
     "@types/react": "19.1.10",
     "@types/react-dom": "19.1.7",

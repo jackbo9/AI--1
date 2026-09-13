@@ -104,7 +104,7 @@
 .t01-selected-preview.is-format-banner_2227x950 .t01-preview-title h3{font-size:22px;line-height:23px;letter-spacing:-.5px}
 .t01-selected-preview.is-format-banner_2227x950 .t01-preview-title p{font-size:3.5px;line-height:4.5px}
 .t01-selected-preview.is-format-longform_1080xAuto{width:292px;height:var(--t01-preview-longform-height,632px)}
-.t01-selected-preview.is-format-longform_1080xAuto .t01-preview-background{height:327px}
+.t01-selected-preview.is-format-longform_1080xAuto .t01-preview-background{height:327px;object-position:center top}
 .t01-selected-preview.is-format-longform_1080xAuto .t01-preview-title{top:75px}
 .t01-selected-preview.is-format-longform_1080xAuto .t01-preview-info-panel{top:327px}
 .t01-selected-preview.is-format-longform_1080xAuto .t01-preview-info-stack{top:336px;height:70px}
