@@ -53,6 +53,21 @@
 .ead-theme-b .ead-subscene-list button { font-size: var(--studio-help); }
 .ead-theme-b .ead-subscene-list button small { font-size: 10px; }
 @media(max-width:900px) { .ead-theme-b .ead-topbar { grid-template-columns: 1fr auto; } }
+@media(max-width:900px) {
+  .ead-theme-b .ead-body {display:grid;grid-template-columns:minmax(0,1fr) 310px;grid-template-rows:auto minmax(0,1fr)}
+  .ead-theme-b .ead-sidebar {display:flex;grid-column:1/-1;min-height:auto;padding:8px 10px;border-right:0;border-bottom:1px solid #e0e4dc}
+  .ead-theme-b .ead-sidebar>h2,.ead-theme-b .ead-side-footer {display:none}
+  .ead-theme-b .ead-scene-list {display:flex;gap:6px;overflow-x:auto}
+  .ead-theme-b .ead-scene {flex:0 0 auto;width:auto;min-width:126px;margin:0;padding:8px}
+  .ead-theme-b .ead-scene small {max-width:150px}
+  .ead-theme-b .ead-subscene-list {display:none}
+}
+@media(max-width:760px) {
+  .ead-theme-b .ead-body {display:block}
+  .ead-theme-b .ead-sidebar {display:flex;position:sticky;top:70px;z-index:9}
+  .ead-theme-b .ead-scene {min-width:112px}
+  .ead-theme-b .ead-preview {display:block}
+}
 /* September 13 annotated UI feedback; product controls only. */
 .ead-theme-b .ead-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .ead-theme-b .ead-field textarea,

@@ -29,7 +29,7 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
       if (!live) return;
       if (loaded.scene !== teaScene) throw new Error("任务场景不匹配");
       setJob(loaded); setFields(loaded.fields); setExpanded(true);
-      setStage(loaded.status === "READY_FOR_REVIEW" || loaded.status === "RENDERING" ? 3 : 2);
+      setStage(loaded.status === "READY_FOR_REVIEW" || loaded.status === "RENDERING" ? 3 : 1);
     }).catch(e => live && setError(e.message)).finally(() => live && setRestoring(false));
     return () => { live = false; };
   }, [initialJobId, fixture]);
@@ -44,7 +44,7 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
     if (!jobId || !working || fixture) return;
     let live = true, timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
-      try { const next = await jsonRequest(`/api/jobs/${jobId}`) as TeaJob; if (live) { setJob(next); setError(next.error); if (next.error) setStage(2); } }
+      try { const next = await jsonRequest(`/api/jobs/${jobId}`) as TeaJob; if (live) { setJob(next); setError(next.error); if (next.error) setStage(1); } }
       catch { if (live) setError("状态读取暂时失败，正在重新连接；请勿重复生成。"); }
       if (live) timer = setTimeout(poll, 1500);
     };
@@ -74,7 +74,7 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
     const next: TeaJob = fixture ? { scene: teaScene, id: crypto.randomUUID(), userId: "fixture", idempotencyKey: crypto.randomUUID(), actionIdempotencyKeys: [], sourceVersionId: crypto.randomUUID(), fields: parsed.data, options: [], outputs: [], status: "READY_FOR_VISUAL_REVIEW", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : await jsonRequest("/api/jobs", { scene: teaScene, fields: parsed.data, previousJobId: job?.id, idempotencyKey: crypto.randomUUID() });
     setJob(next); return next;
   };
-  const submit = () => perform(async () => { await ensureJob(); setStage(2); });
+  const submit = () => perform(async () => { await ensureJob(); setStage(1); });
   const action = (kind: "generate" | "retry" | "select" | "confirm", optionId?: string) => perform(async () => {
     const current = kind === "generate" ? await ensureJob() : job;
     if (!current) throw new Error("请先确认内容");

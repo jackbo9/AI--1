@@ -60,8 +60,8 @@ export function summarizeOwnedJobs(jobs: StoredJob[]) {
     const latest = ordered[0];
     const state = isTeaJob(latest)
       ? latest.status === "READY_FOR_REVIEW" ? { status: "completed" as const, resumeStage: 3 as const }
-        : processing.has(latest.status) ? { status: "processing" as const, resumeStage: latest.status === "RENDERING" ? 3 as const : 2 as const }
-        : { status: "visual_review" as const, resumeStage: 2 as const }
+        : processing.has(latest.status) ? { status: "processing" as const, resumeStage: latest.status === "RENDERING" ? 3 as const : 1 as const }
+        : { status: "visual_review" as const, resumeStage: 1 as const }
       : activityStatus(latest.status);
     const coverPath = ordered.map((version) => isTeaJob(version) ? teaCover(version) : latestPortraitPreviewOutputPath(version)).find(Boolean);
     return { workId, latestJobId: latest.id, scene: isTeaJob(latest) ? "employee-afternoon-tea" as const : "employee_activity" as const, ...title(latest), ...state, updatedAt: latest.updatedAt, versionCount: versions.length, coverPath };

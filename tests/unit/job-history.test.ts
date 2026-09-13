@@ -3,7 +3,7 @@ import { summarizeOwnedJobs } from "@/server/job-history";
 import type { StoredJob } from "@/server/job-store";
 
 function tea(id: string, updatedAt: string, previousJobId?: string, status = "READY_FOR_VISUAL_REVIEW") {
-  return { scene: "employee-afternoon-tea", id, previousJobId, userId: "owner", idempotencyKey: id, actionIdempotencyKeys: [], sourceVersionId: id, fields: { brief: "水果", food: "无花果", title: id, subtitle: "清甜好时光", visualPrompt: "无花果静物摄影" }, options: [], outputs: [], status, createdAt: updatedAt, updatedAt } as StoredJob;
+  return { scene: "employee-afternoon-tea", id, previousJobId, userId: "owner", idempotencyKey: id, actionIdempotencyKeys: [], sourceVersionId: id, fields: { brief: "水果", food: "无花果", title: id, subtitle: "清甜好时光", visualPrompt: "无花果静物摄影", time: "", place: "" }, options: [], outputs: [], status, createdAt: updatedAt, updatedAt } as StoredJob;
 }
 
 describe("job history summaries", () => {

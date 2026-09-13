@@ -37,7 +37,6 @@ for (const width of [1280, 1440, 1920, 2560]) {
     await page.goto(`${base}/?fixture=1&scene=employee-afternoon-tea`);
     await page.getByLabel("这次准备了什么下午茶？").fill("无花果");
     await page.getByRole("button", { name: "AI 整理内容" }).click();
-    await page.getByRole("button", { name: "确认内容，进入主视觉 →" }).click();
     await expect(page.getByLabel("画面描述", { exact: true })).not.toBeVisible();
     await page.getByRole("button", { name: "生成两张主视觉", exact: true }).click();
     await expect(page.locator(".ead-option-card")).toHaveCount(2);
