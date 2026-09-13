@@ -149,7 +149,8 @@ export function StepThree({
 
       <div ref={optionSection} className="ead-visual-block ead-option-section">
         <div className="ead-visual-confirm-head">
-          <h3>3 比较图片</h3><p className="ead-phase-summary">选择一张主视觉，自动裁切排版为所有已选尺寸。</p>
+          <div className="ead-phase-heading"><h3>3 比较图片</h3></div>
+          <p className="ead-phase-summary">选择一张主视觉，自动裁切排版为所有已选尺寸。</p>
         </div>
         {isGenerating && (
           <div className="ead-visual-progress">

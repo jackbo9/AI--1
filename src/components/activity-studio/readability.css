@@ -99,11 +99,12 @@
 .ead-generation-placeholders {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .ead-generation-placeholder {min-height:180px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:1px solid #e3e5e1;border-radius:12px;background:#f6f7f5;font-size:14px}
 .ead-visual-progress>small {margin-left:auto}
-.ead-phase-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 12px}
-.ead-phase-heading h3 {font-size:17px;color:#111}
+.ead-phase-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 8px}
+.ead-phase-heading h3,.ead-visual-confirm-head .ead-phase-heading h3 {margin:0;color:#111;font-size:17px;font-weight:600;line-height:1.45}
 .ead-text-action {padding:8px 0;border:0;background:none;color:#666;font-size:14px;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 .ead-text-action:disabled {opacity:.5;cursor:default}
-.ead-phase-summary {color:#777;font-size:14px;line-height:1.6;margin-bottom:12px}
+.ead-phase-summary {margin:0 0 12px;color:#777;font-size:14px;line-height:1.6}
+.ead-option-section .ead-phase-heading {margin-top:0}
 .ead-theme-b .ead-description-actions {justify-content:space-between}
 .ead-theme-b .ead-prompt-editor {margin-top:12px;padding-top:0;border-top:0}
 .t01-selected-preview.is-full-canvas .t01-preview-background {height:100%;object-fit:cover;object-position:center top}
