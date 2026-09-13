@@ -9,6 +9,7 @@
     "start": "next start",
     "archive:demo": "node --import tsx scripts/archive-demo-data.ts",
     "db:deploy": "prisma migrate deploy",
+    "storage:cleanup": "node --import tsx scripts/cleanup-storage.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

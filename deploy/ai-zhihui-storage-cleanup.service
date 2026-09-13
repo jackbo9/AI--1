@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Zhihui expired asset cleanup
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=poster
+Group=poster
+WorkingDirectory=/opt/ai-zhihui/current
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/node --env-file=/opt/ai-zhihui/shared/app.env --import tsx scripts/cleanup-storage.ts
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true

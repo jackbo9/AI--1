@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
-import { findJob, findTeaJob } from "@/server/job-store";
+import { deleteOwnedWork, findJob, findTeaJob } from "@/server/job-store";
 import { publicTeaJob } from "@/server/tea-api";
 import { latestPortraitPreviewOutputPath } from "@/server/portrait-preview";
 import {
@@ -28,4 +28,11 @@ export async function GET(_: Request, context: { params: Promise<{ jobId: string
     })),
     previewUrl: outputPath ? `/api/files/${path.basename(outputPath)}` : undefined
   });
+}
+
+export async function DELETE(_: Request, context: { params: Promise<{ jobId: string }> }) {
+  const identity = await requireApiIdentity();
+  if (!identity) return unauthorizedResponse();
+  const deleted = await deleteOwnedWork((await context.params).jobId, identity.userId);
+  return deleted ? new NextResponse(null, { status: 204 }) : NextResponse.json({ error: { code: "JOB_NOT_FOUND", message: "未找到该作品" } }, { status: 404 });
 }
