@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { dispatchTeaAction } from "@/server/tea-api";
 import { confirmVisualOptionSchema } from "@/contracts/poster";
 import {
   claimJobAction,
@@ -21,6 +22,8 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
+  const teaResponse = await dispatchTeaAction(request, (await context.params).jobId, identity.userId, "confirm");
+  if (teaResponse) return teaResponse;
   const body = await readJsonRequest(request);
   if (!body.ok) {
     return NextResponse.json(

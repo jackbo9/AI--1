@@ -18,6 +18,7 @@ vi.mock("@/server/auth", () => ({
   unauthorizedResponse: () => new Response("unauthorized", { status: 401 })
 }));
 vi.mock("@/server/job-store", () => ({
+  findTeaJob: vi.fn(),
   findJob: vi.fn(),
   updateJob: vi.fn(),
   claimJobAction: vi.fn(),

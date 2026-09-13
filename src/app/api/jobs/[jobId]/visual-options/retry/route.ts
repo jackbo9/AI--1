@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
+import { dispatchTeaAction } from "@/server/tea-api";
 import { requireApiIdentity, unauthorizedResponse, forbiddenResponse } from "@/server/auth";
 import { findJob, claimJobAction } from "@/server/job-store";
 import { readJsonRequest } from "@/server/request-json";
@@ -8,6 +9,8 @@ import { runVisualBatch } from "@/worker/visual-batch";
 export async function POST(request: Request, context: { params: Promise<{ jobId: string }> }) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
+  const teaResponse = await dispatchTeaAction(request, (await context.params).jobId, identity.userId, "retry");
+  if (teaResponse) return teaResponse;
   const body = await readJsonRequest(request);
   const parsed = z.object({ batchId: z.string().uuid(), directionId: z.string().uuid(), idempotencyKey: z.string().uuid() }).safeParse(body.ok ? body.value : undefined);
   if (!parsed.success) return NextResponse.json({ error: { message: "重试参数有误" } }, { status: 400 });

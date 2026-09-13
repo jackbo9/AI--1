@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Field, SectionHead } from "../fields";
+import { VisualOptionCard } from "../visual-option-card";
 import type { ActivityJob, FormState } from "../types";
 
 type Props = {
@@ -148,7 +149,8 @@ export function StepThree({
 
       <div ref={optionSection} className="ead-visual-block ead-option-section">
         <div className="ead-visual-confirm-head">
-          <h3>3 比较图片</h3><p className="ead-phase-summary">选择一张主视觉，自动裁切排版为所有已选尺寸。</p>
+          <div className="ead-phase-heading"><h3>3 比较图片</h3></div>
+          <p className="ead-phase-summary">选择一张主视觉，自动裁切排版为所有已选尺寸。</p>
         </div>
         {isGenerating && (
           <div className="ead-visual-progress">
@@ -163,26 +165,15 @@ export function StepThree({
               {options.map((option, index) => {
                 const selected = option.id === job?.selectedVisualOptionId;
                 return (
-                  <button
-                    type="button"
-                    className={`ead-option-card ${selected ? "is-selected" : ""}`}
+                  <VisualOptionCard
                     key={option.id}
-                    onClick={() => onSelect(option.id)}
+                    onSelect={() => onSelect(option.id)}
                     disabled={busy || pendingSelect || option.sourceCopyCreatedAt !== job?.copyDraft?.createdAt}
-                    aria-pressed={selected}
-                  >
-                    <span className="ead-option-image">
-                      {/* Candidate files are private authenticated routes, so Next Image cannot prefetch them. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={option.previewUrl}
-                        alt={`主视觉方案 ${index + 1}`}
-                      />
-                      <b>{selected ? "已选中" : `方案 ${index + 1}`}</b>
-                    </span>
-                    <strong>{option.sourceDocument.title}</strong>
-
-                  </button>
+                    selected={selected}
+                    src={option.previewUrl}
+                    label={`主视觉方案 ${index + 1}`}
+                    title={option.sourceDocument.title}
+                  />
                 );
               })}
             </div>

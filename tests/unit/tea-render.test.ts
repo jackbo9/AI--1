@@ -1,0 +1,21 @@
+import { expect, it } from "vitest";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
+import { renderTea } from "@/templates/tea-renderer";
+const fields = { brief: "无花果", food: "无花果", title: "午后鲜享", subtitle: "新鲜无花果，清甜好时光", visualPrompt: "切面近景", time: "", place: "" };
+it("renders a 1080×1920 poster with measured contrast, and blocks dark backgrounds in strict mode", async () => {
+  const dir = path.join(process.cwd(), "test-results/tea-render");
+  await mkdir(dir, { recursive: true });
+  const light = path.join(dir, "light.png"), dark = path.join(dir, "dark.png");
+  await sharp({ create: { width: 1024, height: 1536, channels: 3, background: "#fff" } }).png().toFile(light);
+  await sharp({ create: { width: 1024, height: 1536, channels: 3, background: "#050505" } }).png().toFile(dark);
+  const good = await renderTea(fields, light, "tea-test-light", "strict");
+  expect(good.exportAllowed).toBe(true); expect(good.passed).toBe(true);
+  const metadata = await sharp(good.outputPath).metadata();
+  expect([metadata.width, metadata.height]).toEqual([1080, 1920]);
+  const bad = await renderTea(fields, dark, "tea-test-dark", "strict");
+  expect(bad.exportAllowed).toBe(false);
+  const trial = await renderTea(fields, dark, "tea-test-trial", "trial");
+  expect(trial.exportAllowed).toBe(true); expect(trial.passed).toBe(false);
+}, 60000);

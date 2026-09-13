@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id
+  tenantKey   String?
+  openId      String?
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  jobs        Job[]
+
+  @@unique([tenantKey, openId])
+}
+
+model Job {
+  id             String       @id @db.Uuid
+  userId         String
+  scene          String
+  status         String
+  currentStep    String?
+  previousJobId  String?      @db.Uuid
+  idempotencyKey String       @unique
+  schemaVersion  String       @default("1")
+  payload        JobPayload?
+  visualAssets   VisualAsset[]
+  posterOutputs  PosterOutput[]
+  actions        JobAction[]
+  deletedAt      DateTime?
+  purgeAfter     DateTime?
+  createdAt      DateTime
+  updatedAt      DateTime
+  user           User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, updatedAt])
+  @@index([previousJobId])
+  @@index([purgeAfter])
+}
+
+model JobPayload {
+  jobId         String   @id @db.Uuid
+  schemaVersion String
+  data          Json
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model VisualAsset {
+  id            String   @id
+  jobId         String   @db.Uuid
+  ownerId       String
+  kind          String
+  objectKey     String   @unique
+  contentType   String
+  width         Int?
+  height        Int?
+  provider      String?
+  model         String?
+  status        String
+  selected      Boolean  @default(false)
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([ownerId, createdAt])
+  @@index([expiresAt])
+}
+
+model PosterOutput {
+  id              String   @id
+  jobId           String   @db.Uuid
+  ownerId         String
+  objectKey       String   @unique
+  contentType     String
+  width           Int
+  height          Int
+  templateVersion String
+  validation      Json
+  createdAt       DateTime @default(now())
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([ownerId, createdAt])
+}
+
+model JobAction {
+  id             String   @id @default(uuid()) @db.Uuid
+  jobId          String   @db.Uuid
+  idempotencyKey String   @unique
+  action         String
+  status         String
+  error          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  job            Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
+model StorageCleanup {
+  objectKey  String   @id
+  reason     String
+  createdAt  DateTime @default(now())
+}

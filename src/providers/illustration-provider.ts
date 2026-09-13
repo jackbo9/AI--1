@@ -108,6 +108,14 @@ export async function generateIllustration(
   brief: IllustrationBrief,
   jobId: string
 ): Promise<IllustrationResult> {
+  return generateControlledImage({ prompt: imageRequestPrompt(brief), canvasTarget: brief.canvasTarget }, jobId);
+}
+
+/** Receives a server-compiled prompt; scenario rules never cross this adapter. */
+export async function generateControlledImage(
+  input: { prompt: string; size?: string; canvasTarget?: IllustrationBrief["canvasTarget"]; failWithoutFallback?: boolean },
+  jobId: string
+): Promise<IllustrationResult> {
   const provider = serverEnv.IMAGE_PROVIDER;
   const baseUrl = serverEnv.IMAGE_BASE_URL;
   const apiKey = serverEnv.IMAGE_API_KEY;
@@ -119,11 +127,12 @@ export async function generateIllustration(
     !apiKey ||
     !model
   ) {
+    if (input.failWithoutFallback) throw new ProviderError("IMAGE_GENERATION_FAILED", "图片模型暂不可用，请稍后重试");
     return fallback(jobId, "demo-image", "未配置图片模型，已使用默认品牌插画");
   }
 
   try {
-    const prompt = imageRequestPrompt(brief);
+    const prompt = input.prompt;
     const payload = imageResponseSchema.parse(
       await requestJson(
         imageGenerationEndpoint(provider, baseUrl),
@@ -137,13 +146,13 @@ export async function generateIllustration(
             imageGenerationPayload(provider, {
               model,
               prompt,
-              size: brief.canvasTarget ? `${sportsRequestSize(brief.canvasTarget).width}x${sportsRequestSize(brief.canvasTarget).height}` : serverEnv.IMAGE_SIZE
+              size: input.size ?? (input.canvasTarget ? `${sportsRequestSize(input.canvasTarget).width}x${sportsRequestSize(input.canvasTarget).height}` : serverEnv.IMAGE_SIZE)
             })
           )
         },
         {
           timeoutMs: provider === "openai-images" ? 180_000 : 90_000,
-          retries: brief.canvasTarget ? 0 : 1,
+          retries: input.canvasTarget || input.failWithoutFallback ? 0 : 1,
           classify: classifyImageStatus,
             networkError: () =>
               new ProviderError(
@@ -179,15 +188,15 @@ export async function generateIllustration(
       );
     }
 
-    if (brief.canvasTarget) {
-      const expected = sportsRequestSize(brief.canvasTarget);
+    if (input.canvasTarget) {
+      const expected = sportsRequestSize(input.canvasTarget);
       const actual = await sharp(bytes).metadata();
       if (actual.width !== expected.width || actual.height !== expected.height) {
         throw new ProviderError("IMAGE_SIZE_MISMATCH", `图片尺寸不符合要求：${actual.width}×${actual.height}，应为 ${expected.width}×${expected.height}`);
       }
     }
-    if (brief.canvasTarget) {
-      const c = sportsCanvases[brief.canvasTarget];
+    if (input.canvasTarget) {
+      const c = sportsCanvases[input.canvasTarget];
       const rawPath = path.join(process.cwd(), "data/generated", `${jobId}-native.png`);
       await mkdir(path.dirname(rawPath), { recursive: true });
       await writeFile(rawPath, bytes);
@@ -210,6 +219,7 @@ export async function generateIllustration(
       model
     };
   } catch (error) {
+    if (input.failWithoutFallback) throw error instanceof ProviderError ? error : new ProviderError("IMAGE_GENERATION_FAILED", "主视觉生成失败，请重试该方案");
     return fallback(
       jobId,
       provider,

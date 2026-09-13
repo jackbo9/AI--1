@@ -1,5 +1,6 @@
 import { sportsCanvases } from "@/contracts/sports-canvas";
 import { mkdir, readFile } from "node:fs/promises";
+import { readGeneratedAsset } from "@/server/job-assets";
 import path from "node:path";
 import QRCode from "qrcode";
 import { chromium, type Page } from "playwright";
@@ -123,7 +124,7 @@ export async function renderEmployeeActivity(
   options: EmployeeActivityRenderOptions = {}
 ): Promise<EmployeeActivityRenderResult> {
   const [imageBytes, assets] = await Promise.all([
-    readFile(illustrationPath),
+    readGeneratedAsset(illustrationPath),
     loadEmbeddedBrandAssets()
   ]);
   const imageData = dataUriForPath(illustrationPath, imageBytes);

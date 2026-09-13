@@ -1,0 +1,4 @@
+.ead-history-card { position: relative; }
+.ead-history-open { display: block; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; }
+.ead-history-delete { position: absolute; right: 10px; bottom: 10px; padding: 4px 7px; border: 0; border-radius: 6px; color: #8f3d36; background: #f7ecea; font-size: 9px; }
+.ead-history-delete:disabled { opacity: .55; }

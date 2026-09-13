@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
 
-export function PosterViewport({ children, target }: { children: ReactNode; target: string }) {
+export function PosterViewport({ children, target, className = "" }: { children: ReactNode; target: string; className?: string }) {
   const viewport = useRef<HTMLDivElement>(null);
   const layer = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -70,7 +70,7 @@ export function PosterViewport({ children, target }: { children: ReactNode; targ
       node.removeEventListener("keydown", key);
     };
   }, []);
-  return <div ref={viewport} className={`ead-final-canvas ead-continuous-canvas is-${target}`} tabIndex={0} role="region" aria-label="海报缩放预览：滚轮缩放，拖动移动，双击或按 0 复位，加减键缩放">
+  return <div ref={viewport} className={`ead-final-canvas ead-continuous-canvas is-${target} ${className}`} tabIndex={0} role="region" aria-label="海报缩放预览：滚轮缩放，拖动移动，双击或按 0 复位，加减键缩放">
     <div ref={layer} className="ead-zoom-layer">{children}</div>
     <small className="ead-canvas-hint">滚轮或触控板缩放 · 拖动查看 · 双击复位</small>
   </div>;

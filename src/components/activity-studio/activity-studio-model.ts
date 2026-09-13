@@ -76,6 +76,7 @@ export function createCopyReview(job: ActivityJob): CopyReview | undefined {
 }
 
 export function getStageForJob(job: ActivityJob): Stage | undefined {
+  if (job.status === "FAILED_FINAL" || job.status === "FAILED_RETRYABLE") return 1;
   if (job.status === "READY_FOR_COPY_REVIEW") return 1;
   if (
     [
@@ -99,10 +100,35 @@ export function getStageForJob(job: ActivityJob): Stage | undefined {
 
 export function hydrateForm(current: FormState, job: ActivityJob): FormState {
   const document = job.copyDraft?.document;
-  if (!document) return current;
   const renderTargets = job.campaignBrief?.renderTargets?.length
     ? job.campaignBrief.renderTargets
     : current.renderTargets;
+  if (!document && job.input) {
+    const input = job.input;
+    return {
+      ...current,
+      renderTargets,
+      activeRenderTarget: renderTargets.includes(current.activeRenderTarget) ? current.activeRenderTarget : renderTargets[0]!,
+      activityName: input.activityName,
+      slogan: input.slogan,
+      subtitle: input.subtitle,
+      session: input.sessions[0] ?? current.session,
+      audience: input.audience,
+      rules: input.rules ?? input.participationSteps.join("\n"),
+      qrUrl: input.qrPayload,
+      qrAssetId: input.qrAssetId,
+      qrAssetPreviewUrl: input.qrAssetId ? `/api/uploads/qr/${input.qrAssetId}` : undefined,
+      qrAssetName: input.qrAssetId ? "已上传二维码图片" : "",
+      finalistGroups: input.finalistGroups?.length ? input.finalistGroups : current.finalistGroups,
+      sportType: input.sportType,
+      themeColor: input.themeColor,
+      peopleMode: input.peopleMode,
+      visualType: input.visualType,
+      visualTreatment: input.visualTreatment,
+      sportsConfirmed: input.sportsConfirmed
+    };
+  }
+  if (!document) return current;
   return {
     ...current,
     renderTargets,

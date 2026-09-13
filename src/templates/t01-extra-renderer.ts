@@ -1,5 +1,6 @@
 import { sportsCanvases } from "@/contracts/sports-canvas";
 import { mkdir, readFile } from "node:fs/promises";
+import { readGeneratedAsset } from "@/server/job-assets";
 import path from "node:path";
 import QRCode from "qrcode";
 import { chromium } from "playwright";
@@ -32,7 +33,7 @@ export async function renderT01Extra(
 ) {
   if (!/^[a-zA-Z0-9-]+$/.test(outputId)) throw new ExtraRenderError("INVALID_OUTPUT_ID", "输出标识无效");
   const [brand, imageBytes, mediumFont] = await Promise.all([
-    loadEmbeddedBrandAssets(), readFile(imagePath),
+    loadEmbeddedBrandAssets(), readGeneratedAsset(imagePath),
     readFile(path.join(process.cwd(), "public/brand/fonts/MiSans-Medium.otf"))
   ]);
   const imageMime = imagePath.endsWith(".svg") ? "image/svg+xml" : /\.jpe?g$/i.test(imagePath) ? "image/jpeg" : imagePath.endsWith(".webp") ? "image/webp" : "image/png";

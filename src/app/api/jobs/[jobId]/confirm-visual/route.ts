@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { dispatchTeaAction } from "@/server/tea-api";
 import { confirmVisualSchema } from "@/contracts/poster";
 import { claimJobAction, findJob, JobActionError } from "@/server/job-store";
 import crypto from "node:crypto";
@@ -19,6 +20,8 @@ export async function POST(
 ) {
   const identity = await requireApiIdentity();
   if (!identity) return unauthorizedResponse();
+  const teaResponse = await dispatchTeaAction(request, (await context.params).jobId, identity.userId, "generate");
+  if (teaResponse) return teaResponse;
   const body = await readJsonRequest(request);
   if (!body.ok) {
     return NextResponse.json(

@@ -12,6 +12,7 @@ export const UI_FIXTURE_JOB_ID = "ui-fixture-local";
 export const UI_FIXTURE_STORAGE_KEY = "ninebot-ui-fixture-job-v2";
 
 export type ActivityStudioFixtureJob = {
+  input?: EmployeeActivityInput;
   previousJobId?: string;
   visualBatches?: import("@/contracts/job").VisualBatch[];
   id?: string;

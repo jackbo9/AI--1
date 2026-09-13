@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import crypto from "node:crypto";
+import { isTeaJob, teaFieldsSchema, type TeaJob } from "@/contracts/tea";
 import path from "node:path";
 import type {
   Artifact,
@@ -16,6 +17,8 @@ import {
   employeeActivityInputSchema
 } from "@/contracts/poster";
 import { activityTemplateFamilyManifest } from "@/templates/activity-template-family";
+import { serverEnv } from "@/lib/env";
+import { claimPersistedJobAction, PersistedActionError, purgeDeletedJobs, readActiveJobByKey, readActiveJobs, saveJob as savePostgresJob, softDeleteWork as softDeletePostgresWork, updatePersistedJob } from "./postgres-job-repository";
 
 const dataDir = path.join(process.cwd(), "data");
 const jobFile = path.join(dataDir, "jobs.json");
@@ -31,23 +34,50 @@ type StoredGenerationJob = Omit<
   visualOptions?: GenerationJob["visualOptions"];
 };
 
-async function readJobs(): Promise<CampaignGenerationJob[]> {
+export type StoredJob = CampaignGenerationJob | TeaJob;
+
+async function readAllJobs(): Promise<StoredJob[]> {
+  if (serverEnv.DATABASE_URL) {
+    const jobs = await readActiveJobs();
+    return jobs.flatMap<StoredJob>((item) => {
+      if (isTeaJob(item)) return [{ ...item, fields: teaFieldsSchema.parse(item.fields) }];
+      try { return [normalizeStoredJob(item)]; } catch { return []; }
+    });
+  }
   try {
     const parsed = JSON.parse(await readFile(jobFile, "utf8")) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((item) => {
+    if (!Array.isArray(parsed)) throw new Error("任务存储格式无效，已停止写入以保护历史数据");
+    return parsed.flatMap<CampaignGenerationJob | TeaJob>((item) => {
+      if (isTeaJob(item)) return [{ ...item, fields: teaFieldsSchema.parse(item.fields) }];
       try {
         return [normalizeStoredJob(item as StoredGenerationJob)];
       } catch {
         return [];
       }
     });
-  } catch {
-    return [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
 }
 
+export async function listOwnedJobs(userId: string): Promise<StoredJob[]> {
+  return (await readAllJobs()).filter((job) => job.userId === userId);
+}
+
+async function readJobs(): Promise<CampaignGenerationJob[]> {
+  return (await readAllJobs()).filter((job): job is CampaignGenerationJob => !isTeaJob(job));
+}
+
 async function saveJobs(jobs: GenerationJob[]) {
+  await saveAllJobs([...jobs, ...(await readAllJobs()).filter(isTeaJob)]);
+}
+
+async function saveAllJobs(jobs: Array<GenerationJob | TeaJob>) {
+  if (serverEnv.DATABASE_URL) {
+    await Promise.all(jobs.map((job) => savePostgresJob(isTeaJob(job) ? job : normalizeStoredJob(job))));
+    return;
+  }
   await mkdir(dataDir, { recursive: true });
   const temporaryFile = `${jobFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
   try {
@@ -56,6 +86,68 @@ async function saveJobs(jobs: GenerationJob[]) {
   } finally {
     await unlink(temporaryFile).catch(() => undefined);
   }
+}
+
+export async function deleteOwnedWork(jobId: string, userId: string) {
+  if (serverEnv.DATABASE_URL) return softDeletePostgresWork(jobId, userId);
+  return withMutation(async () => {
+    const jobs = await readAllJobs();
+    const source = jobs.find((job) => job.id === jobId && job.userId === userId);
+    if (!source) return false;
+    const owned = jobs.filter((job) => job.userId === userId);
+    const parent = new Map(owned.map((job) => [job.id, job.previousJobId]));
+    const rootOf = (id: string) => { const seen = new Set<string>(); let current = id; while (parent.get(current) && !seen.has(current)) { seen.add(current); current = parent.get(current)!; } return current; };
+    const root = rootOf(jobId);
+    await saveAllJobs(jobs.filter((job) => job.userId !== userId || rootOf(job.id) !== root));
+    return true;
+  });
+}
+
+export async function purgeExpiredDeletedJobs(now = new Date()) {
+  return serverEnv.DATABASE_URL ? purgeDeletedJobs(now) : [];
+}
+
+export async function findTeaJob(id: string) {
+  return (await readAllJobs()).filter(isTeaJob).find(job => job.id === id);
+}
+
+export async function createTeaJob(job: TeaJob) {
+  if (serverEnv.DATABASE_URL) {
+    const existing = await readActiveJobByKey(job.idempotencyKey);
+    if (existing) {
+      if (!isTeaJob(existing) || existing.userId !== job.userId) throw new Error("幂等键已被占用");
+      return existing;
+    }
+    return savePostgresJob(job) as Promise<TeaJob>;
+  }
+  return withMutation(async () => {
+    const jobs = await readAllJobs();
+    const existing = jobs.find(item => item.idempotencyKey === job.idempotencyKey);
+    if (existing) {
+      if (!isTeaJob(existing) || existing.userId !== job.userId) throw new Error("幂等键已被占用");
+      return existing;
+    }
+    jobs.unshift(job);
+    await saveAllJobs(jobs);
+    return job;
+  });
+}
+
+export async function updateTeaJob(id: string, change: (job: TeaJob) => TeaJob) {
+  if (serverEnv.DATABASE_URL) return updatePersistedJob(id, (job) => {
+    if (!isTeaJob(job)) throw new Error("下午茶任务不存在");
+    return change(job);
+  }) as Promise<TeaJob>;
+  return withMutation(async () => {
+    const jobs = await readAllJobs();
+    const index = jobs.findIndex(job => job.id === id);
+    const current = jobs[index];
+    if (!isTeaJob(current)) throw new Error("下午茶任务不存在");
+    const next = { ...change(current), updatedAt: new Date().toISOString() };
+    jobs[index] = next;
+    await saveAllJobs(jobs);
+    return next;
+  });
 }
 
 function withMutation<T>(operation: () => Promise<T>) {
@@ -193,6 +285,11 @@ export async function findByKey(key: string) {
 }
 
 export async function createJob(job: GenerationJob) {
+  if (serverEnv.DATABASE_URL) {
+    const existing = await readActiveJobByKey(job.idempotencyKey);
+    if (existing && !isTeaJob(existing)) return normalizeStoredJob(existing);
+    return savePostgresJob(normalizeStoredJob(job));
+  }
   return withMutation(async () => {
     const jobs = await readJobs();
     const existing = jobs.find((item) => item.idempotencyKey === job.idempotencyKey);
@@ -208,6 +305,10 @@ export async function updateJob(
   id: string,
   change: (job: CampaignGenerationJob) => GenerationJob
 ) {
+  if (serverEnv.DATABASE_URL) return updatePersistedJob(id, (job) => {
+    if (isTeaJob(job)) throw new Error("任务不存在");
+    return normalizeStoredJob(change(normalizeStoredJob(job)));
+  }) as Promise<CampaignGenerationJob>;
   return withMutation(async () => {
     const jobs = await readJobs();
     const index = jobs.findIndex((job) => job.id === id);
@@ -238,6 +339,17 @@ export async function claimJobAction(
   allowedStatuses: string[],
   change: (job: CampaignGenerationJob) => GenerationJob
 ) {
+  if (serverEnv.DATABASE_URL) {
+    try {
+      return await claimPersistedJobAction(id, idempotencyKey, allowedStatuses, (job) => {
+        if (isTeaJob(job)) throw new Error("任务不存在");
+        return normalizeStoredJob(change(normalizeStoredJob(job)));
+      }) as CampaignGenerationJob;
+    } catch (error) {
+      if (error instanceof PersistedActionError) throw new JobActionError(error.code, error.message);
+      throw error;
+    }
+  }
   return withMutation(async () => {
     const jobs = await readJobs();
     const index = jobs.findIndex((job) => job.id === id);
