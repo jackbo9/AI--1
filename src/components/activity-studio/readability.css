@@ -1,0 +1,93 @@
+/* Interface typography only: never target the template's .t01-* descendants. */
+#employee-activity-demo { --studio-text: 14px; --studio-help: 12px; max-width: none; width: 100%; margin: 0; border-radius: 0; height: 100dvh; min-height: 640px; }
+#employee-activity-demo[data-text-size="large"] { --studio-text: 17px; --studio-help: 14px; }
+.ead-window { grid-template-rows: 76px minmax(0, 1fr); }
+.ead-topbar { grid-template-columns: 240px minmax(0, 1fr) 130px; }
+.ead-body { grid-template-columns: 220px minmax(440px, 1fr) minmax(334px, 32vw); }
+.ead-workspace { padding: 28px clamp(20px, 3vw, 64px); }
+.ead-activity-content { max-width: 1000px; }
+.ead-body.is-result .ead-activity-content { max-width: none; }
+.ead-field input, .ead-field textarea, .ead-select select, .ead-qr-add input,
+.ead-finalist-group input, .ead-visual-prompt { font-size: var(--studio-text); line-height: 1.65; }
+.ead-field label, .ead-select>span, .ead-section-head h3, .ead-preview-head b,
+.ead-scene b, .ead-primary, .ead-secondary, .ead-session-heading b,
+.ead-template-picker b, .ead-template-picker strong, .ead-final-download a,
+.ead-qr-title b, .ead-qr-options button, .ead-visual-label { font-size: var(--studio-text); }
+.ead-field-hint, .ead-field label i, .ead-title-row p, .ead-template-picker small,
+.ead-copy-actions small, .ead-session-heading small, .ead-qr-title small,
+.ead-upload-status, .ead-preview-disclaimer, .ead-progress button,
+.ead-select small, .ead-scene small, .ead-profile b, .ead-profile small,
+.ead-visual-context, .ead-option-card small, .ead-selected-option p,
+.ead-final-download small, .ead-final-size-tabs button, .ead-final-view-controls button,
+.ead-size-tabs button, .ead-error { font-size: var(--studio-help); line-height: 1.6; }
+.ead-field input, .ead-select select, .ead-finalist-group input { min-height: 42px; }
+.ead-field input::placeholder, .ead-field textarea::placeholder { color: #82877f; }
+.ead-text-size { display: flex; justify-content: flex-end; gap: 4px; }
+.ead-text-size button { border: 1px solid #d6dad2; border-radius: 8px; padding: 7px 10px; background: white; font-size: var(--studio-help); }
+.ead-text-size button[aria-pressed="true"] { color: #fff; background: #202320; border-color: #202320; }
+.ead-visual-preferences { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ead-finalist-group header input { min-width: 0; width: 160px; border: 1px solid #dfe3db; border-radius: 8px; padding: 6px 10px; background: white; }
+.ead-finalist-entry { min-width: 0; }
+.ead-finalist-entry input { min-width: 0; }
+.ead-template-picker button strong { font-size: var(--studio-text); }
+.ead-template-picker button small, .ead-add-finalist, .ead-finalist-entry button { font-size: var(--studio-help); }
+.ead-generate-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ead-final-download .ead-secondary { width: 100%; margin-top: 8px; }
+.ead-preview { overflow: hidden; }
+.ead-canvas-wrap { align-content: start; }
+.ead-poster-frame.is-longform_1080xAuto { height: auto; min-height: 632px; }
+.ead-poster-frame.is-longform_1080xAuto .t01-selected-preview { position: relative; }
+@media(min-width:1600px) { .ead-poster-frame { zoom: 1.35; } }
+@media(min-width:2200px) { .ead-poster-frame { zoom: 1.7; } .ead-body { grid-template-columns: 260px minmax(440px, 1fr) 36vw; } }
+@media(max-width:1100px) { .ead-body { grid-template-columns: 170px minmax(360px, 1fr) 310px; } .ead-workspace { padding: 20px 16px; } .ead-topbar { grid-template-columns: 190px minmax(0, 1fr) 120px; } }
+@media(max-width:900px) { .ead-body { grid-template-columns: minmax(360px, 1fr) 310px; } .ead-sidebar { display: none; } .ead-topbar { grid-template-columns: 1fr auto; } .ead-progress { display: none; } }
+@media(max-width:760px) { #employee-activity-demo { height: auto; min-height: 100dvh; } .ead-body { display: block; } .ead-preview { overflow: visible; } .ead-window { display: block; } .ead-topbar { min-height: 70px; } .ead-final-viewer-head { flex-wrap: wrap; } }
+.ead-theme-b .ead-topbar { grid-template-columns: 240px minmax(0, 1fr) 130px; padding: 0 20px; }
+.ead-theme-b .ead-brand { padding-left: 0; }
+.ead-theme-b .ead-progress { justify-content: center; padding-left: 0; }
+.ead-theme-b .ead-prompt-editor .ead-generate-row { height: 0; margin: 0; }
+.ead-theme-b .ead-prompt-refine { min-width: 0; font-size: var(--studio-help); }
+.ead-theme-b .ead-template-picker button { min-width: 0; }
+.ead-theme-b .ead-template-meta strong { font-size: var(--studio-text); }
+.ead-theme-b .ead-template-meta small { font-size: var(--studio-help); }
+.ead-theme-b .ead-subscene-list button { font-size: var(--studio-help); }
+.ead-theme-b .ead-subscene-list button small { font-size: 10px; }
+@media(max-width:900px) { .ead-theme-b .ead-topbar { grid-template-columns: 1fr auto; } }
+/* September 13 annotated UI feedback; product controls only. */
+.ead-theme-b .ead-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.ead-theme-b .ead-field textarea,
+.ead-theme-b .ead-finalist-group input,
+.ead-theme-b .ead-qr-add input:not([type="file"]),
+.ead-theme-b .ead-visual-prompt {background:#f5f5f5}
+.ead-theme-b .ead-field label,.ead-theme-b .ead-select>span,.ead-theme-b .ead-visual-label {color:#111}
+.ead-theme-b .ead-field label i,.ead-form-heading>small i {color:#c62828;background:none;font-style:normal}
+.ead-form-heading {display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.ead-form-heading>small {white-space:nowrap;color:#656565;font-size:var(--studio-help)}
+.ead-theme-b .ead-copy-actions {flex-wrap:wrap}
+.ead-theme-b .ead-copy-actions>small {white-space:nowrap}
+.ead-theme-b .ead-step-two-preferences {background:transparent}
+.ead-theme-b .ead-direction-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+.ead-theme-b .ead-direction-grid>.ead-span-2 {grid-column:1/-1}
+.ead-theme-b .ead-prompt-editor {border-top:1px solid #e7e9e3;margin-top:22px;padding-top:22px}
+.ead-theme-b .ead-prompt-editor .ead-visual-label {margin:0;padding:14px 16px 0;border:1px solid #dfe3db;border-bottom:0;border-radius:12px 12px 0 0;background:#f5f5f5}
+.ead-theme-b .ead-prompt-editor .ead-visual-prompt {border-top:0;border-radius:0 0 12px 12px;background:#f5f5f5}
+.ead-continuous-canvas {position:relative;overflow:hidden;touch-action:none;cursor:grab;overscroll-behavior:contain}
+.ead-continuous-canvas:active {cursor:grabbing}
+.ead-zoom-layer {position:absolute;inset:0;transform-origin:0 0;will-change:transform;pointer-events:none}
+.ead-zoom-layer>img {position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);object-fit:contain;user-select:none}
+.ead-zoom-layer>.t01-preview {position:absolute;inset:12px;margin:auto;max-width:calc(100% - 24px);max-height:calc(100% - 24px)}
+.ead-zoom-layer>.ead-final-output-state {height:100%}
+.ead-theme-b .ead-scene.is-activity.is-active>span>small {display:block}
+.ead-theme-b .ead-copy-actions {align-items:flex-end}
+.ead-canvas-hint {position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;padding:7px 12px;border-radius:20px;background:rgb(255 255 255 / 90%);color:#646464;font-size:12px;white-space:nowrap;pointer-events:none}
+.ead-generation-placeholders {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ead-generation-placeholder {min-height:180px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:1px solid #e3e5e1;border-radius:12px;background:#f6f7f5;font-size:14px}
+.ead-visual-progress>small {margin-left:auto}
+.ead-phase-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 12px}
+.ead-phase-heading h3 {font-size:17px;color:#111}
+.ead-text-action {padding:8px 0;border:0;background:none;color:#666;font-size:14px;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.ead-text-action:disabled {opacity:.5;cursor:default}
+.ead-phase-summary {color:#777;font-size:14px;line-height:1.6;margin-bottom:12px}
+.ead-theme-b .ead-description-actions {justify-content:space-between}
+.ead-theme-b .ead-prompt-editor {margin-top:12px;padding-top:0;border-top:0}
+.t01-selected-preview.is-full-canvas .t01-preview-background {height:100%;object-fit:cover;object-position:center top}

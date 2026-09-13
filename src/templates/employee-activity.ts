@@ -1,3 +1,4 @@
+import { sportsCanvases } from "@/contracts/sports-canvas";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import QRCode from "qrcode";
@@ -18,7 +19,7 @@ import { t01PortraitLayout } from "./t01-portrait-layout";
 
 export const employeeActivityTemplate = {
   id: "employee-activity-portrait",
-  version: "2.3.0-figma-2026-09-10-info-grid",
+  version: "2.5.0-mother-crop",
   outputFormat: "portrait_1080x1920",
   width: 1080,
   height: 1920,
@@ -69,6 +70,7 @@ export type EmployeeActivityRenderResult = {
 };
 
 export type EmployeeActivityRenderOptions = {
+  fullCanvas?: boolean;
   readabilityMode?: "strict" | "trial";
   qrDataUri?: string;
 };
@@ -149,6 +151,9 @@ export async function renderEmployeeActivity(
     await assertRenderReadiness(page);
     await assertLayoutCapacity(page);
 
+    if (options.fullCanvas) {
+      await page.addStyleTag({ content: `.background{inset:0;width:${sportsCanvases.portrait_1080x1920.width}px;height:${sportsCanvases.portrait_1080x1920.height}px;object-fit:cover;object-position:center top}` });
+    }
     const initialAnalysis = await analyzeBackground(page);
     // Keep an inspectable result even when neither tone passes. The worker
     // retries the visual first; after its bounded retries this warning render

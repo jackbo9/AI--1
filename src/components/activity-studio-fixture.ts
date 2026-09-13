@@ -2,6 +2,7 @@ import {
   t01PortraitSubtitleMaxCharacters,
   textCharacterCount,
   type EmployeeActivityInput,
+  type VisualPreference,
   type PosterDocument
 } from "@/contracts/poster";
 import type { RenderTargetId } from "@/contracts/brand";
@@ -11,6 +12,8 @@ export const UI_FIXTURE_JOB_ID = "ui-fixture-local";
 export const UI_FIXTURE_STORAGE_KEY = "ninebot-ui-fixture-job-v2";
 
 export type ActivityStudioFixtureJob = {
+  previousJobId?: string;
+  visualBatches?: import("@/contracts/job").VisualBatch[];
   id?: string;
   status: string;
   currentStep: string;
@@ -24,11 +27,14 @@ export type ActivityStudioFixtureJob = {
     createdAt: string;
   };
   visualInput?: {
+    preferences?: VisualPreference;
     originalIntent: string;
     sourceCopyCreatedAt: string;
     createdAt: string;
   };
   visualDraft?: {
+    preferences?: VisualPreference;
+    sportType?: string;
     description: string;
     provider: string;
     promptVersion: string;
@@ -37,12 +43,14 @@ export type ActivityStudioFixtureJob = {
     fallback: boolean;
   };
   confirmedVisual?: {
+    preferences?: VisualPreference;
     description: string;
     sourceDraftCreatedAt: string;
     sourceCopyCreatedAt?: string;
     createdAt: string;
   };
   visualOptions?: Array<{
+    brief?: import("@/contracts/poster").IllustrationBrief;
     id: string;
     createdAt: string;
     description: string;

@@ -136,11 +136,11 @@ describe("employee activity v1.7 contract", () => {
     });
 
     expect(prompt).toContain("【版式构图】");
-    expect(prompt).toContain("LEFT TOP = TITLE SAFE AREA");
-    expect(prompt).toContain("CENTER-RIGHT = MAIN VISUAL");
-    expect(prompt).toContain("X 68%–78%");
+    expect(prompt).toContain("标题安全区");
+    expect(prompt).toContain("Primary Visual Focus");
+    expect(prompt).toContain("X=378–1080px,Y=443–1280px");
     expect(prompt).toContain("Editorial Sports Photography");
-    expect(prompt).toContain("默认不出现人物");
+    expect(prompt).toContain("人物范围遵循受控赛事方向");
     expect(prompt).toContain("不是AI概念图");
   });
 });

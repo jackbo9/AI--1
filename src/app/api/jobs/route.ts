@@ -7,7 +7,7 @@ import {
   createJobSchema,
   posterDocumentSchema
 } from "@/contracts/poster";
-import { createJob, findByKey } from "@/server/job-store";
+import { createJob, findByKey, findJob } from "@/server/job-store";
 import { runCopyStage } from "@/worker/run-job";
 import { requireApiIdentity, unauthorizedResponse } from "@/server/auth";
 import { preflightEmployeeActivity, PosterRenderError } from "@/templates/employee-activity";
@@ -59,6 +59,10 @@ export async function POST(request: Request) {
         );
   }
 
+  if (parsed.data.previousJobId) {
+    const previous = await findJob(parsed.data.previousJobId);
+    if (!previous || previous.userId !== identity.userId) return NextResponse.json({ error: { message: "历史任务不可访问" } }, { status: 403 });
+  }
   const campaignBrief = campaignBriefFromLegacyInput(parsed.data.input, parsed.data.renderTargets);
   if (
     parsed.data.skipCopy &&
@@ -130,6 +134,7 @@ export async function POST(request: Request) {
       ? createT01BaseVisualDraft(manualDocument, now, now)
       : undefined;
     const candidate = {
+      previousJobId: parsed.data.previousJobId,
       id: crypto.randomUUID(),
       traceId: crypto.randomUUID(),
       idempotencyKey: parsed.data.idempotencyKey,

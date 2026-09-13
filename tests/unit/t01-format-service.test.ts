@@ -1,3 +1,5 @@
+import { generateIllustration } from "@/providers/illustration-provider";
+import { briefFromConfirmedDescription } from "@/providers/prompt-compiler";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import normal from "../fixtures/employee-activity.normal.json";
 import type { CampaignGenerationJob, GenerationVersion } from "@/contracts/job";
@@ -6,6 +8,7 @@ import { findJob, updateJob } from "@/server/job-store";
 import { claimFormat, renderClaimedFormat } from "@/server/t01-format-service";
 import { ExtraRenderError, renderT01Extra } from "@/templates/t01-extra-renderer";
 
+vi.mock("@/providers/illustration-provider", () => ({ generateIllustration: vi.fn(), imageRequestPrompt: vi.fn(() => "final landscape request") }));
 vi.mock("@/server/job-store", () => ({ findJob: vi.fn(), updateJob: vi.fn() }));
 vi.mock("@/lib/env", () => ({ serverEnv: { READABILITY_MODE: "trial" } }));
 vi.mock("@/templates/t01-extra-renderer", () => ({
@@ -61,6 +64,24 @@ beforeEach(() => {
 });
 
 describe("T01 format claims and isolated completion", () => {
+  it("freezes the original mother and retries layout without image calls", async () => {
+    const brief = briefFromConfirmedDescription("篮球入网瞬间，克制蓝色，真实体育摄影。", { category:"competition", themeKeywords:[], visualIntent:"篮球", peopleMode:"forbid" });
+    stored.confirmedVisualOptionId = "selected";
+    stored.visualOptions = [{id:"selected",createdAt:now,description:"篮球",sourceDraftCreatedAt:now,sourceCopyCreatedAt:now,sourceDocumentVersionId:"copy",sourceDocument:document,promptVersion:"canvas",brief,assetPath:"/fixture/mother.png",assetMode:"generated",imageProvider:"test",imageModel:"test"}];
+    const claims = await Promise.all(Array.from({length:8}, () => claimFormat("job","owner","landscape_1920x1080")));
+    expect(claims.filter(c=>c.claimed)).toHaveLength(1);
+    const claim = claims.find(c=>c.claimed)!;
+    expect(claim.artifact).toMatchObject({ adaptationMode:"template-crop-v1",sourceVisualOptionId:"selected",assetPath:"/fixture/mother.png" });
+    expect(claim.artifact.sourceBrief).toBeUndefined();
+    vi.mocked(renderT01Extra).mockRejectedValueOnce(new ExtraRenderError("CAPACITY","Too much copy"));
+    await renderClaimedFormat("job",claim.artifact.id,"landscape_1920x1080",claim.sourceDocument);
+    const retry = await claimFormat("job","owner","landscape_1920x1080");
+    await renderClaimedFormat("job",retry.artifact.id,"landscape_1920x1080",retry.sourceDocument);
+    expect(generateIllustration).not.toHaveBeenCalled();
+    expect(stored.artifacts.at(-1)).toMatchObject({status:"READY",assetPath:"/fixture/mother.png"});
+    expect(renderT01Extra).toHaveBeenLastCalledWith("landscape_1920x1080",retry.sourceDocument,"/fixture/mother.png",expect.any(String),{readabilityMode:"trial",fullCanvas:false});
+  });
+
   it("reuses one rendering artifact for concurrent repeated requests", async () => {
     const claims = await Promise.all(Array.from({ length: 8 }, () => claimFormat("job", "owner", "landscape_1920x1080")));
     expect(claims.filter(result => result.claimed)).toHaveLength(1);
@@ -116,7 +137,7 @@ describe("T01 format claims and isolated completion", () => {
     expect(next.claimed).toBe(true);
     expect(next.artifact.documentVersionId).toBe("new-version");
     expect(old.sourceDocument.title).toBe("秋日同行");
-    expect(renderT01Extra).toHaveBeenCalledWith("landscape_1920x1080", old.sourceDocument, "/fixture/source.png", `job-${old.artifact.id}`, { readabilityMode: "trial" });
+    expect(renderT01Extra).toHaveBeenCalledWith("landscape_1920x1080", old.sourceDocument, "/fixture/source.png", `job-${old.artifact.id}`, { readabilityMode: "trial", fullCanvas: false });
     expect(stored.artifacts.find(item => item.id === next.artifact.id)?.status).toBe("RENDERING");
   });
 

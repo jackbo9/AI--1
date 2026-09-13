@@ -1,3 +1,4 @@
+import { sportsCanvases } from "@/contracts/sports-canvas";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import QRCode from "qrcode";
@@ -11,7 +12,7 @@ import { adaptWideContrast } from "./t01-wide-contrast";
 
 export const extraFormats = ["landscape_1920x1080", "banner_2227x950", "longform_1080xAuto"] as const;
 export type ExtraFormat = (typeof extraFormats)[number];
-export const extraTemplateVersion = "t01-figma-2026-09-10-v7-info-grid";
+export const extraTemplateVersion = "t01-2026-09-13-v10-mother-crop";
 export const extraTemplateNodes = {
   landscape_1920x1080: "426:74",
   banner_2227x950: "426:140",
@@ -27,7 +28,7 @@ export async function renderT01Extra(
   posterDocument: PosterDocument,
   imagePath: string,
   outputId: string,
-  options: { content?: T01TemplateContent; outputDirectory?: string; readabilityMode?: "strict" | "trial"; qrDataUri?: string } = {}
+  options: { fullCanvas?: boolean; content?: T01TemplateContent; outputDirectory?: string; readabilityMode?: "strict" | "trial"; qrDataUri?: string } = {}
 ) {
   if (!/^[a-zA-Z0-9-]+$/.test(outputId)) throw new ExtraRenderError("INVALID_OUTPUT_ID", "输出标识无效");
   const [brand, imageBytes, mediumFont] = await Promise.all([
@@ -63,7 +64,7 @@ export async function renderT01Extra(
   const content = options.content ?? t01ContentFromDocument(posterDocument);
   const markup = format === "longform_1080xAuto" ? longformMarkup(content, assets) : wideMarkup(format, content, assets);
   const width = format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080;
-  const fixedHeight = format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : undefined;
+  const fixedHeight = options.fullCanvas ? sportsCanvases[format].height : format === "landscape_1920x1080" ? 1080 : format === "banner_2227x950" ? 950 : undefined;
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: fixedHeight ?? 3000 }, deviceScaleFactor: 1 });
@@ -73,6 +74,7 @@ export async function renderT01Extra(
     await page.setContent(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>${brand.fontFaceCss}
       @font-face{font-family:MiSans;src:url(data:font/otf;base64,${mediumFont.toString("base64")}) format('opentype');font-weight:500;font-display:block}
       *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff}body{font-family:MiSans,sans-serif}img{display:block}${markup.css}
+      ${options.fullCanvas ? `.t01-longform{height:${sportsCanvases[format].height}px;--lf-canvas-height:${sportsCanvases[format].height}px!important}.lf-hero-background,.t01-wide-background{width:${sportsCanvases[format].width}px;height:${sportsCanvases[format].height}px;object-fit:fill;object-position:0 0}` : ""}
       </style></head><body>${markup.html}</body></html>`, { waitUntil: "load" });
     const ready = await page.evaluate(async () => {
       await Promise.all(Array.from(window.document.fonts).map(face => face.load().catch(() => undefined)));

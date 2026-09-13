@@ -1,3 +1,5 @@
+import { briefFromConfirmedDescription } from "@/providers/prompt-compiler";
+import { runVisualBatch } from "@/worker/visual-batch";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import normal from "../fixtures/employee-activity.normal.json";
 import {
@@ -46,6 +48,7 @@ vi.mock("@/providers/prompt-compiler", () => ({
   compileIllustrationBrief: vi.fn()
 }));
 vi.mock("@/providers/illustration-provider", () => ({
+  imageRequestPrompt: vi.fn(() => "recorded-image-prompt"),
   generateIllustration: vi.fn(),
   seedreamPrompt: vi.fn(() => "valid prompt")
 }));
@@ -142,6 +145,24 @@ function baseJob(): CampaignGenerationJob {
 
 describe("T01 visual options worker", () => {
   let currentJob: CampaignGenerationJob;
+
+  it("keeps a successful direction and retries only the failed direction", async () => {
+    vi.mocked(briefFromConfirmedDescription).mockImplementation(() => ({ ...brief }));
+    currentJob.confirmedVisual = { batchId: "pair", description: brief.confirmedDescription, sourceDraftCreatedAt: currentJob.visualDraft!.createdAt, createdAt: currentJob.createdAt };
+    vi.mocked(generateIllustration).mockReset().mockResolvedValueOnce({ path: "/tmp/a.png", mode: "generated", provider: "test", model: "test" }).mockResolvedValueOnce({ path: "/tmp/fallback.png", mode: "fallback", provider: "test", model: "test" });
+    await runVisualBatch(currentJob.id);
+    expect(currentJob.visualOptions).toHaveLength(1);
+    expect(vi.mocked(generateIllustration).mock.calls[0][0].systemDirection).not.toBe(vi.mocked(generateIllustration).mock.calls[1][0].systemDirection);
+    expect(currentJob.selectedVisualOptionId).toBeUndefined();
+    const batch = currentJob.visualBatches![0];
+    expect(batch.directions.map(d => d.status)).toEqual(["READY", "FAILED"]);
+    currentJob.status = "GENERATING_ASSET";
+    vi.mocked(generateIllustration).mockResolvedValueOnce({ path: "/tmp/b.png", mode: "generated", provider: "test", model: "test" });
+    await runVisualBatch(currentJob.id, { batchId: batch.id, directionId: batch.directions[1].id });
+    expect(generateIllustration).toHaveBeenCalledTimes(3);
+    expect(currentJob.visualOptions).toHaveLength(2);
+    expect(currentJob.visualBatches![0].directions.every(d => d.status === "READY")).toBe(true);
+  });
 
   beforeEach(() => {
     vi.resetAllMocks();

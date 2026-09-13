@@ -7,7 +7,8 @@ export type ProviderErrorCode =
   | "IMAGE_AUTH_FAILED"
   | "IMAGE_RATE_LIMITED"
   | "IMAGE_GENERATION_FAILED"
-  | "IMAGE_DOWNLOAD_FAILED";
+  | "IMAGE_DOWNLOAD_FAILED"
+  | "IMAGE_SIZE_MISMATCH";
 
 export class ProviderError extends Error {
   constructor(

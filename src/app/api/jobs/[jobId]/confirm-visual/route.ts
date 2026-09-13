@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { confirmVisualSchema } from "@/contracts/poster";
 import { claimJobAction, findJob, JobActionError } from "@/server/job-store";
+import crypto from "node:crypto";
+import { runVisualBatch } from "@/worker/visual-batch";
 import { runVisualStage } from "@/worker/run-job";
 import {
   forbiddenResponse,
@@ -52,6 +54,7 @@ export async function POST(
   ) {
     return NextResponse.json({ error: { code: "STALE_VISUAL_DRAFT", message: "画面描述已过期，请重新优化" } }, { status: 409 });
   }
+  if (parsed.data.count === 2 && (job.visualDraft.provider === "t01-base-description" || job.visualDraft.fallback || JSON.stringify(parsed.data.preferences) !== JSON.stringify(job.visualDraft.preferences))) return NextResponse.json({ error: { code: "STALE_VISUAL_DRAFT", message: "请按当前选项重新生成主视觉 Prompt" } }, { status: 409 });
   let claimedJob;
   try {
     claimedJob = await claimJobAction(jobId, parsed.data.idempotencyKey, ["READY_FOR_VISUAL_REVIEW"], (item) => {
@@ -63,7 +66,13 @@ export async function POST(
         actionIdempotencyKeys: [...(item.actionIdempotencyKeys ?? []), parsed.data.idempotencyKey],
         status: "GENERATING_ASSET",
         currentStep: "视觉描述已确认，准备生成图片",
+        selectedVisualOptionId: parsed.data.count === 2 ? undefined : item.selectedVisualOptionId,
         confirmedVisual: {
+          batchId: parsed.data.count === 2 ? crypto.randomUUID() : undefined,
+          preferences: parsed.data.preferences ?? item.visualInput?.preferences ?? {
+            themeColor: item.input.themeColor, peopleMode: item.input.peopleMode,
+            visualType: item.input.visualType, visualTreatment: item.input.visualTreatment
+          },
           description: parsed.data.description,
           sourceDraftCreatedAt: parsed.data.sourceDraftCreatedAt,
           sourceCopyCreatedAt: item.copyDraft?.createdAt,
@@ -81,6 +90,7 @@ export async function POST(
     }
     throw error;
   }
-  void runVisualStage(jobId, claimedJob.copyDraft!.document, parsed.data.description);
+  if (parsed.data.count === 2) void runVisualBatch(jobId);
+  else void runVisualStage(jobId, claimedJob.copyDraft!.document, parsed.data.description);
   return NextResponse.json({ jobId, status: "GENERATING_ASSET" }, { status: 202 });
 }

@@ -16,6 +16,7 @@ import {
   claimJobAction,
   findJob
 } from "@/server/job-store";
+import { runVisualBatch } from "@/worker/visual-batch";
 import { runVisualStage } from "@/worker/run-job";
 import { createT01BaseVisualDraft } from "@/providers/t01-base-visual";
 
@@ -31,6 +32,7 @@ vi.mock("@/server/job-store", () => ({
     code = "ACTION_NOT_ALLOWED";
   }
 }));
+vi.mock("@/worker/visual-batch", () => ({ runVisualBatch: vi.fn() }));
 vi.mock("@/worker/run-job", () => ({ runVisualStage: vi.fn() }));
 
 const input = employeeActivityInputSchema.parse({
@@ -116,6 +118,23 @@ beforeEach(() => {
 });
 
 describe("visual description routes", () => {
+  it("requires an AI draft for a pair and saves its batch without default selection", async () => {
+    const job = baseJob();
+    const preferences = { themeColor: "blue" as const, peopleMode: "allow" as const, visualType: "action" as const, visualTreatment: "" };
+    vi.mocked(findJob).mockResolvedValue(job);
+    const request = () => new Request("http://localhost/api/jobs/job/confirm-visual", { method: "POST", body: JSON.stringify({ count: 2, sourceDraftCreatedAt: visualDraft.createdAt, description: "羽毛球拍击球瞬间，蓝色背景，真实体育摄影。", preferences, idempotencyKey: "bf255882-d519-4e97-a04c-9b292db0e833" }) });
+    const context = { params: Promise.resolve({ jobId: "job" }) };
+    expect((await confirmVisual(request(), context)).status).toBe(409);
+    expect(runVisualBatch).not.toHaveBeenCalled();
+    job.visualDraft = { ...visualDraft, provider: "deepseek", fallback: false, preferences };
+    vi.mocked(claimJobAction).mockImplementation(async (_id, _key, _statuses, change) => applyJobChange(job, change));
+    expect((await confirmVisual(request(), context)).status).toBe(202);
+    expect(runVisualBatch).toHaveBeenCalledExactlyOnceWith("job");
+    const claimed = await vi.mocked(claimJobAction).mock.results[0].value;
+    expect(claimed.confirmedVisual.batchId).toBeTruthy();
+    expect(claimed.selectedVisualOptionId).toBeUndefined();
+  });
+
   it("saves the edited description with its copy source before image generation", async () => {
     const job = baseJob();
     vi.mocked(findJob).mockResolvedValue(job);

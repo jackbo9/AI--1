@@ -37,11 +37,13 @@ export async function fetchActivityJob(id: string): Promise<ApiResult<ActivityJo
   return { ok: true, payload: await readJson<ActivityJob>(response) };
 }
 
-export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string, skipCopy = false, renderTargets?: RenderTargetId[]) {
+export function requestJobCreation(input: EmployeeActivityInput, idempotencyKey: string, skipCopy = false, renderTargets?: RenderTargetId[], previousJobId?: string) {
   return postJson<{ jobId?: string; error?: { message: string } }>("/api/jobs", {
     input,
     idempotencyKey,
     skipCopy,
+    previousJobId,
+    deferSportSelection: skipCopy,
     renderTargets
   });
 }
@@ -70,9 +72,11 @@ export function requestVisualRefinement(
   jobId: string,
   visualIntent: string,
   preferences: VisualPreference,
-  idempotencyKey: string
+  idempotencyKey: string,
+  context?: { mode: "initial" | "regenerate"; sourceCopyCreatedAt?: string; sportType: string }
 ) {
   return postJson<ErrorPayload>(`/api/jobs/${jobId}/refine-visual`, {
+    ...context,
     visualIntent,
     preferences,
     idempotencyKey
@@ -83,10 +87,13 @@ export function requestVisualConfirmation(
   jobId: string,
   sourceDraftCreatedAt: string,
   description: string,
-  idempotencyKey: string
+  idempotencyKey: string,
+  preferences?: VisualPreference
 ) {
   return postJson<ErrorPayload>(`/api/jobs/${jobId}/confirm-visual`, {
+    count: 2,
     sourceDraftCreatedAt,
+    preferences,
     description,
     idempotencyKey
   });

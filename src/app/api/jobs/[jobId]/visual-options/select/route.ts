@@ -45,7 +45,7 @@ export async function POST(
       { status: 409 }
     );
   }
-  if (!(job.visualOptions ?? []).some((option) => option.id === parsed.data.optionId)) {
+  if (!(job.visualOptions ?? []).some((option) => option.id === parsed.data.optionId && option.sourceCopyCreatedAt === job.copyDraft?.createdAt)) {
     return NextResponse.json(
       { error: { code: "VISUAL_OPTION_NOT_FOUND", message: "主视觉方案不存在" } },
       { status: 404 }

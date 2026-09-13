@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { findJob } from "@/server/job-store";
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/server/auth";
 
 export async function GET(
-  _: Request,
+  request: Request,
   context: { params: Promise<{ path: string[] }> }
 ) {
   const identity = await requireApiIdentity();
@@ -41,9 +42,27 @@ export async function GET(
   if (!belongsToArtifact && !belongsToLegacyVersion && !belongsToVisualOption) {
     return new NextResponse("Not found", { status: 404 });
   }
+  const format = new URL(request.url).searchParams.get("format");
+  if (format && format !== "jpg") return NextResponse.json({ error: { code: "INVALID_DOWNLOAD_FORMAT", message: "不支持的下载格式" } }, { status: 400 });
+  if (format === "jpg" && (!(belongsToArtifact || belongsToLegacyVersion) || !filename.endsWith(".png"))) {
+    return new NextResponse("Not found", { status: 404 });
+  }
   try {
+    const bytes = await readFile(path.join(process.cwd(), "data", "generated", filename));
+    if (format === "jpg") {
+      try {
+        const jpeg = await sharp(bytes).flatten({ background: "#ffffff" }).jpeg({ quality: 95 }).toBuffer();
+        return new NextResponse(new Uint8Array(jpeg), { headers: {
+          "Content-Type": "image/jpeg",
+          "Content-Disposition": 'attachment; filename="' + filename.replace(/\.png$/, ".jpg") + '"',
+          "Cache-Control": "private, no-store"
+        } });
+      } catch {
+        return NextResponse.json({ error: { code: "JPG_CONVERSION_FAILED", message: "JPG 转换失败，请重试或下载 PNG" } }, { status: 500 });
+      }
+    }
     return new NextResponse(
-      await readFile(path.join(process.cwd(), "data", "generated", filename)),
+      bytes,
       {
         headers: {
           "Content-Type": contentTypeFor(filename),

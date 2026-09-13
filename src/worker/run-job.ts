@@ -68,7 +68,9 @@ export async function runCopyStage(jobId: string) {
 export async function runVisualRefinement(
   jobId: string,
   visualIntent: string,
-  preferences?: VisualPreference
+  preferences?: VisualPreference,
+  mode?: "initial" | "regenerate",
+  sportType?: import("@/contracts/poster").EmployeeActivityInput["sportType"]
 ) {
   try {
     const job = await findJob(jobId);
@@ -98,9 +100,14 @@ export async function runVisualRefinement(
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
     const compiler = await compileIllustrationBrief({
       ...input,
+      activityName: job.copyDraft?.document.title ?? input.activityName,
+      slogan: job.copyDraft?.document.slogan ?? input.slogan,
+      subtitle: job.copyDraft?.document.subtitle ?? input.subtitle,
+      sportType: sportType ?? input.sportType,
       ...preferences,
       visualIntent
     });
+    if (compiler.provider !== "deepseek") throw new ProviderError("LLM_REQUEST_FAILED", "主视觉 Prompt 生成暂不可用，已保留当前文字，请稍后重试", true);
     const description = visualDescriptionFromBrief(compiler.brief);
     const createdAt = new Date().toISOString();
     await updateJob(jobId, (item) => ({
@@ -108,6 +115,9 @@ export async function runVisualRefinement(
       status: "READY_FOR_VISUAL_REVIEW",
       currentStep: "等待确认主视觉描述",
       visualDraft: {
+        mode,
+        sportType,
+        preferences,
         description,
         brief: compiler.brief,
         provider: compiler.provider,
@@ -120,7 +130,7 @@ export async function runVisualRefinement(
   } catch (error) {
     await updateJob(jobId, (item) => {
       const createdAt = new Date().toISOString();
-      const visualDraft = item.visualDraft
+      const visualDraft = mode ? item.visualDraft : item.visualDraft
         ? {
             ...item.visualDraft,
             description:
@@ -163,14 +173,14 @@ export async function runVisualStage(
     const input = legacyPortraitInputFromCampaignBrief(job.campaignBrief);
     const brief = briefFromConfirmedDescription(confirmedDescription, {
       ...input,
-      ...job.visualInput?.preferences
+      ...(job.confirmedVisual?.preferences ?? job.visualInput?.preferences)
     });
     // Validate the final provider payload before any paid image request.
     seedreamPrompt(brief);
     const compiler = {
       brief,
       provider: "confirmed-visual",
-      promptVersion: `visual-confirmed-v3-${brief.visualStyleMode}`
+      promptVersion: `visual-confirmed-v4-people-${brief.visualStyleMode}`
     };
     const documentVersionId =
       job.confirmedDocument?.documentVersionId ??
@@ -196,6 +206,7 @@ export async function runVisualStage(
           id: optionId,
           createdAt,
           description: confirmedDescription,
+          preferences: job.confirmedVisual?.preferences ?? job.visualInput?.preferences,
           sourceDraftCreatedAt:
             item.confirmedVisual?.sourceDraftCreatedAt ??
             job.confirmedVisual?.sourceDraftCreatedAt ??
@@ -254,7 +265,7 @@ export async function runSelectedVisualStage(
       document,
       option.assetPath,
       outputId,
-      { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
+      { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri, fullCanvas: Boolean(option.brief.canvasTarget) }
     );
     const outputPath = rendered.outputPath;
     const posterValidation = validatePoster(input, document);
@@ -341,6 +352,8 @@ export async function runSelectedVisualStage(
           assetDetail: finalAssetDetail,
           assetPath: option.assetPath,
           outputPath,
+          adaptationMode: "template-crop-v1",
+          sourceVisualOptionId: option.id,
           validation
         }
       ],
