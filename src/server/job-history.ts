@@ -5,6 +5,7 @@ import type { JobHistoryItem, JobHistoryResponse, HistoryStatus } from "@/contra
 import type { StoredJob } from "./job-store";
 import { listOwnedJobs } from "./job-store";
 import { latestPortraitPreviewOutputPath } from "./portrait-preview";
+import { serverEnv } from "@/lib/env";
 
 const processing = new Set(["QUEUED", "VALIDATING_INPUT", "GENERATING_COPY", "REFINING_VISUAL", "GENERATING_ASSET", "RENDERING", "VALIDATING_OUTPUT"]);
 
@@ -94,7 +95,8 @@ export async function listJobHistory(userId: string, limit: number, cursor?: str
   const items: JobHistoryItem[] = await Promise.all(page.map(async ({ coverPath, ...item }) => {
     let coverUrl: string | undefined;
     if (coverPath) {
-      try { await access(coverPath); coverUrl = `/api/files/${path.basename(coverPath)}`; } catch { /* Keep the task visible with a neutral placeholder. */ }
+      if (serverEnv.STORAGE_DRIVER === "oss") coverUrl = `/api/files/${path.basename(coverPath)}`;
+      else try { await access(coverPath); coverUrl = `/api/files/${path.basename(coverPath)}`; } catch { /* Keep the task visible with a neutral placeholder. */ }
     }
     return { ...item, coverUrl, hasDownloadableOutput: Boolean(coverUrl) };
   }));

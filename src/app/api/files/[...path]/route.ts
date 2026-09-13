@@ -3,6 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { findJob, findTeaJob } from "@/server/job-store";
+import { readOwnedStoredFile } from "@/server/job-assets";
 import {
   forbiddenResponse,
   requireApiIdentity,
@@ -30,7 +31,7 @@ export async function GET(
     const format = new URL(request.url).searchParams.get("format");
     if (format && (format !== "jpg" || !output)) return new NextResponse("Invalid format", { status: 400 });
     try {
-      const bytes = await readFile(path.join(process.cwd(), "data/generated", filename));
+      const bytes = await readGeneratedFile(identity.userId, jobId, filename);
       const result = format === "jpg" ? await sharp(bytes).flatten({ background: "white" }).jpeg({ quality: 95 }).toBuffer() : bytes;
       return new NextResponse(new Uint8Array(result), { headers: { "Content-Type": format === "jpg" ? "image/jpeg" : contentTypeFor(filename), "Cache-Control": "private, no-store", "Content-Disposition": `${format ? "attachment" : "inline"}; filename="${format ? filename.replace(/\.png$/, ".jpg") : filename}"` } });
     } catch { return new NextResponse("Not found", { status: 404 }); }
@@ -62,7 +63,7 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
   try {
-    const bytes = await readFile(path.join(process.cwd(), "data", "generated", filename));
+    const bytes = await readGeneratedFile(identity.userId, jobId, filename);
     if (format === "jpg") {
       try {
         const jpeg = await sharp(bytes).flatten({ background: "#ffffff" }).jpeg({ quality: 95 }).toBuffer();
@@ -95,4 +96,13 @@ function contentTypeFor(filename: string) {
   if (filename.endsWith(".webp")) return "image/webp";
   if (filename.endsWith(".svg")) return "image/svg+xml";
   return "image/png";
+}
+
+async function readGeneratedFile(ownerId: string, jobId: string, filename: string) {
+  try { return await readFile(path.join(process.cwd(), "data", "generated", filename)); }
+  catch {
+    const stored = await readOwnedStoredFile(ownerId, jobId, filename);
+    if (!stored) throw new Error("FILE_NOT_FOUND");
+    return stored.bytes;
+  }
 }

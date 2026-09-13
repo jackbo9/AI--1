@@ -4,12 +4,13 @@ import sharp from "sharp";
 import { chromium } from "playwright";
 import { teaFieldsSchema, type TeaFields } from "@/contracts/tea";
 import { teaMarkup, teaTemplateVersion } from "./tea-layout";
+import { readGeneratedAsset } from "@/server/job-assets";
 
 export async function renderTea(fields: TeaFields, imagePath: string, outputId: string, mode: "strict" | "trial") {
   teaFieldsSchema.parse(fields);
   if (!/^[a-zA-Z0-9-]+$/.test(outputId)) throw new Error("输出标识无效");
   const root = path.join(process.cwd(), "public/brand/tea");
-  const [brand, bold, regular, image] = await Promise.all([readFile(path.join(root, "brand.svg")), readFile(path.join(root, "MiSans-Bold.ttf")), readFile(path.join(root, "MiSans-Regular.ttf")), readFile(imagePath)]);
+  const [brand, bold, regular, image] = await Promise.all([readFile(path.join(root, "brand.svg")), readFile(path.join(root, "MiSans-Bold.ttf")), readFile(path.join(root, "MiSans-Regular.ttf")), readGeneratedAsset(imagePath)]);
   const background = await sharp(image).resize(1080, 1920, { fit: "cover", position: "bottom" }).flatten({ background: "#fff" }).png().toBuffer();
   const browser = await chromium.launch({ headless: true });
   try {
