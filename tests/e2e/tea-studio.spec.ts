@@ -28,8 +28,8 @@ test("late extraction never overwrites manual input, missing food can be correct
   await page.getByRole("button", { name: "AI 整理内容" }).click();
   await expect.poll(() => Boolean(release)).toBe(true); release!();
   await expect(page.locator(".tea-studio .ead-error")).toContainText("未识别到食品");
-  await page.getByLabel(/^食品/).fill("蛋糕");
-  await expect(page.getByLabel(/^食品/)).toHaveValue("蛋糕");
+  await brief.fill("下午茶准备蛋糕");
+  await expect(brief).toHaveValue("下午茶准备蛋糕");
 });
 for (const width of [1280, 1440, 1920, 2560]) {
   test(`tea layout at ${width}`, async ({ page }) => {
