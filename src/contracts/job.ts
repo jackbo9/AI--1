@@ -70,6 +70,12 @@ export type Artifact = {
   templateVersion: string;
   assetMode: "generated" | "derived" | "fallback";
   assetDetail?: string;
+  sourceBrief?: import("./poster").IllustrationBrief;
+  adaptationMode?: "template-crop-v1";
+  sourceVisualOptionId?: string;
+  actualPrompt?: string;
+  imageProvider?: string;
+  imageModel?: string;
   assetPath?: string;
   outputPath?: string;
   validation: OutputValidation;
@@ -92,6 +98,9 @@ export type VisualInput = {
 };
 
 export type VisualDraft = {
+  preferences?: VisualPreference;
+  sportType?: string;
+  mode?: "initial" | "regenerate";
   description: string;
   brief: VisualMaster["brief"];
   provider: string;
@@ -103,13 +112,28 @@ export type VisualDraft = {
 };
 
 export type ConfirmedVisual = {
+  batchId?: string;
+  preferences?: VisualPreference;
   description: string;
   sourceDraftCreatedAt: string;
   sourceCopyCreatedAt?: string;
   createdAt: string;
 };
 
+export type VisualBatch = {
+  id: string;
+  description: string;
+  sourceCopyCreatedAt: string;
+  sourceDraftCreatedAt: string;
+  preferences?: VisualPreference;
+  directions: Array<{ id: string; composition: string; status: "PENDING" | "GENERATING" | "READY" | "FAILED"; optionId?: string; error?: string }>;
+};
+
 export type VisualOption = {
+  actualPrompt?: string;
+  batchId?: string;
+  directionId?: string;
+  preferences?: VisualPreference;
   id: string;
   createdAt: string;
   description: string;
@@ -127,6 +151,7 @@ export type VisualOption = {
 };
 
 export type GenerationJob = {
+  previousJobId?: string;
   id: string;
   traceId: string;
   idempotencyKey: string;
@@ -146,6 +171,7 @@ export type GenerationJob = {
   visualDraft?: VisualDraft;
   confirmedVisual?: ConfirmedVisual;
   visualOptions?: VisualOption[];
+  visualBatches?: VisualBatch[];
   selectedVisualOptionId?: string;
   confirmedVisualOptionId?: string;
   confirmedDocument?: ConfirmedCampaignDocument;

@@ -1,3 +1,4 @@
+import { rosterLayout, rosterRowHeight } from "./t01-roster-layout";
 import type { T01TemplateAssets, T01TemplateContent } from "./t01-template-content";
 
 function escapeHtml(value: string): string {
@@ -20,22 +21,13 @@ export function longformMarkup(
     .join("\n");
   const locations = content.sessions.map((session) => session.location).join("\n");
   const groups = content.finalistGroups ?? [];
-  const rosterHeight = groups.reduce((total, group) => {
-    const rows = Math.max(1, Math.ceil(group.entrants.length / 2));
-    return total + 51 + rows * 33.35 + (rows - 1) * 15;
-  }, 0);
-  // Figma 600:3531: roster starts at 1700 and, with five groups of four
-  // entrants, the recap starts at 2418. Keep those locked coordinates while
-  // letting the roster extend the document for other entrant counts.
-  const recapTop = 1700 + rosterHeight + 54.5;
-  const canvasHeight = recapTop + 582;
+  const { recapTop, height: canvasHeight } = rosterLayout(groups);
   const rosterRows = groups.map((group, index) => {
     const entrants = group.entrants;
-    const rows = Math.max(1, Math.ceil(entrants.length / 2));
-    const rowHeight = 51 + rows * 33.35 + (rows - 1) * 15;
+    const rowHeight = rosterRowHeight(entrants.length);
     return `<div class="lf-roster-row${index % 2 ? " is-tinted" : ""}" data-capacity="finalist-group" style="--lf-roster-row-height:${rowHeight}px">
-      <p class="lf-group-name">${escapeHtml(group.label)}</p>
-      <div class="lf-entrants">${entrants.map((entrant) => `<div class="lf-entrant"><b>${escapeHtml(entrant.name)}</b><span>${escapeHtml(entrant.region)}</span></div>`).join("")}</div>
+      <p class="lf-group-name" data-capacity="group-name" data-max-lines="1">${escapeHtml(group.label)}</p>
+      <div class="lf-entrants">${entrants.map((entrant) => `<div class="lf-entrant"><b data-capacity="entrant-name" data-max-lines="1">${escapeHtml(entrant.name)}</b><span data-capacity="entrant-region" data-max-lines="1">${escapeHtml(entrant.region)}</span></div>`).join("")}</div>
     </div>`;
   }).join("");
   const roster = groups.length ? `<section class="lf-roster-heading">
@@ -67,7 +59,7 @@ export function longformMarkup(
     </main>`,
     css: `
       .t01-longform,.t01-longform *{box-sizing:border-box}.t01-longform{position:relative;width:1080px;height:var(--lf-canvas-height);overflow:hidden;background:#fff;color:#181818;font-family:MiSans,sans-serif;font-weight:400;font-synthesis:none;line-break:strict;word-break:normal;overflow-wrap:break-word}.t01-longform p,.t01-longform h1,.t01-longform h2,.t01-longform h3,.t01-longform figure{margin:0}.t01-longform p,.t01-longform h1{white-space:pre-wrap}.t01-longform img{display:block}
-      .lf-hero-background{position:absolute;z-index:0;left:0;top:0;width:1080px;height:1210px;object-fit:cover;object-position:center}
+      .lf-hero-background{position:absolute;z-index:0;left:0;top:0;width:1080px;height:1210px;object-fit:cover;object-position:center top}
       .lf-information-panel{position:absolute;left:0;top:1210px;width:1080px;height:calc(var(--lf-canvas-height) - 1210px);background:#f2f2ee;z-index:1}
       .lf-brand-header{position:absolute;z-index:2;left:64px;right:64px;top:64px;height:66.014px;display:flex;align-items:center;justify-content:space-between}.lf-company-logo{width:224px;height:66.014px;object-fit:contain;object-position:left center}.lf-administration-logo{width:61.2px;height:61.2px;object-fit:contain}.lf-hero-divider{position:absolute;z-index:2;left:64px;top:184px;width:952px;height:2px;background:#151515}
       .lf-title-block{position:absolute;z-index:2;left:64px;top:222px;width:952px;display:flex;flex-direction:column;gap:22px;color:#151515}.lf-eyebrow{font-size:26px;font-weight:500;line-height:32.5px}.lf-title{width:952px;font-size:125px;font-weight:600;line-height:1.04}.lf-description{width:952px;font-size:28px;font-weight:500;line-height:35px}

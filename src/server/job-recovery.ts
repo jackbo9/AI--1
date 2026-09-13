@@ -35,6 +35,7 @@ export function recoverInterruptedJob(
     return {
       ...job,
       status: "READY_FOR_VISUAL_REVIEW",
+      visualBatches: job.visualBatches?.map(b => ({ ...b, directions: b.directions.map(d => d.status === "PENDING" || d.status === "GENERATING" ? { ...d, status: "FAILED", error: "服务重启中断，请重试该方案" } : d) })),
       currentStep: "服务重启中断了未完成操作，请从主视觉步骤重试",
       updatedAt: recoveredAt,
       error: {

@@ -81,7 +81,7 @@ const finalistEntrantSchema = z.object({
 });
 
 export const finalistGroupSchema = z.object({
-  label: z.enum(finalistGroupLabels),
+  label: z.string().trim().refine((value) => Array.from(value).length >= 2 && Array.from(value).length <= 4, "组别名称请填写 2–4 字"),
   entrants: z.array(finalistEntrantSchema).max(6, "每个组别最多 6 人")
 });
 
@@ -280,6 +280,7 @@ export const editablePosterContentSchema = z.object({
 });
 
 export const illustrationBriefSchema = z.object({
+  canvasTarget: renderTargetIdSchema.optional(),
   confirmedDescription: z.string().trim().min(2).max(420).optional(),
   visualStyleMode: z.enum(["editorial", "legacy"]).optional(),
   systemDirection: z.string().trim().max(1400).optional(),
@@ -324,14 +325,16 @@ export const generationStatusSchema = z.enum([
 ]);
 
 export const createJobSchema = z.object({
+  previousJobId: z.string().uuid().optional(),
   input: employeeActivityInputSchema,
   idempotencyKey: z.string().uuid(),
   // Manual confirmation deliberately bypasses copy generation. This is a
   // per-request choice, never a migration of historical tasks.
   skipCopy: z.boolean().default(false),
+  deferSportSelection: z.boolean().default(false),
   renderTargets: z.array(renderTargetIdSchema).min(1).max(4).default([...defaultRenderTargetIds])
 }).superRefine((value, context) => {
-  validateSportsScope(value.input, context);
+  if (!(value.skipCopy && value.deferSportSelection)) validateSportsScope(value.input, context);
 });
 
 export const confirmCopySchema = z.object({
@@ -340,6 +343,9 @@ export const confirmCopySchema = z.object({
 });
 
 export const refineVisualSchema = z.object({
+  mode: z.enum(["initial", "regenerate"]).optional(),
+  sportType: sportTypeSchema.optional(),
+  sourceCopyCreatedAt: z.string().datetime().optional(),
   visualIntent: z
     .string()
     .trim()
@@ -350,6 +356,8 @@ export const refineVisualSchema = z.object({
 });
 
 export const confirmVisualSchema = z.object({
+  count: z.union([z.literal(1), z.literal(2)]).default(1),
+  preferences: visualPreferenceSchema.optional(),
   sourceDraftCreatedAt: z.string().datetime(),
   description: z
     .string()

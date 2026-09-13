@@ -1,3 +1,4 @@
+import { sportsCanvases } from "@/contracts/sports-canvas";
 import crypto from "node:crypto";
 import path from "node:path";
 import type { Artifact, CampaignGenerationJob } from "@/contracts/job";
@@ -33,14 +34,17 @@ export async function claimFormat(jobId: string, userId: string, format: ExtraFo
     const visualFamilyId = job.visualMaster?.visualFamilyId ?? version.id;
     reused = [...job.artifacts].reverse().find(artifact => artifact.renderTargetId === format && artifact.documentVersionId === documentVersionId && artifact.visualFamilyId === visualFamilyId && artifact.templateVersion === extraTemplateVersion && artifact.status !== "FAILED");
     if (reused) return job;
+    const mother = job.visualOptions?.find(option => option.id === job.confirmedVisualOptionId);
     claimed = {
       id: crypto.randomUUID(), renderTargetId: format, status: "RENDERING", createdAt: new Date().toISOString(),
       brandSpecVersion: 1, documentVersionId, visualFamilyId,
-      width: format === "landscape_1920x1080" ? 1920 : format === "banner_2227x950" ? 2227 : 1080,
+      width: sportsCanvases[format].width,
+      height: sportsCanvases[format].height,
       heightMode: format === "longform_1080xAuto" ? "auto" : "fixed",
       templateId: `employee-activity-${format.split("_")[0]}`, templateVersion: extraTemplateVersion,
-      assetMode: version.assetMode === "fallback" ? "fallback" : "derived", assetPath: version.assetPath,
-      assetDetail: "复用本次已生成的主视觉，按模板裁切；未再次调用图片模型。",
+      assetMode: version.assetMode === "fallback" ? "fallback" : "derived", assetPath: mother?.assetPath ?? version.assetPath,
+      adaptationMode: "template-crop-v1", sourceVisualOptionId: mother?.id,
+      assetDetail: "使用选中母图等比例裁切排版，不调用图片模型。",
       validation: { passed: false, exportAllowed: false, messages: ["正在检查模板输出"] }
     };
     return { ...job, artifacts: [...job.artifacts, claimed] };
@@ -58,8 +62,8 @@ export async function renderClaimedFormat(jobId: string, artifactId: string, for
       ? await readOwnedQrAssetDataUri(document.qrAssetId, job.userId)
       : undefined;
     const renderOptions = qrDataUri
-      ? { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri }
-      : { readabilityMode: serverEnv.READABILITY_MODE };
+      ? { readabilityMode: serverEnv.READABILITY_MODE, qrDataUri, fullCanvas: false }
+      : { readabilityMode: serverEnv.READABILITY_MODE, fullCanvas: false };
     const rendered = await renderT01Extra(format, document, artifact.assetPath, `${jobId}-${artifact.id}`, renderOptions);
     const contrastPassed = rendered.contrast?.passed ?? true;
     await updateJob(jobId, current => ({ ...current, artifacts: current.artifacts.map(item => item.id !== artifactId ? item : {

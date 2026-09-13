@@ -58,8 +58,8 @@ describe("T01 base visual description", () => {
     );
     expect(draft.sourceCopyCreatedAt).toBe("2026-09-08T08:00:00.000Z");
     expect(draft.provider).toBe("t01-base-description");
-    expect(draft.promptVersion).toBe("t01-sports-base-visual-v2");
-    expect(draft.brief.subject).toContain("不出现人物");
+    expect(draft.promptVersion).toBe("t01-sports-base-visual-v3-people");
+    expect(draft.brief.subject).toContain("根据动作需要");
     expect(draft.brief.negative).toContain("Logo");
   });
 });

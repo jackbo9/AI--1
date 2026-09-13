@@ -96,6 +96,7 @@ export async function POST(
         status: "READY_FOR_VISUAL_REVIEW",
         currentStep: "请重新核对视觉描述",
         visualInput: {
+          preferences: item.confirmedVisual?.preferences ?? item.visualInput?.preferences,
           originalIntent: description,
           sourceCopyCreatedAt,
           createdAt

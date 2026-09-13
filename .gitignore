@@ -10,3 +10,5 @@ data/uploads/qr/*
 !data/uploads/qr/.gitkeep
 playwright-report/
 test-results/
+*.tsbuildinfo
+data/canvas-probe/

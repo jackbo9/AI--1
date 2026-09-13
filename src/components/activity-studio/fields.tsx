@@ -24,6 +24,7 @@ export function Field({
   type = "text",
   maxLength,
   hint,
+  placeholder = "",
   multiline = false
 }: {
   className?: string;
@@ -35,12 +36,13 @@ export function Field({
   maxLength?: number;
   hint?: string;
   multiline?: boolean;
+  placeholder?: string;
 }) {
   const id = useId();
   const control = multiline
-    ? <textarea id={id} rows={2} value={value} required={required} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />
-    : <input id={id} type={type} value={value} required={required} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />;
-  return <div className={`ead-field ${className}`}><label htmlFor={id}>{label} {required && <i>必填</i>}</label>{control}{(hint || maxLength) && <small className="ead-field-hint">{hint}{hint && maxLength ? " · " : ""}{maxLength ? `${textCharacterCount(value)} / ${maxLength}` : ""}</small>}</div>;
+    ? <textarea id={id} placeholder={placeholder} rows={2} value={value} required={required} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />
+    : <input id={id} placeholder={placeholder} type={type} value={value} required={required} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />;
+  return <div className={`ead-field ${className}`}><label htmlFor={id}>{label} {required && <i aria-label="必填">*</i>}</label>{control}{(hint || maxLength) && <small className="ead-field-hint">{hint}{hint && maxLength ? " · " : ""}{maxLength ? `${textCharacterCount(value)} / ${maxLength}` : ""}</small>}</div>;
 }
 
 export function TextField({
