@@ -65,7 +65,15 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
     const result = fixture ? { fields: { ...emptyTeaFields, brief, food: "无花果", title: "午后鲜享", subtitle: "新鲜无花果，清甜好时光", visualPrompt: "新鲜无花果切面，细腻果肉，自然色，浅色留白。" }, missing: [] } : await jsonRequest("/api/tea/extract", { brief });
     if (revision.current !== before) { setError("内容已被修改，本次整理结果未覆盖你的输入。"); return; }
     setFields(result.fields); setExpanded(true);
-    if (result.missing.includes("food")) setError("未识别到食品，请在下方补充食品名称。");
+    if (result.missing.includes("food")) setError("未识别到食品，请在上方输入中补充食品名称后重新整理。");
+  });
+  const regeneratePrompt = () => perform(async () => {
+    const before = revision.current;
+    const brief = currentFields.current.brief.trim();
+    if (!brief) throw new Error("请先填写下午茶想法");
+    const result = fixture ? { fields: { ...currentFields.current, visualPrompt: "新鲜食品超近景，真实纹理，自然色，浅色留白。" } } : await jsonRequest("/api/tea/extract", { brief });
+    if (revision.current !== before) { setError("内容已被修改，本次 Prompt 未覆盖你的输入。"); return; }
+    setFields(current => ({ ...current, visualPrompt: result.fields.visualPrompt }));
   });
   const ensureJob = async () => {
     const parsed = teaFieldsSchema.safeParse(currentFields.current);
@@ -90,6 +98,6 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
     setJob(next); if (kind === "confirm") setStage(3);
   });
   const restart = () => { revision.current++; setFields({ ...emptyTeaFields }); setJob(undefined); setExpanded(false); setStage(1); setError(undefined); };
-  return { fields, expanded, stage, setStage, job, error, pending, restoring, working, update, extract, submit, action, restart };
+  return { fields, expanded, stage, setStage, job, error, pending, restoring, working, update, extract, regeneratePrompt, submit, action, restart };
 }
 export type TeaController = ReturnType<typeof useTeaStudio>;
