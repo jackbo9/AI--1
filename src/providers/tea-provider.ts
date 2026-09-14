@@ -16,6 +16,28 @@ export function teaImagePrompt(fields: TeaFields, description: string, direction
 }
 
 const extraction = teaFieldsSchema.omit({ brief: true, food: true }).extend({ food: z.string().trim().max(100) });
+
+// Allow list formatting changes without accepting food names absent from the source.
+export function sourceFoods(brief: string, food: string) {
+  const value = food.trim();
+  if (!value) return "";
+  if (brief.includes(value)) return value;
+  const cache = new Map<string, string[] | null>();
+  const match = (text: string): string[] | null => {
+    text = text.trim();
+    if (!text) return null;
+    if (brief.includes(text)) return [text];
+    if (cache.has(text)) return cache.get(text)!;
+    for (const separator of text.matchAll(/[、，,；;/\n+＋&]+|以及|还有|和|与|及/gu)) {
+      const left = match(text.slice(0, separator.index));
+      const right = left && match(text.slice(separator.index! + separator[0].length));
+      if (left && right) { const parts = [...left, ...right]; cache.set(text, parts); return parts; }
+    }
+    cache.set(text, null);
+    return null;
+  };
+  return match(value)?.join("、") ?? "";
+}
 export async function extractTea(brief: string) {
   if (!configured.copy) throw new ProviderError("LLM_REQUEST_FAILED", "文案模型暂不可用，请稍后重试");
   const payload = await requestJson(`${serverEnv.LLM_BASE_URL}/chat/completions`, {
@@ -29,7 +51,8 @@ export async function extractTea(brief: string) {
     const response = z.object({ choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1) }).parse(payload);
     const fields = extraction.parse(JSON.parse(response.choices[0].message.content));
     // Factual values must be exact source spans; reject invented facts independently of the model.
-    for (const key of ["food", "time", "place"] as const) if (fields[key] && !brief.includes(fields[key])) fields[key] = "";
+    fields.food = sourceFoods(brief, fields.food);
+    for (const key of ["time", "place"] as const) if (fields[key] && !brief.includes(fields[key])) fields[key] = "";
     return { fields: { brief, ...fields }, missing: (["food", "time", "place"] as const).filter(key => !fields[key]) };
   } catch { throw new ProviderError("LLM_INVALID_OUTPUT", "整理结果不符合要求，请重试；原输入已保留"); }
 }

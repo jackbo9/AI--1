@@ -79,8 +79,16 @@ export async function POST(
         item.confirmedVisual?.description ??
         item.visualInput?.originalIntent ??
         baseDraft.description;
+      const preferences = item.confirmedVisual?.preferences ?? item.visualDraft?.preferences ?? item.visualInput?.preferences ?? {
+        themeColor: item.input.themeColor, peopleMode: item.input.peopleMode,
+        visualType: item.input.visualType, visualTreatment: item.input.visualTreatment
+      };
       const visualDraft = {
         ...baseDraft,
+        ...item.visualDraft,
+        createdAt,
+        sourceCopyCreatedAt,
+        preferences,
         description,
         brief: item.visualMaster?.brief ?? baseDraft.brief,
         provider: "saved-visual-description",
@@ -96,7 +104,7 @@ export async function POST(
         status: "READY_FOR_VISUAL_REVIEW",
         currentStep: "请重新核对视觉描述",
         visualInput: {
-          preferences: item.confirmedVisual?.preferences ?? item.visualInput?.preferences,
+          preferences,
           originalIntent: description,
           sourceCopyCreatedAt,
           createdAt

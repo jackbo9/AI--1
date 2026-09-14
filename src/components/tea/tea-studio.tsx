@@ -8,7 +8,7 @@ import type { TeaController } from "./use-tea-studio";
 
 export function TeaPreview({ controller: c }: { controller: TeaController }) {
   const selected = c.job?.options.find(o => o.id === c.job?.selectedVisualOptionId);
-  return <aside className="ead-preview tea-preview"><h3>海报预览 <small>1080 × 1920</small></h3><div className="tea-poster" dangerouslySetInnerHTML={{ __html: teaMarkup(c.fields, selected?.previewUrl, "/brand/tea/brand.svg") }} />{!selected && <p>生成后，这里会显示食品主视觉</p>}</aside>;
+  return <aside className="ead-preview tea-preview"><div className="ead-preview-head"><header><b>海报预览</b></header><p className="ead-preview-disclaimer">主视觉预览，最终成品将按正式模板排版与校验。</p><div className="ead-preview-format"><span>预览尺寸</span><span>竖版 · 1080 × 1920</span></div></div><div className="tea-poster" dangerouslySetInnerHTML={{ __html: teaMarkup(c.fields, selected?.previewUrl, "/brand/tea/brand.svg") }} />{!selected && <p>生成后，这里会显示食品主视觉</p>}</aside>;
 }
 
 function TeaCreation({ c }: { c: TeaController }) {
@@ -19,10 +19,13 @@ function TeaCreation({ c }: { c: TeaController }) {
     <button type="button" className="tea-secondary" disabled={busy || !c.fields.brief.trim()} onClick={c.extract}>{c.pending && !c.expanded ? "正在整理…" : "AI 整理内容"}</button>
     {c.expanded && <>
       <div className="tea-visual-section"><header><div><h2>生成主视觉</h2><p>高端食品摄影 · 浅色背景 · 竖版海报</p></div></header>
-        <label className="tea-prompt-label">画面描述<div className="tea-prompt-box"><textarea rows={5} maxLength={1200} disabled={busy} value={c.fields.visualPrompt} onChange={e => c.update("visualPrompt", e.target.value)} /><button type="button" disabled={busy} onClick={c.regeneratePrompt}>↻ 重新生成主视觉 Prompt</button></div></label>
+        <div className="ead-phase-heading"><h3>1 检查描述</h3></div>
+        <div className="tea-prompt-label"><label htmlFor="tea-visual-description">主视觉描述</label><div className="tea-prompt-box"><textarea id="tea-visual-description" rows={5} maxLength={1200} disabled={busy} value={c.fields.visualPrompt} onChange={e => c.update("visualPrompt", e.target.value)} /><button type="button" disabled={busy} onClick={c.regeneratePrompt}>AI 重新生成描述</button></div></div>
         {changed && <p className="tea-note">内容已修改，重新生成将建立新版本，旧图片会保留在原任务中。</p>}
-        <button type="button" className="ead-primary" disabled={busy} onClick={() => c.action("generate")}>{c.working ? "正在生成，请稍候…" : c.job?.options.length ? "重新生成两张主视觉" : "生成两张主视觉"}</button>
-        <div className="ead-option-grid">{c.job?.options.map((o, i) => o.status === "READY" ? <VisualOptionCard selected={c.job?.selectedVisualOptionId === o.id} disabled={Boolean(busy || changed)} key={o.id} onSelect={() => c.action("select", o.id)} src={o.previewUrl} label={`下午茶方案 ${i + 1}`} /> : <div className="ead-generation-placeholder" key={o.id} role="status"><b>方案 {i + 1}</b><p>{o.status === "FAILED" ? o.error : "正在生成图片…"}</p>{o.status === "FAILED" && <button type="button" disabled={busy || changed} onClick={() => c.action("retry", o.id)}>重试该方案</button>}</div>)}</div>
+        <button type="button" className="ead-primary" disabled={busy || !c.fields.food.trim()} onClick={() => c.action("generate")}>{c.working ? "正在生成方案…" : c.job?.options.length ? "重新生成两张主视觉" : "生成两张主视觉"}</button>
+        {!c.fields.food.trim() && <p role="status" className="ead-error">未识别到食品，请在上方输入中补充食品名称后重新整理；原输入和描述已保留。</p>}
+        {Boolean(c.job?.options.length) && <div className="ead-visual-confirm-head"><div className="ead-phase-heading"><h3>2 比较图片</h3></div><p className="ead-phase-summary">选择一张主视觉，自动裁切排版为竖版海报。</p></div>}
+        <div className="ead-option-grid">{c.job?.options.map((o, i) => o.status === "READY" ? <VisualOptionCard selected={c.job?.selectedVisualOptionId === o.id} disabled={Boolean(busy || changed)} key={o.id} onSelect={() => c.action("select", o.id)} src={o.previewUrl} label={`主视觉方案 ${i + 1}`} /> : <div className="ead-generation-placeholder" key={o.id} role="status"><b>方案 {i + 1}</b><p>{o.status === "FAILED" ? o.error : "正在生成图片…"}</p>{o.status === "FAILED" && <button type="button" disabled={busy || changed} onClick={() => c.action("retry", o.id)}>重试该方案</button>}</div>)}</div>
         {Boolean(c.job?.options.length) && <button type="button" className="ead-primary" disabled={busy || changed || !c.job?.selectedVisualOptionId} onClick={() => c.action("confirm", c.job?.selectedVisualOptionId)}>使用所选方案并排版 →</button>}
       </div>
     </>}

@@ -17,6 +17,11 @@ function job(status: ActivityJob["status"], currentStep = "处理中"): Activity
 }
 
 describe("activity studio model", () => {
+  it("requires rules for every format, including banner-only and whitespace input", () => {
+    for (const target of ["portrait_1080x1920", "landscape_1920x1080", "banner_2227x950", "longform_1080xAuto"] as const) {
+      for (const rules of ["", " \n\t "]) expect(validateForm({ ...initialForm, renderTargets: [target], rules })).toBe("请填写赛事规则");
+    }
+  });
   it("starts empty and keeps partial roster feedback out of submissions", () => {
     expect(emptyForm.activityName).toBe("");
     expect(emptyForm.session.date).toBe("");

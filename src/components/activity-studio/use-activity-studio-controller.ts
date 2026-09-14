@@ -308,7 +308,15 @@ export function useActivityStudioController(fixtureMode: boolean, skipInitialRes
     setError(undefined);
     if (pendingAction || working || qrUploadPending) return;
     const validationError = validateForm(form, true, qrMode === "add");
-    if (validationError) return setError(validationError);
+    if (validationError) {
+      setError(validationError);
+      if (validationError === "请填写赛事规则") {
+        const field = (event.currentTarget as HTMLFormElement).elements.namedItem("rules") as HTMLTextAreaElement | null;
+        field?.focus();
+        field?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      return;
+    }
     setPendingAction("submit");
     refreshEpochRef.current += 1;
     manuallyEditedRef.current = false;

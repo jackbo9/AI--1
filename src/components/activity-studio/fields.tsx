@@ -51,7 +51,9 @@ export function TextField({
   value,
   onChange,
   placeholder = "",
-  maxLength
+  maxLength,
+  required = false,
+  name
 }: {
   className?: string;
   label: string;
@@ -59,9 +61,11 @@ export function TextField({
   onChange: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
+  required?: boolean;
+  name?: string;
 }) {
   const id = useId();
-  return <div className={`ead-field ${className}`}><label htmlFor={id}>{label}</label><textarea id={id} rows={3} value={value} placeholder={placeholder} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />{maxLength && <small className="ead-field-hint">{textCharacterCount(value)} / {maxLength}</small>}</div>;
+  return <div className={`ead-field ${className}`}><label htmlFor={id}>{label} {required && <i aria-label="必填">*</i>}</label><textarea id={id} name={name} required={required} rows={3} value={value} placeholder={placeholder} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} />{maxLength && <small className="ead-field-hint">{textCharacterCount(value)} / {maxLength}</small>}</div>;
 }
 
 export function LoadingCard({ title, detail }: { title: string; detail: string }) {

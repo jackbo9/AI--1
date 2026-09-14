@@ -65,7 +65,7 @@ export function useTeaStudio(active: boolean, initialJobId?: string, fixture = f
     const result = fixture ? { fields: { ...emptyTeaFields, brief, food: "无花果", title: "午后鲜享", subtitle: "新鲜无花果，清甜好时光", visualPrompt: "新鲜无花果切面，细腻果肉，自然色，浅色留白。" }, missing: [] } : await jsonRequest("/api/tea/extract", { brief });
     if (revision.current !== before) { setError("内容已被修改，本次整理结果未覆盖你的输入。"); return; }
     setFields(result.fields); setExpanded(true);
-    if (result.missing.includes("food")) setError("未识别到食品，请在上方输入中补充食品名称后重新整理。");
+    // Missing food is shown persistently next to the disabled generation action.
   });
   const regeneratePrompt = () => perform(async () => {
     const before = revision.current;

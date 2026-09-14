@@ -47,6 +47,7 @@ export function StepThree({
   const [editingSettings, setEditingSettings] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const optionSection = useRef<HTMLDivElement>(null);
+  const descriptionSection = useRef<HTMLDivElement>(null);
   const hasDescription = Boolean(job?.visualDraft && job.visualDraft.provider !== "t01-base-description") || Boolean(job?.confirmedVisual);
   const names = { tennis: "网球", badminton: "羽毛球", basketball: "篮球", football: "足球", volleyball: "排球", table_tennis: "乒乓球", tug_of_war: "拔河", running: "跑步 / 田径", other: "其他体育赛事" };
   const source = [form.activityName, form.slogan, form.subtitle, form.rules].join(" ");
@@ -71,6 +72,12 @@ export function StepThree({
   useEffect(() => {
     setEditingSettings(false);
   }, [job?.visualDraft?.createdAt]);
+  useEffect(() => {
+    if (job?.visualDraft?.provider !== "saved-visual-description") return;
+    setEditingDescription(true);
+    const frame = requestAnimationFrame(() => descriptionSection.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [job?.visualDraft?.provider, job?.visualDraft?.createdAt]);
   useEffect(() => {
     if (isGenerating || pendingGenerate) {
       setEditingDescription(false);
@@ -102,7 +109,7 @@ export function StepThree({
         {error && <p role="alert" className="ead-error">{error}</p>}
         {descriptionStale && <p className="ead-error" role="status">画面选项已变化，已保留你的文字。请重新生成描述后再生图。</p>}
         {!hasDescription && <button type="button" className="ead-primary" onClick={onRefine} disabled={busy || !sport}>{busy ? "正在生成描述…" : "生成主视觉描述"}</button>}
-        {hasDescription && <div className="ead-phase-heading"><h3>2 检查描述</h3>{showOptions && <button type="button" className="ead-text-action" disabled={busy} onClick={() => setEditingDescription(!editingDescription)}>{showDescription ? "收起描述" : "查看或修改描述"}</button>}</div>}
+        {hasDescription && <div ref={descriptionSection} className="ead-phase-heading"><h3>2 检查描述</h3>{showOptions && <button type="button" className="ead-text-action" disabled={busy} onClick={() => setEditingDescription(!editingDescription)}>{showDescription ? "收起描述" : "查看或修改描述"}</button>}</div>}
         {hasDescription && !showDescription && <p className="ead-phase-summary">已使用确认描述生成方案。</p>}
         {showDescription && <div className="ead-prompt-editor"><label className="ead-visual-label" htmlFor={promptId}>
           主视觉描述

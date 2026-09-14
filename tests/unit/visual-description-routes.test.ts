@@ -175,12 +175,15 @@ describe("visual description routes", () => {
   });
 
   it("restores the saved description as unconfirmed when returning to visual editing", async () => {
+    const preferences = { themeColor: "green" as const, peopleMode: "allow" as const, visualType: "equipment" as const, visualTreatment: "低机位" };
     const savedDescription =
       "主体：羽毛球器材特写。风格：真实摄影。色彩：蓝白。构图：顶部低细节。";
     const job: CampaignGenerationJob = {
       ...baseJob(),
       status: "READY_FOR_REVIEW",
+      visualDraft: { ...visualDraft, provider: "deepseek", preferences, sportType: "badminton", fallback: false },
       confirmedVisual: {
+        preferences,
         description: savedDescription,
         sourceDraftCreatedAt: visualDraft.createdAt,
         sourceCopyCreatedAt: copyCreatedAt,
@@ -228,8 +231,18 @@ describe("visual description routes", () => {
     const claimed = vi.mocked(claimJobAction).mock.results[0].value;
     await expect(claimed).resolves.toMatchObject({
       status: "READY_FOR_VISUAL_REVIEW",
-      visualDraft: { description: savedDescription },
+      visualDraft: { description: savedDescription, preferences, sportType: "badminton", fallback: false },
       confirmedVisual: undefined
     });
+    expect(runVisualBatch).not.toHaveBeenCalled();
+    expect(runVisualStage).not.toHaveBeenCalled();
+    const restored = await claimed;
+    vi.mocked(findJob).mockResolvedValue(restored);
+    vi.mocked(claimJobAction).mockImplementation(async (_id, _key, _statuses, change) => applyJobChange(restored, change));
+    const next = await confirmVisual(new Request("http://localhost/api/jobs/job/confirm-visual", {
+      method: "POST", body: JSON.stringify({ count: 2, sourceDraftCreatedAt: restored.visualDraft.createdAt, description: savedDescription, preferences, idempotencyKey: "7c745f24-817e-440d-bc26-ae1f44a017cb" })
+    }), { params: Promise.resolve({ jobId: "job" }) });
+    expect(next.status).toBe(202);
+    expect(runVisualBatch).toHaveBeenCalledExactlyOnceWith("job");
   });
 });
